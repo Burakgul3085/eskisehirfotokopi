@@ -43,8 +43,8 @@
                 <li><span x-text="summary.missingMockup"></span> kitapta mockup görseli yok.</li>
                 <li><span x-text="summary.tooBig"></span> dosya {{ $maxMb }} MB sınırını aştığı için atlanacak.</li>
             </ul>
-            <div class="table-panel">
-                <table class="w-full text-sm">
+            <div class="card overflow-x-auto">
+                <table class="table-panel">
                     <thead><tr class="text-left text-xs text-muted"><th class="px-4 py-2">Yayınevi klasörü</th><th class="px-4 py-2">Kitap klasörü</th><th class="px-4 py-2">Dosyalar</th></tr></thead>
                     <tbody>
                         <template x-for="row in preview" x-bind:key="row.key">

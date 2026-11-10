@@ -1,6 +1,9 @@
 @php
     $logo = \App\Support\Settings::fileUrl('logo_path');
     $customer = auth('web')->user();
+    $menu = app(\App\Domain\Catalog\CategoryTree::class)->nested(true, true);
+    $headerLinks = \App\Support\Settings::links('header_links');
+    $inlineRoots = array_slice($menu, 0, 6);
 @endphp
 <header class="sticky top-0 z-30 bg-white/95 shadow-[0_1px_0_rgb(15_23_42/0.06)] backdrop-blur">
     @if ($settings['announcement'])
@@ -29,15 +32,7 @@
             @endif
         </a>
 
-        {{-- Arama: Aşama 4'te anlık öneri paneli eklenir --}}
-        <form action="{{ url('/') }}" method="get" role="search" class="relative hidden flex-1 md:block">
-            <label for="q" class="sr-only">Ara</label>
-            <input id="q" name="q" type="search" value="{{ request('q') }}" placeholder="Kitap, yayınevi, yazar veya ISBN ara…"
-                   class="w-full rounded-2xl border border-line bg-surface py-3 pr-14 pl-5 text-[15px] transition placeholder:text-slate-400 focus:border-primary focus:bg-white focus:ring-4 focus:ring-primary/12 focus:outline-none">
-            <button class="absolute top-1.5 right-1.5 flex size-10 items-center justify-center rounded-xl bg-primary text-white hover:bg-primary-hover" aria-label="Ara">
-                <x-icon name="search" class="size-5" />
-            </button>
-        </form>
+        <div class="hidden flex-1 md:block">@include('store.partials.search', ['id' => 'q'])</div>
 
         <nav class="ml-auto flex items-center gap-1 sm:gap-2" aria-label="Hesap">
             @if ($customer)
@@ -49,18 +44,79 @@
                     <x-icon name="user" class="size-5" /><span class="hidden lg:inline">Giriş yap</span>
                 </a>
             @endif
-            <a href="#" class="relative flex items-center gap-2 rounded-xl bg-primary-soft px-3 py-2 text-sm font-semibold text-primary-dark hover:bg-primary-line">
+            @php($cartCount = \Illuminate\Support\Facades\Route::has('cart.index') ? app(\App\Domain\Cart\Cart::class)->count() : 0)
+            <a href="{{ \Illuminate\Support\Facades\Route::has('cart.index') ? route('cart.index') : '#' }}" class="relative flex items-center gap-2 rounded-xl bg-primary-soft px-3 py-2 text-sm font-semibold text-primary-dark hover:bg-primary-line">
                 <x-icon name="cart" class="size-5" /><span class="hidden lg:inline">Sepetim</span>
+                @if ($cartCount)<span class="absolute -top-1.5 -right-1.5 flex min-w-5 items-center justify-center rounded-full bg-accent px-1 text-[11px] font-bold text-ink">{{ $cartCount }}</span>@endif
             </a>
         </nav>
     </div>
 
-    <div class="container-page pb-3 md:hidden">
-        <form action="{{ url('/') }}" method="get" role="search" class="relative">
-            <input name="q" type="search" value="{{ request('q') }}" placeholder="Kitap, yayınevi veya ISBN ara…" aria-label="Ara"
-                   class="w-full rounded-xl border border-line bg-surface py-2.5 pr-11 pl-4 text-[15px] focus:border-primary focus:bg-white focus:outline-none">
-            <x-icon name="search" class="pointer-events-none absolute top-3 right-3.5 size-5 text-muted" />
-        </form>
-    </div>
+    <div class="container-page pb-3 md:hidden">@include('store.partials.search', ['id' => 'q-mobile'])</div>
 
+    {{-- Kategori menüsü (masaüstü): fareyle veya klavyeyle (focus-within) açılır, JavaScript gerektirmez. --}}
+    @if ($menu || $headerLinks)
+        <nav class="relative hidden border-t border-line/70 lg:block" aria-label="Kategoriler">
+            <div class="container-page flex items-center gap-1 text-sm font-medium">
+                @if ($menu)
+                    <div class="group">
+                        <button type="button" class="flex items-center gap-2 rounded-lg bg-primary px-3.5 py-2 my-1.5 font-semibold text-white">
+                            <x-icon name="menu" class="size-4" />Tüm kategoriler
+                        </button>
+                        <div class="invisible absolute inset-x-0 top-full z-40 border-t border-line bg-white opacity-0 shadow-lift transition group-focus-within:visible group-focus-within:opacity-100 group-hover:visible group-hover:opacity-100">
+                            <div class="container-page grid max-h-[70vh] grid-cols-4 gap-x-8 gap-y-6 overflow-y-auto py-6 xl:grid-cols-5">
+                                @foreach ($menu as $root)
+                                    <div>
+                                        <a href="{{ route('category.show', $root['slug']) }}" class="font-display font-bold text-ink hover:text-primary">{{ $root['name'] }}</a>
+                                        @if ($root['children'])
+                                            <ul class="mt-2 space-y-1.5 text-[13px] text-muted">
+                                                @foreach (array_slice($root['children'], 0, 8) as $child)
+                                                    <li><a href="{{ route('category.show', $child['slug']) }}" class="hover:text-primary">{{ $child['name'] }}</a></li>
+                                                @endforeach
+                                                @if (count($root['children']) > 8)
+                                                    <li><a href="{{ route('category.show', $root['slug']) }}" class="font-semibold text-primary">Tümü ({{ count($root['children']) }})</a></li>
+                                                @endif
+                                            </ul>
+                                        @endif
+                                    </div>
+                                @endforeach
+                            </div>
+                        </div>
+                    </div>
+                @endif
+
+                @foreach ($inlineRoots as $root)
+                    <div class="group">
+                        <a href="{{ route('category.show', $root['slug']) }}" class="flex items-center gap-1 rounded-lg px-3 py-2.5 hover:bg-surface hover:text-primary">
+                            {{ $root['name'] }}@if ($root['children'])<x-icon name="chevron-down" class="size-3.5 text-muted" />@endif
+                        </a>
+                        @if ($root['children'])
+                            <div class="invisible absolute inset-x-0 top-full z-40 border-t border-line bg-white opacity-0 shadow-lift transition group-focus-within:visible group-focus-within:opacity-100 group-hover:visible group-hover:opacity-100">
+                                <div class="container-page grid max-h-[70vh] grid-cols-4 gap-x-8 gap-y-6 overflow-y-auto py-6">
+                                    @foreach ($root['children'] as $child)
+                                        <div>
+                                            <a href="{{ route('category.show', $child['slug']) }}" class="font-semibold text-ink hover:text-primary">{{ $child['name'] }}</a>
+                                            @if ($child['children'])
+                                                <ul class="mt-2 space-y-1.5 text-[13px] text-muted">
+                                                    @foreach (array_slice($child['children'], 0, 8) as $leaf)
+                                                        <li><a href="{{ route('category.show', $leaf['slug']) }}" class="hover:text-primary">{{ $leaf['name'] }}</a></li>
+                                                    @endforeach
+                                                </ul>
+                                            @endif
+                                        </div>
+                                    @endforeach
+                                </div>
+                            </div>
+                        @endif
+                    </div>
+                @endforeach
+
+                <div class="ml-auto flex items-center gap-1">
+                    @foreach ($headerLinks as $link)
+                        <a href="{{ $link['url'] }}" class="rounded-lg px-3 py-2.5 font-semibold text-primary-dark hover:bg-primary-soft">{{ $link['label'] }}</a>
+                    @endforeach
+                </div>
+            </div>
+        </nav>
+    @endif
 </header>

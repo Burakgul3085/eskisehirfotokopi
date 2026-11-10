@@ -1,4 +1,4 @@
-@props(['title' => null, 'description' => null])
+@props(['title' => null, 'description' => null, 'noindex' => false, 'image' => null])
 @php
     $siteName = $settings['site_name'] ?: 'Eskişehir Fotokopi';
     $pageTitle = $title ? $title.' — '.$siteName : ($settings['meta_title'] ?: $siteName);
@@ -15,6 +15,10 @@
     @if ($metaDescription)<meta name="description" content="{{ $metaDescription }}">@endif
     <meta property="og:site_name" content="{{ $siteName }}">
     <meta property="og:title" content="{{ $pageTitle }}">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="{{ url()->current() }}">
+    @if ($image)<meta property="og:image" content="{{ $image }}">@endif
+    @if ($noindex)<meta name="robots" content="noindex, follow">@else<link rel="canonical" href="{{ url()->current() }}{{ request('page') > 1 ? '?page='.(int) request('page') : '' }}">@endif
     @if ($favicon)<link rel="icon" href="{{ $favicon }}">@endif
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     <style>{!! \App\Support\Settings::themeCss() !!}</style>

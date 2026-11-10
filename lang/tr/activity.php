@@ -20,6 +20,9 @@ return [
     'product.deleted' => 'Ürün sildi',
     'products.bulk' => 'Toplu ürün işlemi yaptı',
     'products.prices_imported' => 'Excel ile fiyat yükledi',
+    'home_block.created' => 'Ana sayfaya blok ekledi',
+    'home_block.updated' => 'Ana sayfa bloğunu güncelledi',
+    'home_block.deleted' => 'Ana sayfa bloğunu sildi',
     'import.started' => 'Toplu klasör yüklemesi başlattı',
     'import.reviewed' => 'Toplu yükleme kalemini kontrol etti',
 ];

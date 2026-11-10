@@ -21,8 +21,8 @@
         @endif
     </div>
 
-    <div class="table-panel">
-        <table class="w-full text-sm">
+    <div class="card overflow-x-auto">
+        <table class="table-panel">
             <thead><tr class="text-left text-xs text-muted"><th class="px-4 py-3">Klasör</th><th class="px-4 py-3">Durum</th><th class="px-4 py-3">Not</th><th class="px-4 py-3"></th></tr></thead>
             <tbody>
                 @forelse ($items as $item)

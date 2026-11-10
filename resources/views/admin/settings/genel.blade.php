@@ -20,6 +20,10 @@
             <p class="field-help">Bakımdayken yönetici olarak giriş yaptıysanız siteyi görmeye devam edersiniz.</p>
         </fieldset>
         <x-field name="closed_message" type="textarea" label="Bakım mesajı" :value="$s['closed_message']" />
+        <x-field name="header_links" type="textarea" rows="4" label="Menü bağlantıları" :value="$s['header_links']"
+                 help="Kategori menüsünün sağındaki bağlantılar. Her satır: Etiket|/adres (ör. Yayınevleri|/yayinevleri)." />
+        <x-field name="trust_items" type="textarea" rows="4" label="Güven şeridi" :value="$s['trust_items']"
+                 help="Sayfa altındaki şerit. Her satır: simge|Başlık|Açıklama. Simgeler: truck, cash, printer, shield, clock, book, phone, check." />
         <x-field name="footer_about" type="textarea" rows="4" label="Alt bilgi metni" :value="$s['footer_about']" />
         <x-field name="copyright" label="Telif satırı" :value="$s['copyright']" help="Boş bırakılırsa “© yıl site adı” yazılır." />
         <div class="flex justify-end"><button class="btn-primary">Kaydet</button></div>

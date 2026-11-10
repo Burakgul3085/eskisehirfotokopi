@@ -8,8 +8,8 @@
         </div>
     @endif
 
-    <div class="table-panel">
-        <table class="w-full text-sm">
+    <div class="card overflow-x-auto">
+        <table class="table-panel">
             <thead><tr class="text-left text-xs text-muted">
                 <th class="px-4 py-3">Yükleme</th><th class="px-4 py-3">Durum</th><th class="px-4 py-3 text-right">Kitap</th>
                 <th class="px-4 py-3 text-right">Eklendi</th><th class="px-4 py-3 text-right">Kontrol</th><th class="px-4 py-3 text-right">Hata</th><th class="px-4 py-3">Tarih</th>

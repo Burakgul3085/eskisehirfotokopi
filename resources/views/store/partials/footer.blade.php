@@ -2,23 +2,21 @@
     $social = \App\Support\Settings::socialLinks();
 @endphp
 <footer class="mt-16 bg-ink text-slate-300">
-    <div class="border-b border-white/10">
-        <div class="container-page grid gap-6 py-8 sm:grid-cols-3">
-            @foreach ([
-                ['truck', 'Kapınıza teslim', 'Eskişehir içi belirlenen bölgelere'],
-                ['cash', 'Kapıda ödeme', 'Nakit veya kredi kartı ile'],
-                ['printer', 'Belge baskısı', 'Belgeni yükle, biz basalım'],
-            ] as [$icon, $head, $text])
-                <div class="flex items-center gap-4">
-                    <span class="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-white/5 text-accent"><x-icon :name="$icon" class="size-6" /></span>
-                    <div>
-                        <p class="font-display font-semibold text-white">{{ $head }}</p>
-                        <p class="text-sm text-slate-400">{{ $text }}</p>
+    @if ($trust = \App\Support\Settings::trustItems())
+        <div class="border-b border-white/10">
+            <div class="container-page grid gap-6 py-8 sm:grid-cols-2 {{ [1 => 'lg:grid-cols-1', 2 => 'lg:grid-cols-2', 3 => 'lg:grid-cols-3'][count($trust)] ?? 'lg:grid-cols-4' }}">
+                @foreach ($trust as $item)
+                    <div class="flex items-center gap-4">
+                        <span class="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-white/5 text-accent"><x-icon :name="$item['icon']" class="size-6" /></span>
+                        <div>
+                            <p class="font-display font-semibold text-white">{{ $item['title'] }}</p>
+                            @if ($item['text'])<p class="text-sm text-slate-400">{{ $item['text'] }}</p>@endif
+                        </div>
                     </div>
-                </div>
-            @endforeach
+                @endforeach
+            </div>
         </div>
-    </div>
+    @endif
 
     <div class="container-page grid gap-10 py-12 md:grid-cols-[1.4fr_1fr_1fr]">
         <div>

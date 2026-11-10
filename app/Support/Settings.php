@@ -46,6 +46,14 @@ class Settings
         'color_primary' => '#0f766e',
         'color_accent' => '#f59e0b',
 
+        // Menü ve şeritler (satır başına bir öğe)
+        'header_links' => 'Yayınevleri|/yayinevleri
+Belge Yükle|/fotokopi
+Sipariş Takibi|/siparis-takip', // Etiket|Adres
+        'trust_items' => 'truck|Kapınıza teslim|Eskişehir içi belirlenen bölgelere
+cash|Kapıda ödeme|Nakit veya kredi kartı ile
+printer|Belge baskısı|Belgeni yükle, biz basalım', // simge|Başlık|Açıklama
+
         // Alt bilgi
         'footer_about' => 'Eskişehir içinde kitap, soru bankası ve belge baskısında hızlı ve güvenilir hizmet. Siparişiniz kapınıza gelir, ödemenizi kapıda nakit veya kartla yaparsınız.',
         'copyright' => null,             // boşsa "© {yıl} {site adı}"
@@ -141,6 +149,42 @@ class Settings
         $digits = preg_replace('/\D+/', '', (string) self::get('whatsapp'));
 
         return $digits ? 'https://wa.me/'.$digits.($text ? '?text='.rawurlencode($text) : '') : null;
+    }
+
+    /**
+     * "Etiket|Adres" satırlarından bağlantılar (ör. header_links).
+     *
+     * @return list<array{label: string, url: string}>
+     */
+    public static function links(string $key): array
+    {
+        $out = [];
+        foreach (preg_split('/\R/u', (string) self::get($key)) as $line) {
+            [$label, $url] = array_map('trim', explode('|', $line, 2)) + [1 => ''];
+            if ($label !== '' && $url !== '' && preg_match('#^(/|https?://|tel:|mailto:)#i', $url)) {
+                $out[] = ['label' => $label, 'url' => $url];
+            }
+        }
+
+        return $out;
+    }
+
+    /**
+     * Güven şeridi öğeleri: "simge|Başlık|Açıklama" satırları.
+     *
+     * @return list<array{icon: string, title: string, text: string}>
+     */
+    public static function trustItems(): array
+    {
+        $out = [];
+        foreach (preg_split('/\R/u', (string) self::get('trust_items')) as $line) {
+            $parts = array_map('trim', explode('|', $line));
+            if (count($parts) >= 2 && $parts[1] !== '') {
+                $out[] = ['icon' => $parts[0] ?: 'check', 'title' => $parts[1], 'text' => $parts[2] ?? ''];
+            }
+        }
+
+        return $out;
     }
 
     /** @return list<array{key: string, label: string, url: string}> */

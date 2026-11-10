@@ -42,6 +42,8 @@ class SettingsController extends Controller
                 'store_open' => ['required', 'in:0,1'],
                 'closed_message' => ['nullable', 'string', 'max:300'],
                 'footer_about' => ['nullable', 'string', 'max:600'],
+                'header_links' => ['nullable', 'string', 'max:1000'],
+                'trust_items' => ['nullable', 'string', 'max:1000'],
                 'copyright' => ['nullable', 'string', 'max:160'],
             ]),
             'iletisim' => $request->validate([

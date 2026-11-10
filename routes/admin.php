@@ -6,6 +6,7 @@ use App\Http\Controllers\Admin\AuthController;
 use App\Http\Controllers\Admin\AuthorController;
 use App\Http\Controllers\Admin\CategoryController;
 use App\Http\Controllers\Admin\DashboardController;
+use App\Http\Controllers\Admin\HomeBlockController;
 use App\Http\Controllers\Admin\ImportController;
 use App\Http\Controllers\Admin\ProductController;
 use App\Http\Controllers\Admin\PublisherController;
@@ -51,6 +52,11 @@ Route::prefix('yonetim')->name('admin.')->group(function () {
             Route::get('/kalem/{item}/gorsel', 'image')->name('image');
         });
         Route::put('/yazarlar/{author}', [AuthorController::class, 'update'])->name('authors.update');
+
+        // Vitrin
+        Route::post('/ana-sayfa/{homeBlock}/sira', [HomeBlockController::class, 'move'])->name('home-blocks.move');
+        Route::post('/ana-sayfa/{homeBlock}/goster-gizle', [HomeBlockController::class, 'toggle'])->name('home-blocks.toggle');
+        Route::resource('ana-sayfa', HomeBlockController::class)->parameters(['ana-sayfa' => 'homeBlock'])->except('show')->names('home-blocks');
 
         Route::get('/ayarlar/{group}', [SettingsController::class, 'edit'])->name('settings.edit');
         Route::put('/ayarlar/{group}', [SettingsController::class, 'update'])->name('settings.update');

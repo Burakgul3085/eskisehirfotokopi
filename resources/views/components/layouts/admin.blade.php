@@ -13,6 +13,9 @@
             ['Yazarlar', 'user', 'admin.authors.index', 'admin.authors.*'],
             ['Toplu yükleme', 'upload', 'admin.imports.index', 'admin.imports.*'],
         ],
+        'Vitrin' => [
+            ['Ana sayfa', 'home', 'admin.home-blocks.index', 'admin.home-blocks.*'],
+        ],
     ];
     $settingsNav = collect(\App\Http\Controllers\Admin\SettingsController::GROUPS)
         ->map(fn ($label, $group) => ['label' => $label, 'url' => route('admin.settings.edit', $group), 'active' => request()->routeIs('admin.settings.*') && request()->route('group') === $group]);

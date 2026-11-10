@@ -3,6 +3,8 @@
 use App\Http\Controllers\AccountController;
 use App\Http\Controllers\Auth\CustomerAuthController;
 use App\Http\Controllers\HomeController;
+use App\Http\Controllers\Store\CatalogController;
+use App\Http\Controllers\Store\ProductController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -10,6 +12,15 @@ use Illuminate\Support\Facades\Route;
 */
 Route::middleware('store.open')->group(function () {
     Route::get('/', HomeController::class)->name('home');
+
+    // Katalog
+    Route::get('/kategori/{category:slug}', [CatalogController::class, 'category'])->name('category.show');
+    Route::get('/yayinevleri', [CatalogController::class, 'publishers'])->name('publishers.index');
+    Route::get('/yayinevi/{publisher:slug}', [CatalogController::class, 'publisher'])->name('publisher.show');
+    Route::get('/urun/{product:slug}', [ProductController::class, 'show'])->name('product.show');
+    Route::get('/urunler', [CatalogController::class, 'search'])->name('products.index');
+    Route::get('/ara', [CatalogController::class, 'search'])->name('search');
+    Route::get('/ara/oneri', [CatalogController::class, 'suggest'])->middleware('throttle:search')->name('search.suggest');
 
     Route::middleware('guest:web')->group(function () {
         Route::get('/giris', [CustomerAuthController::class, 'showLogin'])->name('login');
