@@ -7,6 +7,7 @@ use App\Domain\Import\FolderName;
 use App\Domain\Import\ImportItemProcessor;
 use App\Domain\Import\InfoSheetParser;
 use App\Domain\Import\Isbn;
+use App\Domain\Import\TitleCategory;
 use PHPUnit\Framework\TestCase;
 use Tests\Support\FakeOcrEngine;
 
@@ -104,6 +105,25 @@ class ImportParsingTest extends TestCase
         // Üst klasör olmadan da "… YAYINLARI" öneki yayınevi sayılır.
         $b = FolderName::book('4K YAYINLARI TYT TARİH SORU BANKASI');
         $this->assertSame(['publisher' => '4K YAYINLARI', 'title' => 'TYT TARİH SORU BANKASI', 'author' => null, 'year' => null], $b);
+    }
+
+    public function test_category_guessed_from_title(): void
+    {
+        $cases = [
+            'AYT Biyoloji Soru Bankası 2023' => ['Soru Bankası', 'AYT', 'Biyoloji'],
+            'TYT Matematik Konu Özetli Soru Bankası 2023' => ['Soru Bankası', 'TYT', 'Matematik'],
+            'TYT Kimya Video Destekli Defter 2024' => ['Defter', 'TYT', 'Kimya'],
+            'TYT Biyoloji Video Destekli Defteri 2024' => ['Defter', 'TYT', 'Biyoloji'],
+            'AYT Eşit Ağırlık Sözel Tam Tekrar 6 Fasikül 2 Deneme 2023' => ['Tam Tekrar', 'AYT', 'Eşit Ağırlık Sözel'],
+            'TYT Din Kültürü Soru Bankası 2022' => ['Soru Bankası', 'TYT', 'Din Kültürü'],
+            'Dil Bilgisi Soru Bankası 2023' => ['Soru Bankası', 'Dil Bilgisi'],
+            'KPSS TARİH SORU BANKASI' => ['Soru Bankası', 'KPSS', 'Tarih'],
+            'TYT Fizik Video Destekli Defter' => ['Defter', 'TYT', 'Fizik'],
+            "Almanya'nın Kısa Tarihi" => [], // roman/inceleme: tahmin yok
+        ];
+        foreach ($cases as $title => $expected) {
+            $this->assertSame($expected, TitleCategory::guess($title), $title);
+        }
     }
 
     public function test_category_split(): void

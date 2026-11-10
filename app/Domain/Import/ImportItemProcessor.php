@@ -153,7 +153,12 @@ class ImportItemProcessor
         }
 
         $categoryPath = self::splitCategory($f['category'] ?? null);
-        if ($infoPath && ! $categoryPath) {
+        if (! $categoryPath && $categoryPath = TitleCategory::guess($title)) {
+            // "Türü" yok: kitap adından tahmin (Soru Bankası › TYT › Biyoloji); kontrol ekranında düzeltilebilir.
+            if ($infoPath) {
+                $issues[] = 'Türü okunamadı; kategori kitap adından tahmin edildi: '.implode(' › ', $categoryPath).'.';
+            }
+        } elseif ($infoPath && ! $categoryPath) {
             $issues[] = 'Türü okunamadı; ürün kategorisiz kaldı.';
         }
 
