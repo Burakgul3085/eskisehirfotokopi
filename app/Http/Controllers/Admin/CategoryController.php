@@ -91,6 +91,40 @@ class CategoryController extends Controller
         return back()->with('status', '“'.$category->name.'” silindi.');
     }
 
+    /**
+     * Seçilen kategorileri siler. En alttakilerden başlanır: bir dal tüm alt kategorileriyle seçildiyse birlikte silinir.
+     * Ürünü olan ya da seçilmemiş alt kategorisi kalan kategori silinmez (tekli silmeyle aynı kural) ve bildirilir.
+     */
+    public function bulkDestroy(Request $request): RedirectResponse
+    {
+        $ids = $request->validate(['ids' => ['required', 'array', 'min:1', 'max:5000'], 'ids.*' => ['integer']],
+            ['ids.required' => 'Önce kategori seçin.'])['ids'];
+        $deleted = 0;
+        $kept = [];
+        foreach (Category::whereIn('id', $ids)->orderByDesc('depth')->get() as $category) {
+            try {
+                $this->tree->delete($category);
+            } catch (DomainException) {
+                $kept[] = $category->name;
+
+                continue;
+            }
+            if ($category->image_path) {
+                Storage::disk('public')->delete($category->image_path);
+            }
+            $deleted++;
+        }
+        Activity::log('category.bulk_deleted', null, ['count' => $deleted, 'kept' => count($kept)]);
+
+        $msg = "{$deleted} kategori silindi.";
+        if ($kept) {
+            $msg .= ' '.count($kept).' kategori ürünü ya da seçilmemiş alt kategorisi olduğu için silinmedi: '
+                .implode(', ', array_slice($kept, 0, 5)).(count($kept) > 5 ? '…' : '').'.';
+        }
+
+        return back()->with('status', $msg);
+    }
+
     /** Aynı düzeydeki kategorilerin sırası (yukarı / aşağı). */
     public function move(Request $request, Category $category): RedirectResponse
     {

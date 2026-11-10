@@ -77,6 +77,36 @@ class PublisherController extends Controller
         return redirect()->route('admin.publishers.index')->with('status', 'Yayınevi silindi.');
     }
 
+    /** Seçilen yayınevlerini siler; ürünü olan yayınevi silinmez (birleştirme önerilir) ve bildirilir. */
+    public function bulkDestroy(Request $request): RedirectResponse
+    {
+        $ids = $request->validate(['ids' => ['required', 'array', 'min:1', 'max:5000'], 'ids.*' => ['integer']],
+            ['ids.required' => 'Önce yayınevi seçin.'])['ids'];
+        $deleted = 0;
+        $kept = [];
+        foreach (Publisher::whereIn('id', $ids)->withCount('products')->get() as $publisher) {
+            if ($publisher->products_count > 0) {
+                $kept[] = $publisher->name;
+
+                continue;
+            }
+            if ($publisher->logo_path) {
+                Storage::disk('public')->delete($publisher->logo_path);
+            }
+            $publisher->delete();
+            $deleted++;
+        }
+        Activity::log('publisher.bulk_deleted', null, ['count' => $deleted, 'kept' => count($kept)]);
+
+        $msg = "{$deleted} yayınevi silindi.";
+        if ($kept) {
+            $msg .= ' '.count($kept).' yayınevinin ürünü olduğu için silinmedi: '.implode(', ', array_slice($kept, 0, 5)).(count($kept) > 5 ? '…' : '')
+                .'. Önce ürünlerini silin ya da başka bir yayınevine birleştirin.';
+        }
+
+        return redirect()->route('admin.publishers.index', $request->only('q', 'filtre'))->with('status', $msg);
+    }
+
     /** Bu yayınevini hedefe birleştirir: ürünler taşınır, adı hedefin takma adı olur, kayıt silinir. */
     public function merge(Request $request, Publisher $publisher): RedirectResponse
     {

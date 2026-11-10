@@ -137,6 +137,41 @@ class CatalogAdminTest extends TestCase
         $this->post(route('admin.products.bulk'), ['action' => 'delete'])->assertSessionHasErrors('ids'); // seçim yoksa uyarı
     }
 
+    public function test_bulk_delete_publishers_skips_ones_with_products(): void
+    {
+        $empty = collect(['a', 'b'])->map(fn ($k) => Publisher::create(['name' => "Boş {$k}", 'slug' => "bos-{$k}", 'match_key' => "bos{$k}"]));
+        $used = Publisher::create(['name' => 'Dolu', 'slug' => 'dolu', 'match_key' => 'dolu']);
+        Product::create(['title' => 'X', 'slug' => 'x', 'publisher_id' => $used->id]);
+        $this->get(route('admin.publishers.index'))->assertSee('form="publisher-bulk"', false);
+
+        $this->post(route('admin.publishers.bulk-destroy'), ['ids' => [...$empty->pluck('id'), $used->id]])
+            ->assertSessionHas('status', fn ($m) => str_starts_with($m, '2 yayınevi silindi.') && str_contains($m, 'Dolu'));
+        $this->assertSame([$used->id], Publisher::pluck('id')->all());
+        $this->post(route('admin.publishers.bulk-destroy'))->assertSessionHasErrors('ids');
+    }
+
+    public function test_bulk_delete_categories_deepest_first(): void
+    {
+        $tree = app(CategoryTree::class);
+        $leaf = $tree->ensurePath(['Ana', 'Alt', 'En Alt']);
+        $alt = $leaf->parent;
+        $ana = $alt->parent;
+        $dolu = $tree->ensurePath(['Dolu']);
+        Product::create(['title' => 'Y', 'slug' => 'y', 'category_id' => $dolu->id]);
+        $this->get(route('admin.categories.index'))->assertSee('form="category-bulk"', false);
+
+        // Dal tümüyle seçildi → üçü de silinir; ürünlü kategori kalır.
+        $this->post(route('admin.categories.bulk-destroy'), ['ids' => [$ana->id, $alt->id, $leaf->id, $dolu->id]])
+            ->assertSessionHas('status', fn ($m) => str_starts_with($m, '3 kategori silindi.') && str_contains($m, 'Dolu'));
+        $this->assertSame([$dolu->id], Category::pluck('id')->all());
+
+        // Alt kategorisi seçilmeyen üst kategori silinmez.
+        $child = $tree->ensurePath(['Üst', 'Çocuk']);
+        $this->post(route('admin.categories.bulk-destroy'), ['ids' => [$child->parent_id]])
+            ->assertSessionHas('status', fn ($m) => str_starts_with($m, '0 kategori silindi.'));
+        $this->assertSame(3, Category::count());
+    }
+
     public function test_price_sheet_roundtrip(): void
     {
         $a = Product::create(['title' => 'Kitap A', 'slug' => 'a', 'price_bw' => '50']);

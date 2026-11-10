@@ -62,8 +62,10 @@ Route::prefix('yonetim')->name('admin.')->group(function () {
         Route::post('/urunler/fiyat-yukle', [ProductController::class, 'priceImport'])->name('products.price-import');
         Route::post('/urunler/toplu', [ProductController::class, 'bulk'])->name('products.bulk');
         Route::resource('urunler', ProductController::class)->parameters(['urunler' => 'product'])->except('show')->names('products');
+        Route::post('/kategoriler/toplu-sil', [CategoryController::class, 'bulkDestroy'])->name('categories.bulk-destroy');
         Route::post('/kategoriler/{category}/sira', [CategoryController::class, 'move'])->name('categories.move');
         Route::resource('kategoriler', CategoryController::class)->parameters(['kategoriler' => 'category'])->except('show')->names('categories');
+        Route::post('/yayinevleri/toplu-sil', [PublisherController::class, 'bulkDestroy'])->name('publishers.bulk-destroy');
         Route::post('/yayinevleri/{publisher}/birlestir', [PublisherController::class, 'merge'])->name('publishers.merge');
         Route::resource('yayinevleri', PublisherController::class)->parameters(['yayinevleri' => 'publisher'])->except('show')->names('publishers');
         Route::get('/yazarlar', [AuthorController::class, 'index'])->name('authors.index');
