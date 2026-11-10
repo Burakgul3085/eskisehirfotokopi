@@ -10,6 +10,7 @@ use App\Http\Controllers\Store\CartController;
 use App\Http\Controllers\Store\CatalogController;
 use App\Http\Controllers\Store\CheckoutController;
 use App\Http\Controllers\Store\OrderTrackingController;
+use App\Http\Controllers\Store\PrintController;
 use App\Http\Controllers\Store\ProductController;
 use Illuminate\Support\Facades\Route;
 
@@ -27,6 +28,18 @@ Route::middleware('store.open')->group(function () {
     Route::get('/urunler', [CatalogController::class, 'search'])->name('products.index');
     Route::get('/ara', [CatalogController::class, 'search'])->name('search');
     Route::get('/ara/oneri', [CatalogController::class, 'suggest'])->middleware('throttle:search')->name('search.suggest');
+
+    // Fotokopi: belge yükle, fiyatı gör, sepete ekle (K1)
+    Route::get('/fotokopi', [PrintController::class, 'show'])->name('print.index');
+    Route::post('/fotokopi/belge', [PrintController::class, 'start'])->middleware('throttle:print-start')->name('print.start');
+    Route::prefix('/fotokopi/belge/{token}')->middleware('throttle:print-api')->controller(PrintController::class)->group(function () {
+        Route::get('/', 'status')->name('print.status');
+        Route::delete('/', 'destroy')->name('print.destroy');
+        Route::post('/parca', 'chunk')->name('print.chunk');
+        Route::get('/onizleme', 'preview')->name('print.preview');
+        Route::post('/fiyat', 'quote')->name('print.quote');
+        Route::post('/sepet', 'add')->name('print.add');
+    });
 
     // Sepet ve sipariş (misafir de sipariş verebilir — K8)
     Route::get('/sepet', [CartController::class, 'index'])->name('cart.index');

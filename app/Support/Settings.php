@@ -66,6 +66,7 @@ printer|Belge baskısı|Belgeni yükle, biz basalım', // simge|Başlık|Açıkl
         'payment_card' => '1',
         'orders_open' => '1',                 // kapalıyken sepet çalışır, sipariş alınmaz
         'orders_closed_message' => 'Şu anda sipariş alamıyoruz. Lütfen daha sonra tekrar deneyin.',
+        'print' => null,                      // fotokopi ayarları (JSON, App\Domain\Print\PrintSettings)
 
         // Alt bilgi
         'footer_about' => 'Eskişehir içinde kitap, soru bankası ve belge baskısında hızlı ve güvenilir hizmet. Siparişiniz kapınıza gelir, ödemenizi kapıda nakit veya kartla yaparsınız.',

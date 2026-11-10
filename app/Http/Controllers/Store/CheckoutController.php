@@ -19,19 +19,19 @@ use Illuminate\View\View;
 /** Tek sayfalık sipariş: iletişim → adres (yalnız hizmet verilen ilçe/mahalle) → teslimat saati → kapıda ödeme yöntemi. */
 class CheckoutController extends Controller
 {
-    public function __construct(private Cart $cart, private DeliveryRules $rules) {}
+    public function __construct(private DeliveryRules $rules) {}
 
-    public function show(Request $request): View|RedirectResponse
+    public function show(Request $request, Cart $cart): View|RedirectResponse
     {
-        if ($this->cart->isEmpty()) {
+        if ($cart->isEmpty()) {
             return redirect()->route('cart.index');
         }
         $districts = DeliveryDistrict::active()->with(['neighborhoods' => fn ($q) => $q->where('is_active', true)])->get();
         $user = $request->user('web');
 
         return view('store.checkout', [
-            'lines' => $this->cart->lines(),
-            'subtotal' => $this->cart->subtotal(),
+            'lines' => $cart->lines(),
+            'subtotal' => $cart->subtotal(),
             'districts' => $districts,
             'districtData' => $districts->mapWithKeys(fn ($d) => [$d->id => [
                 'fee' => (float) $d->fee,

@@ -3,6 +3,7 @@
 use App\Domain\Import\BookFiles;
 use App\Domain\Import\ImportBatchCreator;
 use App\Domain\Import\ImportItemProcessor;
+use App\Domain\Print\PrintFiles;
 use App\Jobs\ProcessImportItem;
 use App\Models\Admin;
 use App\Models\ImportBatch;
@@ -115,3 +116,10 @@ Artisan::command('katalog:yukleme-temizle', function () {
 })->purpose('Eski toplu yükleme görsellerini siler');
 
 Schedule::command('katalog:yukleme-temizle')->dailyAt('04:10');
+
+// Süresi dolan fotokopi belgelerini siler (siparişe girmeyenler kısa, siparişe girenler daha uzun saklanır).
+Artisan::command('fotokopi:temizle', function (PrintFiles $files) {
+    $this->info($files->prune().' belge silindi.');
+})->purpose('Süresi dolan fotokopi belgelerini siler');
+
+Schedule::command('fotokopi:temizle')->dailyAt('04:20');

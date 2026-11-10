@@ -15,14 +15,16 @@ use Illuminate\View\View;
 
 class CartController extends Controller
 {
-    public function __construct(private Cart $cart, private DeliveryRules $rules) {}
+    public function __construct(private DeliveryRules $rules) {}
 
-    public function index(): View
+    // Sepet kurucuda alınmaz: denetleyici nesnesi rota üzerinde saklanır, sepetin satır önbelleği istekler arasında taşınmamalı.
+
+    public function index(Cart $cart): View
     {
-        $subtotal = $this->cart->subtotal();
+        $subtotal = $cart->subtotal();
 
         return view('store.cart', [
-            'lines' => $this->cart->lines(),
+            'lines' => $cart->lines(),
             'subtotal' => $subtotal,
             'remaining' => $this->rules->remainingForFree($subtotal),
             'threshold' => $this->rules->freeThreshold(),
@@ -30,7 +32,7 @@ class CartController extends Controller
         ]);
     }
 
-    public function add(Request $request): RedirectResponse|JsonResponse
+    public function add(Request $request, Cart $cart): RedirectResponse|JsonResponse
     {
         $data = $request->validate([
             'product_id' => ['required', 'integer'],
@@ -39,36 +41,36 @@ class CartController extends Controller
         ]);
         $product = Product::visible()->find($data['product_id']);
         if (! $product || $product->price($data['print_type']) === null) {
-            return $this->reply($request, 'Bu ürün şu anda satışta değil.', false);
+            return $this->reply($request, $cart, 'Bu ürün şu anda satışta değil.', false);
         }
         try {
-            $this->cart->addProduct($product, $data['print_type'], (int) ($data['quantity'] ?? 1));
+            $cart->addProduct($product, $data['print_type'], (int) ($data['quantity'] ?? 1));
         } catch (\DomainException $e) {
-            return $this->reply($request, $e->getMessage(), false);
+            return $this->reply($request, $cart, $e->getMessage(), false);
         }
 
-        return $this->reply($request, '“'.$product->title.'” sepete eklendi.');
+        return $this->reply($request, $cart, '“'.$product->title.'” sepete eklendi.');
     }
 
-    public function update(Request $request): RedirectResponse
+    public function update(Request $request, Cart $cart): RedirectResponse
     {
         $data = $request->validate(['key' => ['required', 'string', 'max:80'], 'quantity' => ['required', 'integer', 'min:0', 'max:'.Cart::MAX_QTY]]);
-        $this->cart->setQuantity($data['key'], (int) $data['quantity']);
+        $cart->setQuantity($data['key'], (int) $data['quantity']);
 
         return redirect()->route('cart.index');
     }
 
-    public function remove(Request $request): RedirectResponse
+    public function remove(Request $request, Cart $cart): RedirectResponse
     {
-        $this->cart->remove((string) $request->input('key'));
+        $cart->remove((string) $request->input('key'));
 
         return redirect()->route('cart.index')->with('status', 'Ürün sepetten çıkarıldı.');
     }
 
-    private function reply(Request $request, string $message, bool $ok = true): RedirectResponse|JsonResponse
+    private function reply(Request $request, Cart $cart, string $message, bool $ok = true): RedirectResponse|JsonResponse
     {
         if ($request->expectsJson()) {
-            return response()->json(['ok' => $ok, 'message' => $message, 'count' => $this->cart->count(), 'subtotal' => Money::format($this->cart->subtotal())], $ok ? 200 : 422);
+            return response()->json(['ok' => $ok, 'message' => $message, 'count' => $cart->count(), 'subtotal' => Money::format($cart->subtotal())], $ok ? 200 : 422);
         }
 
         return $ok

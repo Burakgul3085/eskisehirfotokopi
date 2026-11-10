@@ -51,7 +51,7 @@
                             </span>
                             <span class="min-w-0 flex-1">
                                 <span class="block font-semibold">{{ $item->title }}</span>
-                                <span class="text-xs text-muted">{{ collect([$item->meta['publisher'] ?? null, $item->printTypeLabel(), $item->quantity.' × '.Money::format($item->unit_price)])->filter()->implode(' · ') }}</span>
+                                <span class="text-xs text-muted">{{ collect([$item->meta['publisher'] ?? null, $item->meta['summary'] ?? $item->printTypeLabel(), $item->quantity.' × '.Money::format($item->unit_price)])->filter()->implode(' · ') }}</span>
                             </span>
                             <span class="font-semibold whitespace-nowrap">{{ Money::format($item->line_total) }}</span>
                         </li>

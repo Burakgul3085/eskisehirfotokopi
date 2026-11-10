@@ -42,7 +42,8 @@
                 <thead><tr><th>Ürün</th><th>Baskı</th><th class="r">Adet</th><th class="r">Tutar</th></tr></thead>
                 <tbody>
                     @foreach ($order->items as $item)
-                        <tr><td>{{ $item->title }}@if ($item->meta['publisher'] ?? null) <span class="muted">({{ $item->meta['publisher'] }})</span>@endif</td>
+                        <tr><td>{{ $item->title }}@if ($item->meta['publisher'] ?? null) <span class="muted">({{ $item->meta['publisher'] }})</span>@endif
+                            @if ($item->kind === 'print')<br><span class="muted">Fotokopi: {{ $item->meta['summary'] ?? '' }}</span>@endif</td>
                             <td>{{ $item->printTypeLabel() }}</td><td class="r">{{ $item->quantity }}</td><td class="r">{{ Money::format($item->line_total) }}</td></tr>
                     @endforeach
                     <tr><td colspan="3" class="r muted">Teslimat</td><td class="r">{{ Money::format($order->delivery_fee) }}</td></tr>

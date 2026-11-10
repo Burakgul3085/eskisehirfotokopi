@@ -10,6 +10,7 @@ use App\Http\Controllers\Admin\DeliveryDistrictController;
 use App\Http\Controllers\Admin\HomeBlockController;
 use App\Http\Controllers\Admin\ImportController;
 use App\Http\Controllers\Admin\OrderController;
+use App\Http\Controllers\Admin\PrintController;
 use App\Http\Controllers\Admin\ProductController;
 use App\Http\Controllers\Admin\PublisherController;
 use App\Http\Controllers\Admin\SettingsController;
@@ -33,6 +34,9 @@ Route::prefix('yonetim')->name('admin.')->group(function () {
         Route::get('/siparisler/{order}/fis', [OrderController::class, 'slip'])->name('orders.slip');
         Route::put('/siparisler/{order}/durum', [OrderController::class, 'updateStatus'])->name('orders.status');
         Route::put('/siparisler/{order}/not', [OrderController::class, 'updateNote'])->name('orders.note');
+        Route::get('/baski-dosyasi/{job}', [PrintController::class, 'download'])->name('print.download');
+        Route::get('/fotokopi', [PrintController::class, 'edit'])->name('print.edit');
+        Route::put('/fotokopi', [PrintController::class, 'update'])->name('print.update');
         Route::post('/teslimat-bolgeleri/{district}/ac-kapat', [DeliveryDistrictController::class, 'toggle'])->name('districts.toggle');
         Route::resource('teslimat-bolgeleri', DeliveryDistrictController::class)->parameters(['teslimat-bolgeleri' => 'district'])->except('show')->names('districts');
 

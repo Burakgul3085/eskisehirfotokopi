@@ -10,6 +10,7 @@
             ['Siparişler', 'package', 'admin.orders.index', 'admin.orders.index|admin.orders.show'],
             ['Teslimat listesi', 'truck', 'admin.orders.deliveries', 'admin.orders.deliveries'],
             ['Teslimat bölgeleri', 'pin', 'admin.districts.index', 'admin.districts.*'],
+            ['Fotokopi', 'printer', 'admin.print.edit', 'admin.print.*'],
         ],
         'Katalog' => [
             ['Ürünler', 'book', 'admin.products.index', 'admin.products.*'],

@@ -31,7 +31,9 @@
                             <tr>
                                 <td>@if ($item->product)<a href="{{ route('admin.products.edit', $item->product) }}" class="font-semibold hover:text-primary">{{ $item->title }}</a>@else<span class="font-semibold">{{ $item->title }}</span>@endif
                                     <span class="block text-xs text-muted">{{ collect([$item->meta['publisher'] ?? null, $item->meta['isbn'] ?? null, $item->meta['code'] ?? null])->filter()->implode(' · ') }}</span>
-                                    @if ($item->kind === 'print' && ($item->meta['summary'] ?? null))<span class="block text-xs text-muted">{{ $item->meta['summary'] }}</span>@endif</td>
+                                    @if ($item->kind === 'print')<span class="block text-xs text-muted">{{ $item->meta['summary'] ?? '' }}</span>
+                                        @if ($item->print_job_id)<a href="{{ route('admin.print.download', $item->print_job_id) }}" class="mt-1 inline-flex items-center gap-1 text-xs font-semibold text-primary hover:underline"><x-icon name="upload" class="size-3.5 rotate-180" />Baskı dosyasını indir</a>@endif
+                                    @endif</td>
                                 <td>{{ $item->printTypeLabel() }}</td>
                                 <td class="text-right">{{ Money::format($item->unit_price) }}</td>
                                 <td class="text-right">{{ $item->quantity }}</td>

@@ -47,7 +47,7 @@
             @php($cartCount = \Illuminate\Support\Facades\Route::has('cart.index') ? app(\App\Domain\Cart\Cart::class)->count() : 0)
             <a href="{{ \Illuminate\Support\Facades\Route::has('cart.index') ? route('cart.index') : '#' }}" class="relative flex items-center gap-2 rounded-xl bg-primary-soft px-3 py-2 text-sm font-semibold text-primary-dark hover:bg-primary-line">
                 <x-icon name="cart" class="size-5" /><span class="hidden lg:inline">Sepetim</span>
-                @if ($cartCount)<span class="absolute -top-1.5 -right-1.5 flex min-w-5 items-center justify-center rounded-full bg-accent px-1 text-[11px] font-bold text-ink">{{ $cartCount }}</span>@endif
+                <span data-cart-count @if (! $cartCount) hidden @endif class="absolute -top-1.5 -right-1.5 flex min-w-5 items-center justify-center rounded-full bg-accent px-1 text-[11px] font-bold text-ink">{{ $cartCount }}</span>
             </a>
         </nav>
     </div>

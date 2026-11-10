@@ -30,4 +30,6 @@ return [
     'district.created' => 'Teslimat bölgesi ekledi',
     'district.updated' => 'Teslimat bölgesini güncelledi',
     'district.deleted' => 'Teslimat bölgesi sildi',
+    'print.settings' => 'Fotokopi ayarlarını güncelledi',
+    'print.download' => 'Baskı dosyasını indirdi',
 ];
