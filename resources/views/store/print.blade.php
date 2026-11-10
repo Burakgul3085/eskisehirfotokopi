@@ -2,7 +2,7 @@
     use App\Domain\Print\PrintOptions;
     use App\Support\Money;
     $tiers = collect($print['tiers'])->sortBy('from')->values();
-    $tierLabel = fn ($i) => $tiers[$i]['from'].(isset($tiers[$i + 1]) ? '–'.($tiers[$i + 1]['from'] - 1) : '+').' sayfa';
+    $tierLabel = fn ($i) => $tiers[$i]['from'].(isset($tiers[$i + 1]) ? '–'.($tiers[$i + 1]['from'] - 1) : '+').' yaprak';
 @endphp
 <x-layouts.store title="Fotokopi ve belge baskısı" :description="$print['intro']">
     <div class="container-page py-6 sm:py-10" x-data="printOrder">
@@ -149,7 +149,7 @@
                 <section class="card p-5">
                     <h2 class="font-bold">Fiyatlar (yaprak başı)</h2>
                     <table class="mt-3 w-full text-sm">
-                        <thead><tr class="text-left text-xs text-muted"><th class="pb-2 font-medium">Sayfa</th>
+                        <thead><tr class="text-left text-xs text-muted"><th class="pb-2 font-medium">Yaprak</th>
                             @foreach ($colors as $c)<th class="pb-2 text-right font-medium">{{ PrintOptions::COLORS[$c] }}</th>@endforeach</tr></thead>
                         <tbody>
                             @foreach ($tiers as $i => $t)
@@ -159,7 +159,7 @@
                         </tbody>
                     </table>
                     <ul class="mt-3 space-y-1 text-xs text-muted">
-                        <li>Kademe basılacak sayfa sayısına göre seçilir; önlü arkalı baskıda yaprak sayısı yarıya iner.</li>
+                        <li>Kademe yaprak sayısına göre seçilir. Önlü arkalı baskıda yaprak sayısı yarıya iner (100 sayfa = 50 yaprak).</li>
                         <li>Spiral cilt: kopya başı {{ Money::format($print['spiral_price']) }}.</li>
                         @if ($print['a3_enabled'])<li>A3 baskı: yaprak fiyatı × {{ str_replace('.', ',', rtrim(rtrim($print['a3_multiplier'], '0'), '.')) }}.</li>@endif
                     </ul>

@@ -7,10 +7,11 @@ use DomainException;
 
 /**
  * Baskı fiyatı (her zaman sunucuda) yaprak başınadır:
- *  - Kademe, basılacak sayfa sayısına göre seçilir: sayfa aralığı yoksa belgenin tüm sayfaları, varsa aralıktaki sayfalar.
- *    Önlü arkalı, bir yüze çok sayfa ve kopya sayısı kademeyi değiştirmez (siyah-beyaz ve renkli ayrı fiyat).
- *  - Tutar = kademenin yaprak fiyatı × kopya başı yaprak × kopya. Yaprak: sayfa → bir yüze sığan sayfaya göre yüz →
- *    önlü arkalıysa yüz ÷ 2. Kademe sınırında düzeltme yapılmaz (199 sayfa 100–199, 200 sayfa 200–299 kademesindedir).
+ *  - Yaprak: basılacak sayfa (aralık yoksa tümü) → bir yüze sığan sayfaya göre yüz → önlü arkalıysa yüz ÷ 2 (yukarı).
+ *  - Kademe kopya başı YAPRAK sayısına göre seçilir; kopya sayısı kademeyi değiştirmez (siyah-beyaz ve renkli ayrı fiyat).
+ *    Örnek (1–99: 2 ₺, 100–199: 1,50 ₺): 100 sayfa tek yüz = 100 yaprak × 1,50; 100 sayfa önlü arkalı = 50 yaprak × 2;
+ *    200 sayfa önlü arkalı = 100 yaprak × 1,50.
+ *  - Tutar = kademenin yaprak fiyatı × kopya başı yaprak × kopya.
  *  - Basılacak sayfa özel teklif eşiğine ulaşırsa fiyat verilmez (SpecialQuoteRequired): sepete eklenemez, sipariş verilemez.
  *  - A3 seçilirse yaprak fiyatı çarpanla çarpılır.
  *  - Ciltleme yalnızca spiraldir: tek sabit fiyat, kopya başına (yaprak sınırı yok). Zımba sunulmaz.
@@ -39,10 +40,10 @@ class PrintPricing
         $sheets = $o->duplex ? (int) ceil($sides / 2) : $sides;
         $allSheets = $sheets * $o->copies;
 
-        $tier = collect($s['tiers'])->sortBy('from')->filter(fn ($t) => $pages >= (int) $t['from'])->last() ?? collect($s['tiers'])->sortBy('from')->first();
+        $tier = collect($s['tiers'])->sortBy('from')->filter(fn ($t) => $sheets >= (int) $t['from'])->last() ?? collect($s['tiers'])->sortBy('from')->first();
         $sheetPrice = $o->size === 'A3' ? bcmul((string) $tier[$o->color], (string) $s['a3_multiplier'], 2) : (string) $tier[$o->color];
         $printTotal = bcmul($sheetPrice, (string) $allSheets, 2);
-        $label = "{$sheets} yaprak".($o->copies > 1 ? " × {$o->copies} kopya" : '').' × '.Money::format($sheetPrice)." ({$pages} sayfa kademesi)";
+        $label = "{$sheets} yaprak".($o->copies > 1 ? " × {$o->copies} kopya" : '').' × '.Money::format($sheetPrice)." ({$sheets} yaprak kademesi)";
         $lines = [[$label, Money::format($printTotal)]];
 
         $bindingUnit = match ($o->binding) {

@@ -35,18 +35,18 @@
         <section class="card overflow-x-auto">
             <div class="p-6 pb-0">
                 <h2 class="font-bold">Yaprak başı fiyat kademeleri (₺)</h2>
-                <p class="mt-1 text-sm text-muted">Kademe, basılacak sayfa sayısına göre seçilir. İlk kademe 1. sayfadan başlamalı. Satırı silmek için başlangıcı boş bırakın.</p>
+                <p class="mt-1 text-sm text-muted">Kademe, kopya başı yaprak sayısına göre seçilir: tek yüzde yaprak = sayfa, önlü arkalıda yaprak = sayfa ÷ 2. Ör. 100 sayfa önlü arkalı = 50 yaprak → ilk kademe. İlk kademe 1. yapraktan başlamalı. Satırı silmek için başlangıcı boş bırakın.</p>
             </div>
             @error('tiers')<p class="px-6 pt-3 text-sm text-danger">{{ $message }}</p>@enderror
             @foreach ($warnings as $warning)
                 <p class="mx-6 mt-3 flex items-start gap-2 rounded-lg bg-warning-soft px-3 py-2 text-sm text-warning"><x-icon name="alert" class="mt-0.5 size-4 shrink-0" />{{ $warning }}</p>
             @endforeach
             <table class="table-panel mt-3">
-                <thead><tr><th>Başlangıç sayfası</th><th>Siyah-beyaz yaprak</th><th>Renkli yaprak</th></tr></thead>
+                <thead><tr><th>Başlangıç yaprağı</th><th>Siyah-beyaz yaprak</th><th>Renkli yaprak</th></tr></thead>
                 <tbody>
                     @foreach ($tiers as $i => $row)
                         <tr>
-                            <td><x-field :name="'tiers['.$i.'][from]'" type="number" min="1" :value="$row['from']" aria-label="Başlangıç sayfası" /></td>
+                            <td><x-field :name="'tiers['.$i.'][from]'" type="number" min="1" :value="$row['from']" aria-label="Başlangıç yaprağı" /></td>
                             <td><x-field :name="'tiers['.$i.'][bw]'" inputmode="decimal" :value="$money($row['bw'] ?? '')" aria-label="Siyah-beyaz yaprak fiyatı" /></td>
                             <td><x-field :name="'tiers['.$i.'][color]'" inputmode="decimal" :value="$money($row['color'] ?? '')" aria-label="Renkli yaprak fiyatı" /></td>
                         </tr>

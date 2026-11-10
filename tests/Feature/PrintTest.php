@@ -94,10 +94,17 @@ class PrintTest extends TestCase
         $pricing = app(PrintPricing::class);
         // 10 sayfa, tek yüz, S-B: 10 yaprak × 2,00
         $this->assertSame('20.00', $pricing->quote(10, new PrintOptions)['total']);
-        // 150 sayfa (101+ kademesi 1,50), önlü arkalı → 75 yaprak, 2 kopya, spiral 40 × 2
+        // Kademe yaprağa göre (1–99: 2,00 · 100–199: 1,50 · 200+: 1,00) — yöneticinin verdiği örnekler:
+        $this->assertSame('150.00', $pricing->quote(100, new PrintOptions)['total']);                // 100 sayfa tek yüz = 100 yaprak × 1,50
+        $this->assertSame('100.00', $pricing->quote(100, new PrintOptions(duplex: true))['total']);  // 100 sayfa önlü arkalı = 50 yaprak × 2,00
+        $this->assertSame('150.00', $pricing->quote(200, new PrintOptions(duplex: true))['total']);  // 200 sayfa önlü arkalı = 100 yaprak × 1,50
+        $this->assertSame('198.00', $pricing->quote(99, new PrintOptions)['total']);                 // 99 yaprak hâlâ ilk kademe
+        $this->assertSame('200.00', $pricing->quote(200, new PrintOptions)['total']);                // 200 yaprak × 1,00
+        $this->assertSame('500.00', $pricing->quote(100, new PrintOptions(color: 'color'))['total']); // renkli 100 yaprak × 5,00
+        // Kopya kademeyi değiştirmez: 150 sayfa önlü arkalı = 75 yaprak (ilk kademe), 2 kopya, spiral 40 × 2
         $q = $pricing->quote(150, new PrintOptions(duplex: true, copies: 2, binding: 'spiral'));
         $this->assertSame(75, $q['sheets']);
-        $this->assertSame('305.00', $q['total']); // 75 × 2 × 1,50 = 225 + 80
+        $this->assertSame('380.00', $q['total']); // 75 × 2 × 2,00 = 300 + 80
         // Bir yüze 4 sayfa, renkli: 10 sayfa → 3 yüz → 3 yaprak × 6,00
         $this->assertSame('18.00', $pricing->quote(10, new PrintOptions(color: 'color', layout: 4))['total']);
         // Sayfa aralığı kademeyi belirler

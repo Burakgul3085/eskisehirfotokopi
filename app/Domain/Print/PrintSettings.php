@@ -11,7 +11,7 @@ use Illuminate\Validation\ValidationException;
  * Fotokopi ayarları (Yönetim › Fotokopi): açık/kapalı, yaprak başı fiyat kademeleri, A3 çarpanı, spiral fiyatı, sınırlar
  * ve saklama süreleri. Settings "print" anahtarında JSON olarak tutulur (B2B'den uyarlandı; KDV ve fatura yok).
  *
- * Kademe basılacak sayfa sayısına göre seçilir (önlü arkalı ve kopya kademeyi değiştirmez); her kademede siyah-beyaz
+ * Kademe kopya başı yaprak sayısına göre seçilir (önlü arkalı yaprağı yarıya indirir; kopya kademeyi değiştirmez); her kademede siyah-beyaz
  * ve renkli yaprak fiyatı vardır. Basılacak sayfa özel teklif eşiğine ulaşırsa fiyat verilmez, müşteriye quote_text
  * ve iletişim bilgileri gösterilir; eşik boşsa sınır yoktur.
  */
@@ -23,8 +23,8 @@ class PrintSettings
         'color_enabled' => true,
         'tiers' => [
             ['from' => 1, 'bw' => '2.00', 'color' => '6.00'],
-            ['from' => 101, 'bw' => '1.50', 'color' => '5.00'],
-            ['from' => 501, 'bw' => '1.00', 'color' => '4.00'],
+            ['from' => 100, 'bw' => '1.50', 'color' => '5.00'],
+            ['from' => 200, 'bw' => '1.00', 'color' => '4.00'],
         ],
         'a3_enabled' => false,
         'a3_multiplier' => '2.00',
@@ -106,7 +106,7 @@ class PrintSettings
         foreach ($tiers->skip(1) as $i => $tier) {
             foreach (PrintOptions::COLORS as $key => $label) {
                 if (bccomp($tier[$key], $tiers[$i - 1][$key], 2) > 0) {
-                    $warnings[] = "{$label}: {$tier['from']}. sayfadan başlayan kademenin yaprak fiyatı (".Money::format($tier[$key]).') bir önceki kademeden ('.Money::format($tiers[$i - 1][$key]).') yüksek.';
+                    $warnings[] = "{$label}: {$tier['from']}. yapraktan başlayan kademenin yaprak fiyatı (".Money::format($tier[$key]).') bir önceki kademeden ('.Money::format($tiers[$i - 1][$key]).') yüksek.';
                 }
             }
         }
@@ -152,16 +152,13 @@ class PrintSettings
         }
         usort($tiers, fn ($a, $b) => $a['from'] <=> $b['from']);
         if (! $tiers || $tiers[0]['from'] !== 1) {
-            $errors['tiers'] = 'İlk fiyat kademesi 1. sayfadan başlamalıdır.';
+            $errors['tiers'] = 'İlk fiyat kademesi 1. yapraktan başlamalıdır.';
         }
         if (count(array_unique(array_column($tiers, 'from'))) !== count($tiers)) {
             $errors['tiers'] = 'Her kademenin başlangıcı farklı olmalıdır.';
         }
 
         $threshold = blank($input['quote_threshold'] ?? null) ? null : $int($input['quote_threshold'], 'quote_threshold', 2, 1000000);
-        if ($threshold !== null && $tiers && $threshold <= max(array_column($tiers, 'from'))) {
-            $errors['quote_threshold'] = 'Özel teklif eşiği son fiyat kademesinin başlangıcından büyük olmalıdır.';
-        }
 
         $bw = filter_var($input['bw_enabled'] ?? false, FILTER_VALIDATE_BOOL);
         $color = filter_var($input['color_enabled'] ?? false, FILTER_VALIDATE_BOOL);
