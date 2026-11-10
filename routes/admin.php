@@ -13,6 +13,7 @@ use App\Http\Controllers\Admin\ImportController;
 use App\Http\Controllers\Admin\MailLogController;
 use App\Http\Controllers\Admin\MessageController;
 use App\Http\Controllers\Admin\OrderController;
+use App\Http\Controllers\Admin\PageController;
 use App\Http\Controllers\Admin\PrintController;
 use App\Http\Controllers\Admin\ProductController;
 use App\Http\Controllers\Admin\PublisherController;
@@ -85,6 +86,7 @@ Route::prefix('yonetim')->name('admin.')->group(function () {
         Route::put('/yazarlar/{author}', [AuthorController::class, 'update'])->name('authors.update');
 
         // Vitrin
+        Route::resource('sayfalar', PageController::class)->parameters(['sayfalar' => 'page'])->except('show')->names('pages');
         Route::post('/ana-sayfa/{homeBlock}/sira', [HomeBlockController::class, 'move'])->name('home-blocks.move');
         Route::post('/ana-sayfa/{homeBlock}/goster-gizle', [HomeBlockController::class, 'toggle'])->name('home-blocks.toggle');
         Route::resource('ana-sayfa', HomeBlockController::class)->parameters(['ana-sayfa' => 'homeBlock'])->except('show')->names('home-blocks');

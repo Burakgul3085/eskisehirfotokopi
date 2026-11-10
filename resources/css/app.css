@@ -67,6 +67,39 @@
 }
 
 @layer components {
+    /* Yönetimden yazılan sayfa içeriği (Markdown) */
+    .prose-page {
+        @apply text-[15px] leading-relaxed text-slate-700;
+    }
+
+    .prose-page h2 {
+        @apply mt-7 mb-3 font-display text-xl font-bold text-ink first:mt-0;
+    }
+
+    .prose-page h3 {
+        @apply mt-5 mb-2 font-bold text-ink;
+    }
+
+    .prose-page p {
+        @apply my-3;
+    }
+
+    .prose-page ul {
+        @apply my-3 list-disc space-y-1 pl-5;
+    }
+
+    .prose-page ol {
+        @apply my-3 list-decimal space-y-1 pl-5;
+    }
+
+    .prose-page a {
+        @apply font-semibold text-primary hover:underline;
+    }
+
+    .prose-page strong {
+        @apply text-ink;
+    }
+
     /* Form alanları */
     .field-label {
         @apply mb-1.5 block text-sm font-medium text-ink;

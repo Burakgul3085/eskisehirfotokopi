@@ -12,13 +12,18 @@ use App\Http\Controllers\Store\CatalogController;
 use App\Http\Controllers\Store\CheckoutController;
 use App\Http\Controllers\Store\ContactController;
 use App\Http\Controllers\Store\OrderTrackingController;
+use App\Http\Controllers\Store\PageController;
 use App\Http\Controllers\Store\PrintController;
 use App\Http\Controllers\Store\ProductController;
+use App\Http\Controllers\Store\SitemapController;
 use Illuminate\Support\Facades\Route;
 
 /*
 | Vitrin (müşteri tarafı). Yönetim rotaları routes/admin.php'dedir.
 */
+Route::get('/sitemap.xml', [SitemapController::class, 'sitemap'])->name('sitemap');
+Route::get('/robots.txt', [SitemapController::class, 'robots'])->name('robots');
+
 Route::middleware('store.open')->group(function () {
     Route::get('/', HomeController::class)->name('home');
 
@@ -54,6 +59,8 @@ Route::middleware('store.open')->group(function () {
     Route::get('/siparis-takip', [OrderTrackingController::class, 'form'])->name('orders.track');
     Route::post('/siparis-takip', [OrderTrackingController::class, 'lookup'])->middleware('throttle:order-track');
     Route::get('/siparis/{order}/{token}', [OrderTrackingController::class, 'show'])->name('orders.track.show');
+
+    Route::get('/sayfa/{page:slug}', PageController::class)->name('page.show');
 
     // İletişim ve mesajlar (konuya e-postadaki gizli bağlantıyla dönülür)
     Route::get('/iletisim', [ContactController::class, 'show'])->name('contact');

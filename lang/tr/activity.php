@@ -36,5 +36,8 @@ return [
     'message.replied' => 'Müşteri mesajını yanıtladı',
     'message.status' => 'Mesaj konusunun durumunu değiştirdi',
     'message.deleted' => 'Mesaj konusunu sildi',
+    'page.created' => 'Sayfa ekledi',
+    'page.updated' => 'Sayfayı güncelledi',
+    'page.deleted' => 'Sayfa sildi',
     'customer.toggled' => 'Müşteri hesabını açtı/kapattı',
 ];

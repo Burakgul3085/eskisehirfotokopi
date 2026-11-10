@@ -1,5 +1,8 @@
 @php
     $social = \App\Support\Settings::socialLinks();
+    $pageColumns = \App\Models\Page::links()['columns'];
+    $columnTitles = ['corporate' => $settings['footer_title_corporate'], 'help' => $settings['footer_title_help']];
+    $gridCols = ['lg:grid-cols-[1.4fr_1fr_1fr]', 'lg:grid-cols-[1.4fr_1fr_1fr_1fr]', 'lg:grid-cols-[1.4fr_1fr_1fr_1fr_1fr]'][count($pageColumns)];
 @endphp
 <footer class="mt-16 bg-ink text-slate-300">
     @if ($trust = \App\Support\Settings::trustItems())
@@ -18,7 +21,7 @@
         </div>
     @endif
 
-    <div class="container-page grid gap-10 py-12 md:grid-cols-[1.4fr_1fr_1fr]">
+    <div class="container-page grid gap-10 py-12 sm:grid-cols-2 {{ $gridCols }}">
         <div>
             <p class="font-display text-xl font-extrabold text-white">{{ $settings['site_name'] }}</p>
             @if ($settings['footer_about'])
@@ -32,6 +35,21 @@
                 </div>
             @endif
         </div>
+
+        @foreach (['corporate', 'help'] as $col)
+            @if (! empty($pageColumns[$col]))
+                <div>
+                    <p class="text-sm font-semibold tracking-wide text-white uppercase">{{ $columnTitles[$col] }}</p>
+                    <ul class="mt-4 space-y-2.5 text-sm">
+                        @foreach ($pageColumns[$col] as $link)<li><a href="{{ $link['url'] }}" class="hover:text-white">{{ $link['title'] }}</a></li>@endforeach
+                        @if ($col === 'help')
+                            <li><a href="{{ route('orders.track') }}" class="hover:text-white">Sipariş takibi</a></li>
+                            <li><a href="{{ route('contact') }}" class="hover:text-white">İletişim</a></li>
+                        @endif
+                    </ul>
+                </div>
+            @endif
+        @endforeach
 
         <div>
             <p class="text-sm font-semibold tracking-wide text-white uppercase">Hesap</p>
@@ -64,4 +82,12 @@
     <div class="border-t border-white/10">
         <div class="container-page py-5 text-xs text-slate-500">{{ \App\Support\Settings::copyright() }}</div>
     </div>
+
+    @if ($settings['cookie_notice'])
+        <div x-data="cookieNotice" x-show="visible" x-cloak class="fixed inset-x-3 bottom-3 z-50 mx-auto flex max-w-xl flex-wrap items-center gap-3 rounded-2xl bg-white p-4 text-sm text-ink shadow-lift sm:inset-x-6">
+            <p class="min-w-0 flex-1">{{ $settings['cookie_notice'] }}
+                @if ($cookiePage = \App\Models\Page::linkFor('cookies'))<a href="{{ $cookiePage['url'] }}" class="font-semibold text-primary hover:underline">{{ $cookiePage['title'] }}</a>@endif</p>
+            <button type="button" x-on:click="accept" class="btn-primary btn-sm">Tamam</button>
+        </div>
+    @endif
 </footer>

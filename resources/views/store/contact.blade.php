@@ -24,8 +24,9 @@
                 <x-field name="body" type="textarea" rows="6" label="Mesajınız" required maxlength="5000" />
                 <label class="flex items-start gap-3 text-sm">
                     <input type="checkbox" name="kvkk" value="1" class="mt-0.5 size-4 rounded border-line text-primary" @checked(old('kvkk'))>
-                    <span>{{ $settings['contact_consent'] }}</span>
+                    <span>{{ $settings['contact_consent'] ?: \App\Support\Settings::DEFAULTS['contact_consent'] }}</span>
                 </label>
+                <x-page-links :keys="['kvkk']" class="-mt-3 pl-7" />
                 @error('kvkk')<p class="field-error">{{ $message }}</p>@enderror
                 <div class="flex justify-end"><button class="btn-primary px-6 py-3"><x-icon name="mail" class="size-4" />Gönder</button></div>
             </form>

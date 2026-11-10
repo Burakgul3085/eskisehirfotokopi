@@ -8,8 +8,9 @@
         <x-password-field name="password_confirmation" label="Parola (tekrar)" autocomplete="new-password" />
         <label class="flex items-start gap-2.5 text-sm">
             <input type="checkbox" name="terms" value="1" @checked(old('terms')) class="mt-0.5 size-4 rounded accent-primary">
-            <span>Üyelik koşullarını ve KVKK aydınlatma metnini okudum, kabul ediyorum.</span>
+            <span>{{ $settings['register_consent'] ?: \App\Support\Settings::DEFAULTS['register_consent'] }}</span>
         </label>
+        <x-page-links :keys="['membership', 'kvkk']" class="-mt-2 pl-7" />
         @error('terms')<p class="field-error">{{ $message }}</p>@enderror
         <button class="btn-primary w-full py-3">Hesabımı oluştur</button>
     </form>

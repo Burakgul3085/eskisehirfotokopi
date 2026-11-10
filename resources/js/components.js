@@ -54,6 +54,28 @@ export function flash() {
     };
 }
 
+/** Çerez bildirimi: bir kez kapatılınca tarayıcıda hatırlanır (yalnız zorunlu çerezler; onay kaydı tutulmaz). */
+export function cookieNotice() {
+    return {
+        visible: false,
+        init() {
+            try {
+                this.visible = localStorage.getItem('cookie-notice') !== '1';
+            } catch {
+                this.visible = true;
+            }
+        },
+        accept() {
+            this.visible = false;
+            try {
+                localStorage.setItem('cookie-notice', '1');
+            } catch {
+                // depolama kapalıysa yalnız bu sayfada gizlenir
+            }
+        },
+    };
+}
+
 /** Renk seçici ile metin alanını eşler (yönetim → görünüm). */
 export function colorField() {
     return {

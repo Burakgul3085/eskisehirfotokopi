@@ -26,6 +26,13 @@
                  help="Sayfa altındaki şerit. Her satır: simge|Başlık|Açıklama. Simgeler: truck, cash, printer, shield, clock, book, phone, check." />
         <x-field name="footer_about" type="textarea" rows="4" label="Alt bilgi metni" :value="$s['footer_about']" />
         <x-field name="copyright" label="Telif satırı" :value="$s['copyright']" help="Boş bırakılırsa “© yıl site adı” yazılır." />
+        <div class="grid gap-5 sm:grid-cols-2">
+            <x-field name="footer_title_corporate" label="Alt bilgi: Kurumsal sütun başlığı" :value="$s['footer_title_corporate']" />
+            <x-field name="footer_title_help" label="Alt bilgi: Yardım sütun başlığı" :value="$s['footer_title_help']" />
+        </div>
+        <x-field name="cookie_notice" label="Çerez bildirimi" :value="$s['cookie_notice']" help="İlk ziyarette altta gösterilir; Çerez Politikası sayfasına bağlanır. Boşsa gösterilmez." />
+        <x-field name="checkout_consent" label="Sipariş onay kutusu metni" :value="$s['checkout_consent']" help="Altında Mesafeli Satış Sözleşmesi, KVKK ve Teslimat sayfalarının bağlantıları görünür." />
+        <x-field name="register_consent" label="Üyelik onay kutusu metni" :value="$s['register_consent']" help="Altında Üyelik Koşulları ve KVKK sayfalarının bağlantıları görünür." />
         <div class="flex justify-end"><button class="btn-primary">Kaydet</button></div>
     </form>
 </x-layouts.admin>

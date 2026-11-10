@@ -156,8 +156,9 @@
                 <p x-show="belowMin" x-cloak class="rounded-xl bg-accent-soft px-3 py-2 text-sm text-accent-ink" x-text="minText"></p>
                 <label class="flex items-start gap-2 text-sm">
                     <input type="checkbox" name="terms" value="1" required class="mt-0.5 accent-primary" @checked(old('terms'))>
-                    <span>Sipariş bilgilerimin teslimat için kullanılmasını ve <span class="font-semibold">satış koşullarını</span> onaylıyorum.</span>
+                    <span>{{ $settings['checkout_consent'] ?: \App\Support\Settings::DEFAULTS['checkout_consent'] }}</span>
                 </label>
+                <x-page-links :keys="['sales', 'kvkk', 'delivery']" class="-mt-2 pl-6" />
                 @error('terms')<p class="field-error">{{ $message }}</p>@enderror
                 <button class="btn-primary w-full py-3 text-base" @disabled(! $ordersOpen || $districts->isEmpty()) x-bind:disabled="blocked">Siparişi onayla</button>
                 <p class="text-center text-xs text-muted">Ödeme teslimatta yapılır; şimdi kart bilgisi istenmez.</p>

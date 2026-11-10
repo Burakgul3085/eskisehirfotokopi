@@ -50,6 +50,11 @@ class SettingsController extends Controller
                 'header_links' => ['nullable', 'string', 'max:1000'],
                 'trust_items' => ['nullable', 'string', 'max:1000'],
                 'copyright' => ['nullable', 'string', 'max:160'],
+                'footer_title_corporate' => ['nullable', 'string', 'max:40'],
+                'footer_title_help' => ['nullable', 'string', 'max:40'],
+                'cookie_notice' => ['nullable', 'string', 'max:300'],
+                'checkout_consent' => ['nullable', 'string', 'max:300'],
+                'register_consent' => ['nullable', 'string', 'max:300'],
             ]),
             'iletisim' => $request->validate([
                 'phone' => ['nullable', 'string', 'max:30'],

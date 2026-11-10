@@ -73,6 +73,13 @@ printer|Belge baskısı|Belgeni yükle, biz basalım', // simge|Başlık|Açıkl
         // Alt bilgi
         'footer_about' => 'Eskişehir içinde kitap, soru bankası ve belge baskısında hızlı ve güvenilir hizmet. Siparişiniz kapınıza gelir, ödemenizi kapıda nakit veya kartla yaparsınız.',
         'copyright' => null,             // boşsa "© {yıl} {site adı}"
+        'footer_title_corporate' => 'Kurumsal', // sayfa sütunları (Yönetim › Sayfalar)
+        'footer_title_help' => 'Yardım',
+        'cookie_notice' => 'Sitemiz yalnız çalışması için zorunlu çerezleri (oturum ve sepet) kullanır.', // boşsa gösterilmez
+
+        // Onay metinleri (altında ilgili sözleşme sayfalarının bağlantıları listelenir)
+        'checkout_consent' => 'Sipariş bilgilerimin teslimat için kullanılmasını ve satış koşullarını onaylıyorum.',
+        'register_consent' => 'Üyelik koşullarını ve KVKK aydınlatma metnini okudum, kabul ediyorum.',
 
         // SEO
         'meta_title' => null,
