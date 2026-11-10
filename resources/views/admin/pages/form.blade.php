@@ -38,6 +38,10 @@
                 <x-field name="meta_description" type="textarea" rows="3" label="Arama motoru açıklaması" :value="$page->meta_description" maxlength="170" />
                 <button class="btn-primary w-full">Kaydet</button>
             </div>
+            @if ($missing = $page->missingPlaceholders())
+                <p class="rounded-xl bg-accent-soft px-4 py-3 text-sm text-accent-ink">Bu sayfada kullanılan {{ implode(', ', $missing) }} bilgisi ayarlarda boş; sitede “—” görünür.
+                    <a href="{{ route('admin.settings.edit', 'iletisim') }}" class="font-semibold underline">İletişim ayarlarını doldurun.</a></p>
+            @endif
             @if ($page->isSystem())
                 <p class="rounded-xl bg-info-soft px-4 py-3 text-sm text-info">Bu sayfa sistem sayfasıdır; formlardan bağlanır ve silinemez.</p>
             @endif

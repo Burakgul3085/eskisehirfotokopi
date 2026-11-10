@@ -103,7 +103,7 @@ printer|Belge baskısı|Belgeni yükle, biz basalım', // simge|Başlık|Açıkl
     /** @return array<string, ?string> */
     public static function all(): array
     {
-        $saved = Cache::rememberForever(self::CACHE_KEY, fn () => Setting::query()->pluck('value', 'key')->all());
+        $saved = Cache::memo()->rememberForever(self::CACHE_KEY, fn () => Setting::query()->pluck('value', 'key')->all());
 
         return array_merge(self::DEFAULTS, array_intersect_key($saved, self::DEFAULTS));
     }
@@ -127,7 +127,7 @@ printer|Belge baskısı|Belgeni yükle, biz basalım', // simge|Başlık|Açıkl
             $value = $value === null ? null : trim((string) $value);
             Setting::query()->updateOrCreate(['key' => $key], ['value' => $value === '' ? null : $value]);
         }
-        Cache::forget(self::CACHE_KEY);
+        Cache::memo()->forget(self::CACHE_KEY);
     }
 
     public static function secret(string $key): ?string

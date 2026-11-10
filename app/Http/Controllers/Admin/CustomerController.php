@@ -10,6 +10,7 @@ use App\Support\Activity;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Illuminate\View\View;
 
 /** Yönetim › Müşteriler: üyeler, sipariş sayısı ve toplamı, ayrıntı (siparişler, adresler, mesajlar), hesabı kapatma. */
@@ -52,11 +53,13 @@ class CustomerController extends Controller
 
     public function toggle(User $customer): RedirectResponse
     {
-        $customer->update(['is_active' => ! $customer->is_active]);
+        $customer->is_active = ! $customer->is_active;
         if (! $customer->is_active) {
-            // Açık oturumlar kapanır.
+            // Açık oturumlar kapanır, "beni hatırla" çerezleri geçersizleşir.
+            $customer->setRememberToken(Str::random(60));
             DB::table('sessions')->where('user_id', $customer->id)->delete();
         }
+        $customer->save();
         Activity::log('customer.toggled', $customer, ['is_active' => $customer->is_active]);
 
         return back()->with('status', $customer->is_active ? 'Hesap yeniden açıldı.' : 'Hesap kapatıldı; müşteri giriş yapamaz.');

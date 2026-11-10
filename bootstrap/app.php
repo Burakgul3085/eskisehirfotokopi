@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Middleware\EnsureAdminActive;
+use App\Http\Middleware\EnsureCustomerActive;
 use App\Http\Middleware\EnsureStoreOpen;
 use App\Http\Middleware\EnsureSuperAdmin;
 use App\Http\Middleware\SecurityHeaders;
@@ -21,6 +22,7 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->append(SecurityHeaders::class);
+        $middleware->web(append: [EnsureCustomerActive::class]);
         $middleware->alias([
             'admin.active' => EnsureAdminActive::class,
             'admin.super' => EnsureSuperAdmin::class,

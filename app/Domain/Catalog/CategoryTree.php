@@ -129,7 +129,7 @@ class CategoryTree
     /** Tüm ağaç (önbellekli): [id => ['id','name','slug','parent_id','depth','path','is_active','show_in_menu','position']]. */
     public function all(): Collection
     {
-        return collect(Cache::rememberForever(self::CACHE_KEY, fn () => Category::query()
+        return collect(Cache::memo()->rememberForever(self::CACHE_KEY, fn () => Category::query()
             ->orderBy('depth')->orderBy('position')->orderBy('name')
             ->get(['id', 'name', 'slug', 'parent_id', 'depth', 'path', 'is_active', 'show_in_menu', 'position', 'icon'])
             ->keyBy('id')->map(fn ($c) => $c->only(['id', 'name', 'slug', 'parent_id', 'depth', 'path', 'is_active', 'show_in_menu', 'position', 'icon']))
@@ -171,6 +171,6 @@ class CategoryTree
 
     public function flush(): void
     {
-        Cache::forget(self::CACHE_KEY);
+        Cache::memo()->forget(self::CACHE_KEY);
     }
 }

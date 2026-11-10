@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Store;
 use App\Domain\Catalog\ProductListing;
 use App\Http\Controllers\Controller;
 use App\Models\Category;
+use App\Models\Product;
 use App\Models\Publisher;
 use App\Support\Money;
 use App\Support\Text;
@@ -44,9 +45,10 @@ class CatalogController extends Controller
 
     public function publishers(): View
     {
-        $publishers = Publisher::active()
-            ->withCount(['products' => fn ($q) => $q->visible()])
-            ->orderBy('name')->get()
+        // Ürün sayıları tek gruplu sorguyla (yayınevi başına alt sorgu 10 bin üründe yavaştı).
+        $counts = Product::visible()->whereNotNull('publisher_id')->selectRaw('publisher_id, count(*) as c')->groupBy('publisher_id')->pluck('c', 'publisher_id');
+        $publishers = Publisher::active()->orderBy('name')->get()
+            ->each(fn ($p) => $p->products_count = (int) ($counts[$p->id] ?? 0))
             ->filter(fn ($p) => $p->products_count > 0 || $p->is_featured);
         $byLetter = $publishers->groupBy(fn ($p) => self::initial($p->name));
         $groups = collect(self::LETTERS)->mapWithKeys(fn ($l) => [$l => $byLetter[$l] ?? collect()]);

@@ -28,8 +28,8 @@ class Page extends Model
 
     protected static function booted(): void
     {
-        static::saved(fn () => Cache::forget(self::CACHE_KEY));
-        static::deleted(fn () => Cache::forget(self::CACHE_KEY));
+        static::saved(fn () => Cache::memo()->forget(self::CACHE_KEY));
+        static::deleted(fn () => Cache::memo()->forget(self::CACHE_KEY));
     }
 
     public function getRouteKeyName(): string
@@ -55,15 +55,23 @@ class Page extends Model
     /** Markdown → güvenli HTML; {site_adi} gibi yer tutucular ayarlardan doldurulur. */
     public function html(): HtmlString
     {
-        $s = Settings::all();
-        $body = strtr((string) $this->body, [
-            '{site_adi}' => Settings::siteName(),
-            '{telefon}' => $s['phone'] ?? '',
-            '{eposta}' => $s['email'] ?? '',
-            '{adres}' => $s['address'] ?? '',
-        ]);
+        $body = strtr((string) $this->body, array_map(fn ($v) => $v ?: '—', self::placeholders()));
 
         return new HtmlString(Str::markdown($body, ['html_input' => 'escape', 'allow_unsafe_links' => false]));
+    }
+
+    /** Yer tutucu → ayardaki değer (boşsa null). @return array<string, ?string> */
+    public static function placeholders(): array
+    {
+        $s = Settings::all();
+
+        return ['{site_adi}' => Settings::siteName(), '{telefon}' => $s['phone'] ?: null, '{eposta}' => $s['email'] ?: null, '{adres}' => $s['address'] ?: null];
+    }
+
+    /** İçerikte kullanılan ama ayarlarda boş olan yer tutucular (yönetimde uyarı için). @return list<string> */
+    public function missingPlaceholders(): array
+    {
+        return array_keys(array_filter(self::placeholders(), fn ($v, $k) => $v === null && str_contains((string) $this->body, $k), ARRAY_FILTER_USE_BOTH));
     }
 
     /**
@@ -73,7 +81,7 @@ class Page extends Model
      */
     public static function links(): array
     {
-        $rows = Cache::rememberForever(self::CACHE_KEY, fn () => self::active()->orderBy('position')->orderBy('title')
+        $rows = Cache::memo()->rememberForever(self::CACHE_KEY, fn () => self::active()->orderBy('position')->orderBy('title')
             ->get(['key', 'title', 'slug', 'footer_column'])->map(fn ($p) => $p->only('key', 'title', 'slug', 'footer_column'))->all());
 
         $out = ['columns' => [], 'keys' => []];

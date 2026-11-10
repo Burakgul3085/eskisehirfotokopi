@@ -26,12 +26,12 @@ use Symfony\Component\HttpFoundation\Response;
  */
 class PrintController extends Controller
 {
-    public function __construct(private PrintOwner $owner, private PrintSettings $settings, private PrintFiles $files) {}
+    public function __construct(private PrintSettings $settings, private PrintFiles $files) {}
 
     public function show(): View
     {
         abort_unless($this->settings->enabled(), 404);
-        $owner = $this->owner->find();
+        $owner = $this->owner()->find();
         $files = $owner ? PrintFile::where('owner', $owner)->whereIn('status', ['processing', 'ready', 'failed'])
             ->where('updated_at', '>', now()->subDay())->orderBy('id')->get() : collect();
 
@@ -57,7 +57,7 @@ class PrintController extends Controller
             'name' => ['required', 'string', 'max:255'], 'size' => ['required', 'integer', 'min:1'], 'consent' => ['accepted'],
         ], ['consent.accepted' => 'Belgeyi çoğaltma hakkınız olduğunu onaylayın.']);
         try {
-            $file = $this->files->start($this->owner->key(), $data['name'], (int) $data['size']);
+            $file = $this->files->start($this->owner()->key(), $data['name'], (int) $data['size']);
         } catch (DomainException $e) {
             return response()->json(['message' => $e->getMessage()], 422);
         }
@@ -117,7 +117,7 @@ class PrintController extends Controller
     {
         $file = $this->own($token);
         try {
-            $prints->add($cart, $this->owner->key(), $file, $request->all());
+            $prints->add($cart, $this->owner()->key(), $file, $request->all());
         } catch (ValidationException|DomainException $e) {
             return $this->error($e);
         }
@@ -136,7 +136,7 @@ class PrintController extends Controller
 
     private function own(string $token): PrintFile
     {
-        $owner = $this->owner->find();
+        $owner = $this->owner()->find();
         abort_unless($owner && $this->settings->enabled(), 404);
 
         return PrintFile::where('token', $token)->where('owner', $owner)->where('status', '!=', 'deleted')->firstOrFail();
@@ -151,5 +151,11 @@ class PrintController extends Controller
             'preview' => $file->preview_path ? route('print.preview', $file->token) : null,
             'layouts' => array_keys(PrintOptions::LAYOUTS),
         ];
+    }
+
+    /** Belge sahibi oturuma bağlıdır; denetleyici örneği önbelleğe alınabildiği için her istekte yeniden çözülür. */
+    private function owner(): PrintOwner
+    {
+        return app(PrintOwner::class);
     }
 }

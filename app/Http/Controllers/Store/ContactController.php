@@ -53,6 +53,9 @@ class ContactController extends Controller
     public function reply(Request $request, MessageThread $thread, string $token, Messenger $messenger): RedirectResponse
     {
         abort_unless(hash_equals($thread->token, $token), 404);
+        if ($thread->status === 'closed') {
+            return redirect()->to($thread->url())->withErrors(['body' => 'Bu konu kapatıldı; yeni sorunuz için iletişim formunu kullanın.']);
+        }
         $data = $request->validate(['body' => ['required', 'string', 'min:2', 'max:5000']]);
         $messenger->customerReply($thread, $data['body'], $request->ip());
 

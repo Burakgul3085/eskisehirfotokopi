@@ -89,7 +89,7 @@ class HomePage
             'featured' => $q->where('is_featured', true)->orderByDesc('published_at'),
             'discounted' => $q->where(fn ($w) => $w->whereColumn('compare_bw', '>', 'price_bw')->orWhereColumn('compare_color', '>', 'price_color'))->orderByDesc('published_at'),
             'category' => ($cat = Category::find($b->setting('category_id')))
-                ? $q->whereIn('category_id', Category::where('path', 'like', $cat->path.'%')->select('id'))->orderByDesc('sales_count')->orderByDesc('published_at')
+                ? $q->whereIn('category_id', Category::where('path', 'like', $cat->path.'%')->pluck('id')->all())->orderByDesc('sales_count')->orderByDesc('published_at')
                 : $q->whereRaw('1 = 0'),
             'publisher' => $q->where('publisher_id', (int) $b->setting('publisher_id'))->orderByDesc('sales_count')->orderByDesc('published_at'),
             'manual' => $q->whereIn('id', $ids = array_map('intval', (array) $b->setting('product_ids', [])))

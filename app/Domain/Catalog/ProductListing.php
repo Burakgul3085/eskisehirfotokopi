@@ -46,7 +46,8 @@ class ProductListing
     {
         $query = Product::query()->visible();
         if ($category) {
-            $query->whereIn('category_id', Category::query()->active()->where('path', 'like', $category->path.'%')->select('id'));
+            // Kimlikler önce çekilir: alt sorgulu IN, 10 bin üründe sayımı yavaşlatıyordu.
+            $query->whereIn('category_id', Category::query()->active()->where('path', 'like', $category->path.'%')->pluck('id')->all());
         }
         if ($publisher) {
             $query->where('publisher_id', $publisher->id);
