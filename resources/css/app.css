@@ -182,3 +182,75 @@
         @apply bg-white/10 text-white;
     }
 }
+
+/* ---- Ana sayfa 3D karşılama alanı ---- */
+.hero-3d {
+    --hx: 0;
+    --hy: 0;
+    --mx: 70%;
+    --my: 40%;
+    background:
+        radial-gradient(60rem 40rem at 85% 10%, color-mix(in oklab, var(--color-accent) 22%, transparent), transparent 60%),
+        radial-gradient(50rem 36rem at 0% 100%, color-mix(in oklab, var(--color-primary) 60%, white 8%), transparent 60%),
+        linear-gradient(135deg, color-mix(in oklab, var(--color-primary) 45%, black) 0%, var(--color-primary-dark) 35%, var(--color-primary) 100%);
+}
+/* Fareyi izleyen yumuşak ışık */
+.hero-3d .hero-spot {
+    background: radial-gradient(28rem 28rem at var(--mx) var(--my), rgb(255 255 255 / 0.09), transparent 70%);
+}
+/* İnce ızgara, kenarlara doğru kaybolur */
+.hero-3d .hero-grid {
+    background-image:
+        linear-gradient(rgb(255 255 255 / 0.06) 1px, transparent 1px),
+        linear-gradient(90deg, rgb(255 255 255 / 0.06) 1px, transparent 1px);
+    background-size: 56px 56px;
+    mask-image: radial-gradient(ellipse 70% 60% at 65% 45%, black 20%, transparent 75%);
+}
+.hero-3d .hero-aurora {
+    animation: hero-aurora 18s ease-in-out infinite alternate;
+}
+.hero-3d .hero-aurora-2 {
+    animation-duration: 24s;
+    animation-direction: alternate-reverse;
+}
+@keyframes hero-aurora {
+    0% { transform: translate3d(0, 0, 0) scale(1); }
+    50% { transform: translate3d(6%, -4%, 0) scale(1.12); }
+    100% { transform: translate3d(-4%, 5%, 0) scale(0.95); }
+}
+/* Yazılar sırayla belirir */
+.hero-3d .hero-reveal {
+    opacity: 0;
+    transform: translate3d(0, 18px, 0);
+    animation: hero-reveal 0.9s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+    animation-delay: calc(var(--d, 0) * 110ms + 80ms);
+}
+@keyframes hero-reveal {
+    to { opacity: 1; transform: none; }
+}
+/* Cam kartlar: fareye göre kayar (dış) ve süzülür (iç) */
+.hero-3d .hero-card {
+    transform: translate3d(calc(var(--hx) * var(--depth, 10) * -1px), calc(var(--hy) * var(--depth, 10) * -0.7px), 0);
+    transition: transform 0.6s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.hero-3d .hero-card-float {
+    animation: hero-float 7s ease-in-out infinite;
+    animation-delay: calc(var(--d, 0) * -1.6s);
+}
+@keyframes hero-float {
+    0%, 100% { transform: translate3d(0, 0, 0); }
+    50% { transform: translate3d(0, -10px, 0); }
+}
+/* Sahne hazır olunca tuval belirir, CSS yedeği (parlayan küre) söner */
+.hero-3d .hero-stage { opacity: 0; transition: opacity 1.2s ease; }
+.hero-3d.hero-3d-ready .hero-stage { opacity: 1; }
+.hero-3d.hero-3d-ready .hero-fallback { opacity: 0; }
+.hero-3d [data-hero-tip] { opacity: 0; transition: opacity 0.2s ease; }
+.hero-3d [data-hero-tip][data-show='1'] { opacity: 1; }
+
+@media (prefers-reduced-motion: reduce) {
+    .hero-3d .hero-aurora,
+    .hero-3d .hero-card-float { animation: none; }
+    .hero-3d .hero-reveal { animation: none; opacity: 1; transform: none; }
+    .hero-3d .hero-card { transition: none; transform: none; }
+}

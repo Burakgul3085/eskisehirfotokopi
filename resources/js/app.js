@@ -18,6 +18,13 @@ document.addEventListener('submit', (event) => {
     }
 }, true);
 
+// Ana sayfa 3D sahnesi: Three.js ayrı parça olarak yalnız bu sayfada ve sayfa boştayken yüklenir.
+const heroScene = document.querySelector('[data-hero-scene]');
+if (heroScene) {
+    const load = () => import('./hero-scene.js').then((m) => m.mount(heroScene)).catch(() => {});
+    'requestIdleCallback' in window ? window.requestIdleCallback(load, { timeout: 1200 }) : setTimeout(load, 300);
+}
+
 document.addEventListener('change', (event) => {
     if (event.target.matches('[data-autosubmit]') && event.target.form) {
         event.target.form.requestSubmit();

@@ -49,6 +49,7 @@ class HomePage
             'products' => $this->productIds($b),
             'categories' => $this->categoryIds($b),
             'publishers' => $this->publisherIds($b),
+            'hero' => $this->heroBookIds(),
             default => null,
         };
     }
@@ -59,7 +60,7 @@ class HomePage
             return null;
         }
         $model = match ($b->type) {
-            'products' => Product::query()->visible()->with('publisher:id,name,slug'),
+            'products', 'hero' => Product::query()->visible()->with('publisher:id,name,slug'),
             'categories' => Category::query()->active(),
             'publishers' => Publisher::query()->active(),
         };
@@ -98,6 +99,14 @@ class HomePage
         };
 
         return $q->limit($limit)->pluck('id')->all();
+    }
+
+    /** Karşılama alanındaki 3D sahnede süzülen kitaplar: görseli olan, önce öne çıkan sonra çok satan 7 ürün. */
+    private function heroBookIds(): array
+    {
+        return Product::query()->visible()->whereNotNull('image_key')
+            ->orderByDesc('is_featured')->orderByDesc('sales_count')->orderByDesc('published_at')
+            ->limit(7)->pluck('id')->all();
     }
 
     private function categoryIds(HomeBlock $b): array

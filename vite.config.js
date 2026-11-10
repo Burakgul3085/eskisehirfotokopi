@@ -16,6 +16,10 @@ export default defineConfig({
         }),
         tailwindcss(),
     ],
+    // Three.js (ana sayfa 3D sahnesi) ayrı parçadır ve yalnız ana sayfada yüklenir; boyut uyarısı ona göre.
+    build: {
+        chunkSizeWarningLimit: 650,
+    },
     server: {
         watch: {
             ignored: ['**/storage/framework/views/**'],

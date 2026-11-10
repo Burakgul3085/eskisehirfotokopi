@@ -60,6 +60,20 @@ class StorefrontTest extends TestCase
         $this->get('/')->assertOk()->assertDontSee('Sıkça sorulan sorular')->assertDontSee('Boş satır');
     }
 
+    public function test_hero_3d_scene_gets_visible_products_with_images(): void
+    {
+        $this->assertTrue(HomeBlock::where('type', 'hero')->where('is_active', true)->exists());
+        Product::where('title', 'KPSS Tarih Denemeleri')->update(['image_key' => 'abc123', 'is_featured' => true]);
+        Product::where('title', 'Taslak Kitap')->update(['image_key' => 'gizli']);
+        \App\Domain\Storefront\HomePage::flush();
+
+        $html = $this->get('/')->assertOk()->assertSee('data-hero-scene', false)->getContent();
+        preg_match('/<script type="application\/json" data-hero-books>(.*?)<\/script>/s', $html, $m);
+        $books = json_decode($m[1], true);
+        $this->assertSame(['KPSS Tarih Denemeleri'], array_column($books, 'title')); // görselsiz ve taslak ürün yok
+        $this->assertStringContainsString('/storage/products/abc123/', $books[0]['img']);
+    }
+
     public function test_category_page_lists_subtree_with_filters_and_sorting(): void
     {
         $this->get('/kategori/yks')->assertOk()
