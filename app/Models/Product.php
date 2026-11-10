@@ -26,6 +26,9 @@ class Product extends Model
     /** Sepet ve siparişte saklanan baskı tipi => ad. Sonu "2" olanlar önlü arkalı 2'ye 2'dir. */
     public const PRINT_TYPES = ['bw' => "Siyah-beyaz · 1'e 1", 'bw2' => "Siyah-beyaz · 2'ye 2", 'color' => "Renkli · 1'e 1", 'color2' => "Renkli · 2'ye 2"];
 
+    /** Kitap cildi: ciltsiz kitaplar zımbalanıp ücretsiz gönderilir; spiral fotokopi ayarlarındaki sabit fiyatla eklenir. */
+    public const BINDINGS = ['none' => 'Zımbalı', 'spiral' => 'Spiral cilt'];
+
     /** Baskı tipinin fiyat sütunu */
     public const PRICE_COLUMNS = ['bw' => 'price_bw', 'bw2' => 'price_bw_2up', 'color' => 'price_color', 'color2' => 'price_color_2up'];
 

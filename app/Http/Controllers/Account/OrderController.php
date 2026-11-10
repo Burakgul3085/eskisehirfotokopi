@@ -37,7 +37,7 @@ class OrderController extends Controller
             $product = $products[$item->product_id] ?? null;
             if ($product && $item->print_type && $product->price($item->print_type) !== null) {
                 try {
-                    $cart->addProduct($product, $item->print_type, $item->quantity);
+                    $cart->addProduct($product, $item->print_type, $item->quantity, $item->meta['binding'] ?? 'none');
                     $added++;
                 } catch (\DomainException) {
                     break;

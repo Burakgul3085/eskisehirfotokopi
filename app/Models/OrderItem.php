@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Domain\Cart\CartLine;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -28,6 +29,6 @@ class OrderItem extends Model
 
     public function printTypeLabel(): ?string
     {
-        return $this->print_type ? (Product::PRINT_TYPES[$this->print_type] ?? null) : null;
+        return CartLine::label($this->print_type, $this->meta['binding'] ?? null);
     }
 }

@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Domain\Catalog\CategoryTree;
 use App\Domain\Delivery\DeliveryRules;
+use App\Domain\Print\PrintSettings;
 use App\Events\OrderPlaced;
 use App\Events\OrderStatusChanged;
 use App\Models\Admin;
@@ -90,6 +91,29 @@ class OrderTest extends TestCase
 
         $this->get(route('checkout.done', $order))->assertOk()->assertSee($order->number);
         $this->get(route('cart.index'))->assertSee('Sepetiniz boş');
+    }
+
+    public function test_spiral_binding_adds_fixed_price_per_book(): void
+    {
+        // Yöneticinin örneği: S-B kademeleri, 200 yaprak 1,50 ₺; spiral 60 ₺.
+        $settings = app(PrintSettings::class);
+        $settings->save(['enabled' => '1', 'bw_enabled' => '1', 'color_enabled' => '1', 'spiral_price' => '60', 'a3_multiplier' => '2',
+            'tiers' => [['from' => 1, 'bw' => '2', 'color' => '6'], ['from' => 100, 'bw' => '1,50', 'color' => '5']]]);
+        $book = Product::create(['title' => 'AYT Kimya', 'slug' => 'ayt-kimya', 'page_count' => 400, 'status' => 'active']);
+        $this->assertSame('300.00', $book->price_bw); // 400 sayfa önlü arkalı = 200 yaprak × 1,50
+
+        $this->get(route('product.show', $book))->assertSee('Zımbalı')->assertSee('Ücretsiz')->assertSee('+60,00 ₺');
+        $this->post(route('cart.add'), ['product_id' => $book->id, 'print_type' => 'bw', 'binding' => 'spiral']);
+        $this->post(route('cart.add'), ['product_id' => $book->id, 'print_type' => 'bw']); // zımbalı: ücretsiz, ayrı satır
+        $this->get(route('cart.index'))->assertSee('360,00 ₺')->assertSee("Siyah-beyaz · 1'e 1 · Spiral cilt")->assertSee("Siyah-beyaz · 1'e 1 · Zımbalı");
+        $this->post(route('cart.add'), ['product_id' => $book->id, 'print_type' => 'bw', 'binding' => 'altin'])->assertSessionHasErrors('binding');
+
+        $this->post(route('checkout.store'), $this->checkoutData());
+        $order = Order::firstOrFail();
+        $this->assertSame('660.00', $order->subtotal); // 360 + 300
+        $spiral = $order->items()->where('unit_price', '360.00')->firstOrFail();
+        $this->assertSame('spiral', $spiral->meta['binding']);
+        $this->assertSame("Siyah-beyaz · 1'e 1 · Spiral cilt", $spiral->printTypeLabel());
     }
 
     public function test_free_delivery_above_threshold_and_neighborhood_fee(): void

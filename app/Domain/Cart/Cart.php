@@ -2,6 +2,7 @@
 
 namespace App\Domain\Cart;
 
+use App\Domain\Print\PrintSettings;
 use App\Models\Product;
 use Illuminate\Contracts\Session\Session;
 
@@ -39,15 +40,17 @@ class Cart
         return (array) $this->session->get(self::KEY, []);
     }
 
-    public function addProduct(Product $product, string $printType, int $qty = 1): string
+    public function addProduct(Product $product, string $printType, int $qty = 1, string $binding = 'none'): string
     {
-        $key = 'product:'.$product->id.':'.$printType;
+        $binding = isset(Product::BINDINGS[$binding]) ? $binding : 'none';
+        $key = 'product:'.$product->id.':'.$printType.($binding === 'none' ? '' : ':'.$binding);
         $items = $this->raw();
         $current = $items[$key]['qty'] ?? 0;
         if (! isset($items[$key]) && count($items) >= self::MAX_LINES) {
             throw new \DomainException('Sepette en fazla '.self::MAX_LINES.' satır olabilir.');
         }
-        $items[$key] = ['kind' => 'product', 'product_id' => $product->id, 'print_type' => $printType, 'qty' => min(self::MAX_QTY, $current + max(1, $qty))];
+        $items[$key] = ['kind' => 'product', 'product_id' => $product->id, 'print_type' => $printType, 'binding' => $binding,
+            'qty' => min(self::MAX_QTY, $current + max(1, $qty))];
         $this->store($items);
 
         return $key;
@@ -143,12 +146,15 @@ class Cart
         if ($product === null || $price === null) {
             return null;
         }
+        // Spiral: fotokopi ayarlarındaki güncel sabit fiyat kitap başına eklenir (belge gönderdeki gibi).
+        $binding = $item['binding'] ?? 'none';
+        $bindingPrice = $binding === 'spiral' ? (string) app(PrintSettings::class)->get('spiral_price') : '0.00';
 
         return new CartLine(
             key: $key,
             kind: 'product',
             title: $product->title,
-            unitPrice: (float) $price,
+            unitPrice: (float) bcadd($price, $bindingPrice, 2),
             quantity: max(1, min(self::MAX_QTY, (int) $item['qty'])),
             printType: $item['print_type'],
             url: route('product.show', $product),
@@ -156,6 +162,7 @@ class Cart
             subtitle: $product->publisher?->name,
             product: $product,
             maxQuantity: self::MAX_QTY,
+            meta: array_filter(['binding' => isset($item['binding']) ? $binding : null, 'binding_price' => $binding === 'spiral' ? $bindingPrice : null]),
         );
     }
 

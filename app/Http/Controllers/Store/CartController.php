@@ -38,13 +38,14 @@ class CartController extends Controller
             'product_id' => ['required', 'integer'],
             'print_type' => ['required', Rule::in(array_keys(Product::PRINT_TYPES))],
             'quantity' => ['nullable', 'integer', 'min:1', 'max:'.Cart::MAX_QTY],
+            'binding' => ['nullable', Rule::in(array_keys(Product::BINDINGS))],
         ]);
         $product = Product::visible()->find($data['product_id']);
         if (! $product || ! in_array($data['print_type'], $product->printTypes(), true)) {
             return $this->reply($request, $cart, 'Bu ürün şu anda satışta değil.', false);
         }
         try {
-            $cart->addProduct($product, $data['print_type'], (int) ($data['quantity'] ?? 1));
+            $cart->addProduct($product, $data['print_type'], (int) ($data['quantity'] ?? 1), $data['binding'] ?? 'none');
         } catch (\DomainException $e) {
             return $this->reply($request, $cart, $e->getMessage(), false);
         }

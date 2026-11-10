@@ -3,6 +3,7 @@
     $types = $product->printTypes();
     $colorNames = \App\Domain\Print\PrintOptions::COLORS;
     $layoutHints = \App\Domain\Print\PrintOptions::LAYOUT_HINTS;
+    $spiralPrice = app(\App\Domain\Print\PrintSettings::class)->get('spiral_price');
     $crumbs = $trail->map(fn ($c) => [$c->name, route('category.show', $c)])->push([$product->title, null])->all();
     $specs = array_filter([
         'Yazar' => $product->author?->name,
@@ -83,6 +84,20 @@
                                                 <span class="font-display text-lg font-bold">{{ \App\Support\Money::format($product->price($t)) }}</span>
                                                 @if ($pct = $product->discountPercent($t))<span class="ml-1 rounded bg-danger-soft px-1.5 py-0.5 text-xs font-bold text-danger">%{{ $pct }}</span>@endif
                                             </span>
+                                        </label>
+                                    @endforeach
+                                </div>
+                            </fieldset>
+                            <fieldset>
+                                <legend class="mb-2 text-sm font-semibold">Cilt</legend>
+                                <div class="grid gap-2 sm:grid-cols-2">
+                                    @foreach (\App\Models\Product::BINDINGS as $b => $bLabel)
+                                        <label class="flex cursor-pointer items-center justify-between gap-3 rounded-xl border border-line p-3.5 transition has-checked:border-primary has-checked:bg-primary-soft has-checked:ring-2 has-checked:ring-primary/15">
+                                            <span class="flex items-center gap-2.5">
+                                                <input type="radio" name="binding" value="{{ $b }}" @checked($loop->first) class="accent-primary">
+                                                <span class="text-sm font-semibold">{{ $bLabel }}</span>
+                                            </span>
+                                            <span class="text-sm font-semibold {{ $b === 'none' ? 'text-success' : '' }}">{{ $b === 'none' ? 'Ücretsiz' : '+'.\App\Support\Money::format($spiralPrice) }}</span>
                                         </label>
                                     @endforeach
                                 </div>

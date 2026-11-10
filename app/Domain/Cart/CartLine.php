@@ -30,6 +30,14 @@ class CartLine
 
     public function printTypeLabel(): ?string
     {
-        return $this->printType ? (Product::PRINT_TYPES[$this->printType] ?? null) : null;
+        return self::label($this->printType, $this->meta['binding'] ?? null);
+    }
+
+    /** "Siyah-beyaz · 2'ye 2 · Spiral cilt" (sipariş satırı da kullanır) */
+    public static function label(?string $printType, ?string $binding): ?string
+    {
+        $type = $printType ? (Product::PRINT_TYPES[$printType] ?? null) : null;
+
+        return $type && $binding ? $type.' · '.(Product::BINDINGS[$binding] ?? $binding) : $type;
     }
 }
