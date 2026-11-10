@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Domain\Catalog\BookPricing;
+use App\Domain\Print\PrintSettings;
 use App\Models\Concerns\HasUniqueSlug;
 use App\Support\Text;
 use Illuminate\Database\Eloquent\Builder;
@@ -10,7 +12,9 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Facades\Storage;
 
 /**
- * Katalog ürünü (kitap / soru bankası). İki baskı tipi ve iki fiyat: siyah-beyaz (bw) ve renkli (color) (K3).
+ * Katalog ürünü (kitap / soru bankası). Baskı tipi = renk × düzen: siyah-beyaz / renkli, önlü arkalı 1'e 1 / 2'ye 2.
+ * Fiyat elle girilmez: sayfa sayısından fotokopi kademeleriyle hesaplanır (BookPricing). Sayfa sayısı olmayan eski
+ * kayıtların elle girilmiş fiyatı (yalnız 1'e 1) korunur.
  * Vitrinde görünür = durum "active"; satın alınabilir = en az bir fiyatı var (K2).
  */
 class Product extends Model
@@ -19,19 +23,23 @@ class Product extends Model
 
     public const STATUSES = ['draft' => 'Taslak', 'active' => 'Yayında', 'passive' => 'Pasif'];
 
-    public const PRINT_TYPES = ['bw' => 'Siyah-beyaz', 'color' => 'Renkli'];
+    /** Sepet ve siparişte saklanan baskı tipi => ad. Sonu "2" olanlar önlü arkalı 2'ye 2'dir. */
+    public const PRINT_TYPES = ['bw' => "Siyah-beyaz · 1'e 1", 'bw2' => "Siyah-beyaz · 2'ye 2", 'color' => "Renkli · 1'e 1", 'color2' => "Renkli · 2'ye 2"];
+
+    /** Baskı tipinin fiyat sütunu */
+    public const PRICE_COLUMNS = ['bw' => 'price_bw', 'bw2' => 'price_bw_2up', 'color' => 'price_color', 'color2' => 'price_color_2up'];
 
     /** Görsel boyutları (genişlik, px). */
     public const IMAGE_SIZES = ['sm' => 320, 'md' => 640, 'lg' => 1400];
 
     protected $fillable = ['code', 'isbn', 'title', 'slug', 'publisher_id', 'author_id', 'category_id', 'page_count', 'print_year',
-        'description', 'price_bw', 'price_color', 'compare_bw', 'compare_color', 'status', 'is_featured', 'image_key', 'image_width',
+        'description', 'price_bw', 'price_color', 'price_bw_2up', 'price_color_2up', 'compare_bw', 'compare_color', 'status', 'is_featured', 'image_key', 'image_width',
         'image_height', 'sales_count', 'view_count', 'meta_title', 'meta_description', 'published_at'];
 
     protected function casts(): array
     {
         return [
-            'price_bw' => 'decimal:2', 'price_color' => 'decimal:2', 'compare_bw' => 'decimal:2', 'compare_color' => 'decimal:2',
+            'price_bw' => 'decimal:2', 'price_color' => 'decimal:2', 'price_bw_2up' => 'decimal:2', 'price_color_2up' => 'decimal:2', 'compare_bw' => 'decimal:2', 'compare_color' => 'decimal:2',
             'is_featured' => 'boolean', 'published_at' => 'datetime',
         ];
     }
@@ -41,6 +49,10 @@ class Product extends Model
         static::saving(function (Product $p) {
             if ($p->status === 'active' && ! $p->published_at) {
                 $p->published_at = now();
+            }
+            // Sayfa sayısı değişince (ya da sayfalı üründe fiyat eksikse) dört fiyat yeniden hesaplanır.
+            if ($p->isDirty('page_count') || ($p->page_count && $p->price_bw === null)) {
+                $p->fill(app(BookPricing::class)->prices($p->page_count ? (int) $p->page_count : null));
             }
             if ($p->isDirty(['title', 'code', 'isbn', 'author_id', 'publisher_id', 'category_id']) || $p->search_text === null) {
                 $p->search_text = $p->buildSearchText();
@@ -77,12 +89,13 @@ class Product extends Model
 
     public function price(string $type): ?string
     {
-        return $type === 'color' ? $this->price_color : $this->price_bw;
+        return isset(self::PRICE_COLUMNS[$type]) ? $this->{self::PRICE_COLUMNS[$type]} : null;
     }
 
+    /** Üstü çizili eski fiyat yalnız 1'e 1 fiyatına uygulanır. */
     public function comparePrice(string $type): ?string
     {
-        $compare = $type === 'color' ? $this->compare_color : $this->compare_bw;
+        $compare = ['bw' => $this->compare_bw, 'color' => $this->compare_color][$type] ?? null;
         $price = $this->price($type);
 
         return $compare !== null && $price !== null && bccomp($compare, $price, 2) > 0 ? $compare : null;
@@ -95,15 +108,30 @@ class Product extends Model
         if ($compare === null) {
             return null;
         }
-        $pct = (int) floor((1 - (float) $this->price($type) / (float) $compare) * 100);
+        // Kayan nokta 240/300 için %19,999… verip %19 yazıyordu: bcmath ile kesin hesap.
+        $pct = (int) bcdiv(bcmul(bcsub($compare, $this->price($type), 2), '100', 2), $compare, 0);
 
         return $pct >= 1 ? $pct : null;
     }
 
-    /** @return list<string> satılabilen baskı tipleri */
+    /**
+     * Satılabilen baskı tipleri: fiyatı olan ve rengi fotokopi ayarlarında açık olanlar (renkli yazıcı arızasında
+     * kitapların renkli seçeneği de gizlenir).
+     *
+     * @return list<string>
+     */
     public function printTypes(): array
     {
-        return array_values(array_filter(['bw', 'color'], fn ($t) => $this->price($t) !== null));
+        $colors = app(PrintSettings::class)->colors();
+
+        return array_values(array_filter(array_keys(self::PRINT_TYPES),
+            fn ($t) => $this->price($t) !== null && in_array(rtrim($t, '2'), $colors, true)));
+    }
+
+    /** Rengin adı (ör. "bw2" → "Siyah-beyaz") */
+    public static function colorOf(string $type): string
+    {
+        return rtrim($type, '2');
     }
 
     /** Varsayılan (kartta gösterilen) baskı tipi: siyah-beyaz fiyatı varsa o, yoksa renkli. */

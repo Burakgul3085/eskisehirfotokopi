@@ -169,6 +169,35 @@ class ProductController extends Controller
         return back()->with('status', $msg);
     }
 
+    /**
+     * Ürün listesinden toplu sayfa sayısı girişi: pages[ID] => sayfa. Boş hücre değiştirmez. Fiyatlar sayfa sayısından
+     * otomatik hesaplanır; "publish" işaretliyse fiyatı oluşan taslaklar yayına alınır.
+     */
+    public function pages(Request $request): RedirectResponse
+    {
+        $data = $request->validate([
+            'pages' => ['required', 'array', 'max:1000'],
+            'pages.*' => ['nullable', 'integer', 'min:1', 'max:20000'],
+        ], ['pages.*.integer' => 'Sayfa sayısı tam sayı olmalıdır.', 'pages.*.min' => 'Sayfa sayısı en az 1 olmalıdır.', 'pages.*.max' => 'Sayfa sayısı en fazla 20000 olabilir.']);
+        $changes = array_filter($data['pages'], fn ($v) => $v !== null && $v !== '');
+        $saved = 0;
+        $published = 0;
+        foreach (Product::whereIn('id', array_keys($changes))->get() as $p) {
+            $p->page_count = (int) $changes[$p->id];
+            if ($request->boolean('publish') && $p->status === 'draft') {
+                $p->status = 'active';
+                $published++;
+            }
+            if ($p->isDirty()) {
+                $p->save();
+                $saved++;
+            }
+        }
+        Activity::log('products.pages', null, ['count' => $saved, 'published' => $published]);
+
+        return back()->with('status', "{$saved} ürünün sayfa sayısı kaydedildi, fiyatları hesaplandı".($published ? "; {$published} ürün yayına alındı" : '').'.');
+    }
+
     public function priceTemplate(Request $request, PriceSheet $sheet): BinaryFileResponse
     {
         $path = tempnam(sys_get_temp_dir(), 'fiyat').'.xlsx';
@@ -215,7 +244,8 @@ class ProductController extends Controller
             'image' => ['nullable', 'image', 'max:15360'],
         ]);
         $prices = [];
-        foreach (['price_bw', 'price_color', 'compare_bw', 'compare_color'] as $field) {
+        // Satış fiyatları sayfa sayısından hesaplanır (Product::booted); burada yalnız üstü çizili eski fiyatlar alınır.
+        foreach (['compare_bw', 'compare_color'] as $field) {
             $raw = $request->input($field);
             if (blank($raw)) {
                 $prices[$field] = null;
@@ -228,8 +258,10 @@ class ProductController extends Controller
             }
             $prices[$field] = $value;
         }
-        if ($data['status'] === 'active' && $prices['price_bw'] === null && $prices['price_color'] === null) {
-            throw ValidationException::withMessages(['status' => 'Fiyatı olmayan ürün yayına alınamaz. En az bir fiyat girin.']);
+        // Eski kayıt: sayfa sayısı hiç girilmemiş, elle fiyatı olan ürün yayında kalabilir.
+        $legacyPriced = $product && $product->page_count === null && $product->price_bw !== null;
+        if ($data['status'] === 'active' && empty($data['page_count']) && ! $legacyPriced) {
+            throw ValidationException::withMessages(['page_count' => 'Sayfa sayısı olmayan ürünün fiyatı hesaplanamaz; yayına almak için sayfa sayısını girin.']);
         }
         $data['author_id'] = Author::resolve($data['author'] ?? null)?->id;
         unset($data['author'], $data['image']);

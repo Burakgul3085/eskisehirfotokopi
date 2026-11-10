@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Domain\Catalog\CategoryTree;
 use App\Domain\Catalog\PriceSheet;
+use App\Domain\Print\PrintSettings;
 use App\Models\Admin;
 use App\Models\Category;
 use App\Models\Product;
@@ -88,21 +89,22 @@ class CatalogAdminTest extends TestCase
         Storage::fake('public');
         $pub = Publisher::create(['name' => 'Palme', 'slug' => 'palme', 'match_key' => 'palme']);
 
-        // Fiyatsız ürün yayına alınamaz.
-        $this->post('/yonetim/urunler', ['title' => 'TYT Matematik', 'status' => 'active'])->assertSessionHasErrors('status');
+        // Sayfa sayısı (dolayısıyla fiyatı) olmayan ürün yayına alınamaz.
+        $this->post('/yonetim/urunler', ['title' => 'TYT Matematik', 'status' => 'active'])->assertSessionHasErrors('page_count');
 
+        // Elle fiyat gönderilse de yok sayılır: fiyat 320 sayfadan hesaplanır.
         $this->post('/yonetim/urunler', [
             'title' => 'TYT Matematik Soru Bankası', 'author' => 'Ali Veli', 'publisher_id' => $pub->id, 'isbn' => '978-605-123-456-7',
-            'page_count' => 320, 'price_bw' => '149,90', 'compare_bw' => '199,90', 'status' => 'active',
+            'page_count' => 320, 'price_bw' => '149,90', 'compare_bw' => '300', 'status' => 'active',
             'image' => UploadedFile::fake()->image('mockup.png', 1600, 2200),
         ])->assertRedirect();
 
         $p = Product::firstOrFail();
         $this->assertSame('9786051234567', $p->isbn);
-        $this->assertSame('149.90', $p->price_bw);
-        $this->assertNull($p->price_color);
-        $this->assertSame(['bw'], $p->printTypes());
-        $this->assertSame(25, $p->discountPercent('bw'));
+        $this->assertSame('240.00', $p->price_bw); // 160 yaprak × 1,50
+        $this->assertSame(['bw', 'bw2', 'color', 'color2'], $p->printTypes());
+        $this->assertSame(20, $p->discountPercent('bw'));
+        $this->assertNull($p->comparePrice('bw2'));
         $this->assertNotNull($p->published_at);
         $this->assertSame('Ali Veli', $p->author->name);
         $this->assertStringContainsString('palme', $p->search_text);
@@ -174,39 +176,95 @@ class CatalogAdminTest extends TestCase
 
     public function test_price_sheet_roundtrip(): void
     {
-        $a = Product::create(['title' => 'Kitap A', 'slug' => 'a', 'price_bw' => '50']);
+        $a = Product::create(['title' => 'Kitap A', 'slug' => 'a', 'page_count' => 100]);
         $b = Product::create(['title' => 'Kitap B', 'slug' => 'b']);
-        $c = Product::create(['title' => 'Kitap C', 'slug' => 'c', 'price_bw' => '70', 'price_color' => '90']);
+        $c = Product::create(['title' => 'Kitap C', 'slug' => 'c', 'page_count' => 40, 'compare_bw' => '90']);
 
-        // Dışa aktarma: yalnızca fiyatı eksikler.
+        // Dışa aktarma: yalnızca fiyatı eksikler; fiyat sütunları hesaplanan değerle gelir.
         $response = $this->get('/yonetim/urunler/fiyat-sablonu?fiyat=eksik')->assertOk();
-        $exported = $response->baseResponse->getFile()->getPathname();
-        $rows = $this->readRows($exported);
+        $rows = $this->readRows($response->baseResponse->getFile()->getPathname());
         $this->assertSame('ID', $rows[0][0]);
         $this->assertCount(2, $rows); // başlık + B
+        $all = $this->readRows($this->get('/yonetim/urunler/fiyat-sablonu')->baseResponse->getFile()->getPathname());
+        $rowA = collect($all)->firstWhere(0, $a->id);
+        $this->assertEquals([100, 100.0], [$rowA[6], $rowA[8]]); // 100 sayfa 1'e 1 = 50 yaprak × 2,00
 
-        // Doldurulmuş şablon: B'ye iki fiyat, A'nın renklisi, C'nin renklisi silinir, geçersiz satır raporlanır.
+        // Doldurulmuş şablon: B'ye sayfa sayısı (fiyat sütununa yazılan değer yok sayılır), C'nin eski fiyatı silinir,
+        // A'nın sayfası değişir; geçersiz satırlar raporlanır.
         $path = tempnam(sys_get_temp_dir(), 'x').'.xlsx';
         $w = new Writer;
         $w->openToFile($path);
         $w->addRow(Row::fromValues(PriceSheet::HEADERS));
-        $w->addRow(Row::fromValues([$b->id, '', '', 'Kitap B', '', '', '', '', '120,50', 160, '', '']));
-        $w->addRow(Row::fromValues([$a->id, '', '', 'Kitap A', '', '', '', '', '', '75', '', '']));
-        $w->addRow(Row::fromValues([$c->id, '', '', 'Kitap C', '', '', '', '', '', '-', '', '']));
-        $w->addRow(Row::fromValues([999999, '', '', 'Yok', '', '', '', '', '10', '', '', '']));
-        $w->addRow(Row::fromValues([$a->id, '', '', 'Kitap A', '', '', '', '', 'abc', '', '', '']));
+        $w->addRow(Row::fromValues([$b->id, '', '', 'Kitap B', '', '', 400, '', '999', '', '', '']));
+        $w->addRow(Row::fromValues([$a->id, '', '', 'Kitap A', '', '', '300', '', '', '', '', '']));
+        $w->addRow(Row::fromValues([$c->id, '', '', 'Kitap C', '', '', '', '', '', '', '-', '']));
+        $w->addRow(Row::fromValues([999999, '', '', 'Yok', '', '', 10, '', '', '', '', '']));
+        $w->addRow(Row::fromValues([$a->id, '', '', 'Kitap A', '', '', 'abc', '', '', '', '', '']));
         $w->close();
 
         $this->post('/yonetim/urunler/fiyat-yukle', ['file' => new UploadedFile($path, 'fiyat.xlsx', null, null, true), 'publish' => '1'])
             ->assertSessionHas('status')->assertSessionHas('import_errors', fn ($e) => count($e) === 2);
 
         $b->refresh();
-        $this->assertSame('120.50', $b->price_bw);
-        $this->assertSame('160.00', $b->price_color);
+        $this->assertSame(400, $b->page_count);
+        $this->assertSame('200.00', $b->price_bw);   // 200 yaprak × 1,00
+        $this->assertSame('150.00', $b->price_bw_2up); // 100 yaprak × 1,50
         $this->assertSame('active', $b->status);
-        $this->assertSame('75.00', $a->fresh()->price_color);
-        $this->assertSame('50.00', $a->fresh()->price_bw); // boş hücre değiştirmez
-        $this->assertNull($c->fresh()->price_color);
+        $this->assertSame('225.00', $a->fresh()->price_bw); // 300 sayfa = 150 yaprak × 1,50
+        $this->assertNull($c->fresh()->compare_bw);
+        $this->assertSame(40, $c->fresh()->page_count); // boş hücre değiştirmez
+    }
+
+    public function test_book_prices_follow_page_count_and_print_tiers(): void
+    {
+        // Varsayılan kademeler: 1–99 yaprak S-B 2,00 / renkli 6,00 · 100–199: 1,50 / 5,00 · 200+: 1,00 / 4,00
+        $p = Product::create(['title' => 'TYT Biyoloji', 'slug' => 'tyt-bio', 'page_count' => 300]);
+        $this->assertSame(['225.00', '150.00', '750.00', '450.00'], [$p->price_bw, $p->price_bw_2up, $p->price_color, $p->price_color_2up]);
+        // 300 sayfa: 1'e 1 = 150 yaprak (1,50) · 2'ye 2 = 75 yaprak (2,00) · renkli 150 × 5 · 75 × 6
+
+        $p->update(['page_count' => 400]); // 200 yaprak (1,00) · 100 yaprak (1,50)
+        $this->assertSame(['200.00', '150.00'], [$p->price_bw, $p->price_bw_2up]);
+
+        // Fotokopi fiyatları değişince tüm ürünler güncellenir.
+        $form = ['enabled' => '1', 'bw_enabled' => '1', 'color_enabled' => '1', 'spiral_price' => '40', 'a3_multiplier' => '2', 'max_mb' => 100,
+            'max_copies' => 50, 'unordered_days' => 5, 'ordered_days' => 20,
+            'tiers' => [['from' => 1, 'bw' => '3', 'color' => '8'], ['from' => 150, 'bw' => '2', 'color' => '7']]];
+        $this->put(route('admin.print.update'), $form)->assertRedirect()->assertSessionHas('status', fn ($m) => str_contains($m, '1 ürünün fiyatı güncellendi'));
+        $p->refresh();
+        $this->assertSame(['400.00', '300.00', '1400.00', '800.00'], [$p->price_bw, $p->price_bw_2up, $p->price_color, $p->price_color_2up]);
+
+        // Sayfa sayısı silinirse fiyat da kalkar.
+        $p->update(['page_count' => null]);
+        $this->assertSame([], $p->fresh()->printTypes());
+    }
+
+    public function test_storefront_offers_four_print_types_and_cart_uses_two_up_price(): void
+    {
+        $p = Product::create(['title' => 'KPSS Tarih', 'slug' => 'kpss-tarih', 'page_count' => 300, 'status' => 'active']);
+        $this->get(route('product.show', $p))->assertOk()
+            ->assertSee("Siyah-beyaz · 2'ye 2")->assertSee("Renkli · 1'e 1")->assertSee('150,00 ₺')->assertSee('225,00 ₺');
+
+        $this->post(route('cart.add'), ['product_id' => $p->id, 'print_type' => 'bw2', 'quantity' => 2])->assertSessionHas('status');
+        $this->get(route('cart.index'))->assertSee("Siyah-beyaz · 2'ye 2")->assertSee('300,00 ₺'); // 2 × 150
+
+        // Renkli yazıcı kapatılınca kitapların renkli seçenekleri de satılmaz.
+        app(PrintSettings::class)->toggleColor('color');
+        $this->assertSame(['bw', 'bw2'], $p->fresh()->printTypes());
+        $this->post(route('cart.add'), ['product_id' => $p->id, 'print_type' => 'color'])->assertSessionHasErrors();
+    }
+
+    public function test_bulk_page_counts_from_product_list_publish_drafts(): void
+    {
+        $a = Product::create(['title' => 'A', 'slug' => 'a']);
+        $b = Product::create(['title' => 'B', 'slug' => 'b']);
+        $this->get(route('admin.products.index'))->assertSee('name="pages['.$a->id.']"', false);
+
+        $this->post(route('admin.products.pages'), ['pages' => [$a->id => '120', $b->id => ''], 'publish' => '1'])
+            ->assertSessionHas('status', fn ($m) => str_contains($m, '1 ürünün sayfa sayısı') && str_contains($m, '1 ürün yayına alındı'));
+        $a->refresh();
+        $this->assertSame(['active', '120.00'], [$a->status, $a->price_bw]); // 60 yaprak × 2,00
+        $this->assertSame('draft', $b->fresh()->status);
+        $this->post(route('admin.products.pages'), ['pages' => [$a->id => '0']])->assertSessionHasErrors();
     }
 
     private function readRows(string $path): array

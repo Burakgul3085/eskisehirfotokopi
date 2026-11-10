@@ -16,18 +16,25 @@ use OpenSpout\Writer\XLSX\Writer;
 use RuntimeException;
 
 /**
- * Excel fiyat şablonu (K2, K3). Dışa aktarma: seçilen ürünler satır satır, fiyat sütunları boş veya mevcut değerle.
- * Yönetim yalnızca fiyat sütunlarını doldurup dosyayı geri yükler; eşleştirme ID sütunuyla yapılır.
+ * Excel şablonu (K2, K3). Dışa aktarma: seçilen ürünler satır satır. Satış fiyatı elle girilmez: yönetim "Sayfa"
+ * sütununa PDF sayfa sayısını yazar, fiyatlar (S-B / renkli, 1'e 1) fotokopi kademelerinden hesaplanır; fiyat sütunları
+ * yalnız bilgi içindir, geri yüklemede okunmaz. Üstü çizili eski fiyat sütunları düzenlenebilir. Eşleştirme ID sütunuyla.
  *
- * Hücre kuralları: boş = değiştirme · "-" veya "sil" = fiyatı kaldır · sayı = yeni fiyat ("149,90", "149.9", "1.250").
+ * Hücre kuralları: boş = değiştirme · "-" veya "sil" = kaldır · sayı = yeni değer (fiyat "149,90", "149.9", "1.250").
  */
 class PriceSheet
 {
-    public const HEADERS = ['ID', 'Ürün Kodu', 'ISBN', 'Kitap Adı', 'Yayınevi', 'Yazar', 'Sayfa', 'Durum',
-        'Siyah-Beyaz Fiyat', 'Renkli Fiyat', 'S-B Eski Fiyat (üstü çizili)', 'Renkli Eski Fiyat (üstü çizili)'];
+    public const HEADERS = ['ID', 'Ürün Kodu', 'ISBN', 'Kitap Adı', 'Yayınevi', 'Yazar', 'Sayfa (PDF sayfa sayısı)', 'Durum',
+        "S-B Fiyat (otomatik, 1'e 1)", "Renkli Fiyat (otomatik, 1'e 1)", 'S-B Eski Fiyat (üstü çizili)', 'Renkli Eski Fiyat (üstü çizili)'];
 
-    /** Fiyat sütunları: başlık indeksi => ürün alanı */
-    private const PRICE_COLUMNS = [8 => 'price_bw', 9 => 'price_color', 10 => 'compare_bw', 11 => 'compare_color'];
+    /** Düzenlenebilir sütunlar */
+    private const PAGE_COLUMN = 6;
+
+    /** Hesaplanan fiyat sütunları (yalnız dışa aktarılır) */
+    private const COMPUTED_COLUMNS = [8 => 'price_bw', 9 => 'price_color'];
+
+    /** Elle girilen eski fiyat sütunları: başlık indeksi => ürün alanı */
+    private const PRICE_COLUMNS = [10 => 'compare_bw', 11 => 'compare_color'];
 
     public function export(Builder $query, string $path): int
     {
@@ -42,13 +49,16 @@ class PriceSheet
 
         $head = (new Style)->withFontBold(true)->withFontColor('FFFFFF')->withBackgroundColor('0F766E')->withShouldWrapText(true);
         $priceHead = (new Style)->withFontBold(true)->withBackgroundColor('FDE68A')->withShouldWrapText(true);
-        $writer->addRow(new Row(array_map(fn ($h, $i) => Cell::fromValue($h, $i >= 8 ? $priceHead : $head), self::HEADERS, array_keys(self::HEADERS)), 32));
+        $editable = fn (int $i) => $i === self::PAGE_COLUMN || isset(self::PRICE_COLUMNS[$i]);
+        $writer->addRow(new Row(array_map(fn ($h, $i) => Cell::fromValue($h, $editable($i) ? $priceHead : $head), self::HEADERS, array_keys(self::HEADERS)), 32));
 
         $locked = (new Style)->withFontColor('475569');
         $price = (new Style)->withBackgroundColor('FFFBEB')->withFormat('0.00');
+        $pagesStyle = (new Style)->withBackgroundColor('FFFBEB');
+        $computed = (new Style)->withFontColor('475569')->withFormat('0.00');
         $count = 0;
         $query->with(['publisher:id,name', 'author:id,name'])->orderBy('publisher_id')->orderBy('title')
-            ->chunkById(1000, function ($products) use ($writer, $locked, $price, &$count) {
+            ->chunkById(1000, function ($products) use ($writer, $locked, $price, $pagesStyle, $computed, &$count) {
                 foreach ($products as $p) {
                     $cells = [
                         Cell::fromValue($p->id, $locked),
@@ -57,9 +67,12 @@ class PriceSheet
                         Cell::fromValue($p->title, $locked),
                         Cell::fromValue((string) $p->publisher?->name, $locked),
                         Cell::fromValue((string) $p->author?->name, $locked),
-                        Cell::fromValue($p->page_count, $locked),
+                        Cell::fromValue($p->page_count, $pagesStyle),
                         Cell::fromValue(Product::STATUSES[$p->status] ?? $p->status, $locked),
                     ];
+                    foreach (self::COMPUTED_COLUMNS as $field) {
+                        $cells[] = Cell::fromValue($p->{$field} !== null ? (float) $p->{$field} : null, $computed);
+                    }
                     foreach (self::PRICE_COLUMNS as $field) {
                         $cells[] = Cell::fromValue($p->{$field} !== null ? (float) $p->{$field} : null, $price);
                     }
@@ -73,6 +86,8 @@ class PriceSheet
     }
 
     /**
+     * $publishPriced: sayfa sayısı girilip fiyatı oluşan taslaklar yayına alınır.
+     *
      * @return array{updated:int, unchanged:int, published:int, errors:list<string>}
      */
     public function import(string $path, bool $publishPriced = false): array
@@ -103,6 +118,23 @@ class PriceSheet
                         continue;
                     }
                     $change = [];
+                    $rawPages = $cells[self::PAGE_COLUMN] ?? null;
+                    if ($rawPages !== null && ! (is_string($rawPages) && trim($rawPages) === '')) {
+                        if (is_string($rawPages) && in_array(mb_strtolower(trim($rawPages)), ['-', 'sil', 'yok'], true)) {
+                            $change['page_count'] = null;
+                        } else {
+                            $pages = filter_var(is_string($rawPages) ? trim($rawPages) : $rawPages, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1, 'max_range' => 20000]]);
+                            if ($pages === false && is_float($rawPages) && floor($rawPages) === $rawPages && $rawPages >= 1 && $rawPages <= 20000) {
+                                $pages = (int) $rawPages; // Excel sayıları ondalıklı okunabilir (320.0)
+                            }
+                            if ($pages === false) {
+                                $errors[] = "Satır {$rowNo} (ID {$id}): sayfa sayısı geçersiz: ".mb_substr((string) $rawPages, 0, 20);
+
+                                continue;
+                            }
+                            $change['page_count'] = $pages;
+                        }
+                    }
                     foreach (self::PRICE_COLUMNS as $col => $field) {
                         $raw = $cells[$col] ?? null;
                         if ($raw === null || (is_string($raw) && trim($raw) === '')) {
@@ -145,7 +177,8 @@ class PriceSheet
                         continue;
                     }
                     $p->fill($change);
-                    if ($publishPriced && $p->status === 'draft' && ($p->price_bw !== null || $p->price_color !== null)) {
+                    // Fiyat kayıtta sayfa sayısından hesaplanır; sayfa sayısı olan taslak yayına alınabilir.
+                    if ($publishPriced && $p->status === 'draft' && ($p->page_count || $p->price_bw !== null || $p->price_color !== null)) {
                         $p->status = 'active';
                         $published++;
                     }

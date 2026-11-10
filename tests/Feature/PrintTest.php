@@ -201,7 +201,7 @@ class PrintTest extends TestCase
         $form = ['enabled' => '1', 'bw_enabled' => '1', 'color_enabled' => '1', 'spiral_price' => '35,50', 'a3_multiplier' => '2', 'max_mb' => 100,
             'max_copies' => 50, 'unordered_days' => 5, 'ordered_days' => 20,
             'tiers' => [['from' => 1, 'bw' => '1,75', 'color' => '5'], ['from' => 51, 'bw' => '2,00', 'color' => '4,50'], ['from' => '', 'bw' => '', 'color' => '']]];
-        $this->put(route('admin.print.update'), $form)->assertSessionHasNoErrors();
+        $this->put(route('admin.print.update'), $form)->assertRedirect()->assertSessionHasNoErrors();
         $s = app(PrintSettings::class)->all();
         $this->assertSame('35.50', $s['spiral_price']);
         $this->assertCount(2, $s['tiers']);
@@ -224,7 +224,7 @@ class PrintTest extends TestCase
         // Ana form kaydı renk durumunu değiştirmez.
         $form = ['enabled' => '1', 'spiral_price' => '40', 'a3_multiplier' => '2', 'max_mb' => 100, 'max_copies' => 50,
             'unordered_days' => 5, 'ordered_days' => 20, 'tiers' => PrintSettings::DEFAULTS['tiers']];
-        $this->put(route('admin.print.update'), $form)->assertSessionHasNoErrors();
+        $this->put(route('admin.print.update'), $form)->assertRedirect()->assertSessionHasNoErrors();
         $this->assertSame(['bw'], app(PrintSettings::class)->colors());
 
         // Son açık tür kapatılamaz.

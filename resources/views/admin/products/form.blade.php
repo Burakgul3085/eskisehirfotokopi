@@ -41,10 +41,21 @@
 
             <section class="card p-6 sm:p-8">
                 <h2 class="font-bold">Fiyatlar</h2>
-                <p class="mt-1 text-sm text-muted">Boş bırakılan baskı tipi satılmaz. Eski fiyat girilirse üstü çizili gösterilir ve indirim oranı hesaplanır.</p>
-                <div class="mt-5 grid gap-5 sm:grid-cols-2">
-                    <x-field name="price_bw" label="Siyah-beyaz fiyat (₺)" :value="$money($product->price_bw)" inputmode="decimal" />
-                    <x-field name="price_color" label="Renkli fiyat (₺)" :value="$money($product->price_color)" inputmode="decimal" />
+                <p class="mt-1 text-sm text-muted">Fiyat elle girilmez: <strong>Sayfa</strong> alanındaki PDF sayfa sayısından, fotokopi ayarlarındaki yaprak fiyat kademeleriyle otomatik hesaplanır (1'e 1: sayfa ÷ 2 yaprak, 2'ye 2: sayfa ÷ 4 yaprak). Fotokopi fiyatlarını değiştirince tüm ürünler güncellenir.</p>
+                @if ($product->page_count)
+                    <dl class="mt-5 grid gap-3 sm:grid-cols-2">
+                        @foreach (\App\Models\Product::PRINT_TYPES as $t => $label)
+                            <div class="flex items-center justify-between rounded-xl border border-line bg-surface px-4 py-3">
+                                <dt class="text-sm text-muted">{{ $label }}</dt>
+                                <dd class="font-display font-bold">{{ $product->price($t) !== null ? \App\Support\Money::format($product->price($t)) : '—' }}</dd>
+                            </div>
+                        @endforeach
+                    </dl>
+                @else
+                    <p class="mt-4 rounded-xl bg-warning-soft px-4 py-3 text-sm text-warning">Sayfa sayısı girilmedi; ürünün fiyatı yok ve yayına alınamaz.{{ $product->price_bw !== null ? ' (Eski elle girilmiş fiyat: '.\App\Support\Money::format($product->price_bw).')' : '' }}</p>
+                @endif
+                <p class="mt-5 text-sm text-muted">Eski fiyat girilirse 1'e 1 fiyatının üstü çizili gösterilir ve indirim oranı hesaplanır.</p>
+                <div class="mt-3 grid gap-5 sm:grid-cols-2">
                     <x-field name="compare_bw" label="Siyah-beyaz eski fiyat" :value="$money($product->compare_bw)" inputmode="decimal" />
                     <x-field name="compare_color" label="Renkli eski fiyat" :value="$money($product->compare_color)" inputmode="decimal" />
                 </div>

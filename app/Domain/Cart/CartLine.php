@@ -30,6 +30,6 @@ class CartLine
 
     public function printTypeLabel(): ?string
     {
-        return ['bw' => 'Siyah-beyaz', 'color' => 'Renkli'][$this->printType] ?? null;
+        return $this->printType ? (Product::PRINT_TYPES[$this->printType] ?? null) : null;
     }
 }

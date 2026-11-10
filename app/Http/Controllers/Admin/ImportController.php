@@ -173,6 +173,12 @@ class ImportController extends Controller
         $item->update(['status' => 'imported', 'product_id' => $product->id, 'reviewed_at' => now(), 'error' => null]);
         $item->batch?->refreshStatus();
         Activity::log('import.reviewed', $product);
+        // Kontrolde sayfa sayısı girildiyse fiyat hesaplanmıştır: taslak ürün doğrudan yayına alınır.
+        if ($product->status === 'draft' && $product->page_count && $product->price_bw !== null) {
+            $product->update(['status' => 'active']);
+
+            return $this->afterReview($item, 'Ürün kaydedildi; fiyatı sayfa sayısından hesaplandı ve yayına alındı.');
+        }
 
         return $this->afterReview($item, 'Ürün kaydedildi ve onaylandı.');
     }
@@ -194,7 +200,7 @@ class ImportController extends Controller
         $batch->refreshStatus();
         Activity::log('import.approved_all', null, ['batch' => $batch->id, 'count' => $count]);
 
-        return back()->with('status', "{$count} kitap onaylandı. Ürünler taslakta; fiyatları Excel ile yükleyip yayına alabilirsiniz.");
+        return back()->with('status', "{$count} kitap onaylandı. Ürünler taslakta: Ürünler sayfasında PDF sayfa sayılarını girin; fiyat otomatik hesaplanır ve yayına alınır.");
     }
 
     public function retry(ImportItem $item): RedirectResponse

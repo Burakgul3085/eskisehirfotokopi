@@ -1,7 +1,8 @@
 @php
     /** @var \App\Models\Product $product */
     $types = $product->printTypes();
-    $labels = ['bw' => 'Siyah-beyaz', 'color' => 'Renkli'];
+    $colorNames = \App\Domain\Print\PrintOptions::COLORS;
+    $layoutHints = \App\Domain\Print\PrintOptions::LAYOUT_HINTS;
     $crumbs = $trail->map(fn ($c) => [$c->name, route('category.show', $c)])->push([$product->title, null])->all();
     $specs = array_filter([
         'Yazar' => $product->author?->name,
@@ -11,7 +12,7 @@
         'Baskı yılı' => $product->print_year,
         'ISBN' => $product->isbn,
         'Ürün kodu' => $product->code,
-        'Baskı' => $types ? implode(' / ', array_map(fn ($t) => $labels[$t], $types)) : null,
+        'Baskı' => $types ? implode(' / ', array_unique(array_map(fn ($t) => $colorNames[\App\Models\Product::colorOf($t)], $types))).' · önlü arkalı' : null,
     ]);
     $canBuy = $product->isPurchasable() && \Illuminate\Support\Facades\Route::has('cart.add');
     $schema = array_filter([
@@ -72,7 +73,10 @@
                                         <label class="flex cursor-pointer items-center justify-between gap-3 rounded-xl border border-line p-3.5 transition has-checked:border-primary has-checked:bg-primary-soft has-checked:ring-2 has-checked:ring-primary/15">
                                             <span class="flex items-center gap-2.5">
                                                 <input type="radio" name="print_type" value="{{ $t }}" @checked($loop->first) class="accent-primary">
-                                                <span class="text-sm font-semibold">{{ $labels[$t] }}</span>
+                                                <span>
+                                                    <span class="block text-sm font-semibold">{{ \App\Models\Product::PRINT_TYPES[$t] }}</span>
+                                                    @if ($product->page_count)<span class="block text-xs text-muted">{{ $layoutHints[str_ends_with($t, '2') ? 2 : 1] }}</span>@endif
+                                                </span>
                                             </span>
                                             <span class="text-right">
                                                 @if ($cmp = $product->comparePrice($t))<span class="block text-xs text-muted line-through">{{ \App\Support\Money::format($cmp) }}</span>@endif

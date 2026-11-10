@@ -40,7 +40,7 @@ class CartController extends Controller
             'quantity' => ['nullable', 'integer', 'min:1', 'max:'.Cart::MAX_QTY],
         ]);
         $product = Product::visible()->find($data['product_id']);
-        if (! $product || $product->price($data['print_type']) === null) {
+        if (! $product || ! in_array($data['print_type'], $product->printTypes(), true)) {
             return $this->reply($request, $cart, 'Bu ürün şu anda satışta değil.', false);
         }
         try {

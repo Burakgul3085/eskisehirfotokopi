@@ -61,6 +61,7 @@ Route::prefix('yonetim')->name('admin.')->group(function () {
         Route::get('/urunler/fiyat-sablonu', [ProductController::class, 'priceTemplate'])->name('products.price-template');
         Route::post('/urunler/fiyat-yukle', [ProductController::class, 'priceImport'])->name('products.price-import');
         Route::post('/urunler/toplu', [ProductController::class, 'bulk'])->name('products.bulk');
+        Route::post('/urunler/sayfa-sayilari', [ProductController::class, 'pages'])->name('products.pages');
         Route::resource('urunler', ProductController::class)->parameters(['urunler' => 'product'])->except('show')->names('products');
         Route::post('/kategoriler/toplu-sil', [CategoryController::class, 'bulkDestroy'])->name('categories.bulk-destroy');
         Route::post('/kategoriler/{category}/sira', [CategoryController::class, 'move'])->name('categories.move');

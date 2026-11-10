@@ -21,8 +21,8 @@
     {{-- Excel fiyat şablonu (K2) --}}
     <div class="card mb-5 space-y-4 p-5">
         <div>
-            <p class="font-semibold">Excel ile toplu fiyat</p>
-            <p class="text-sm text-muted">Şablon, aşağıdaki filtreye uyan ürünleri içerir. Yalnızca sarı fiyat sütunlarını doldurun; boş hücre değişmez, “-” fiyatı siler.</p>
+            <p class="font-semibold">Excel ile toplu sayfa sayısı</p>
+            <p class="text-sm text-muted">Şablon, aşağıdaki filtreye uyan ürünleri içerir. Sarı <strong>Sayfa</strong> sütununa PDF sayfa sayısını yazın; fiyatlar fotokopi kademelerinden otomatik hesaplanır (fiyat sütunları yalnız bilgi içindir). Boş hücre değişmez, “-” siler. Az sayıda ürün için aşağıdaki tablodaki Sayfa kutuları da kullanılabilir.</p>
             @error('file')<p class="field-error">{{ $message }}</p>@enderror
             @if (session('import_errors'))
                 <details class="mt-2 text-sm text-danger"><summary class="cursor-pointer font-semibold">{{ count(session('import_errors')) }} satır işlenemedi</summary>
@@ -35,8 +35,8 @@
         <form method="post" action="{{ route('admin.products.price-import') }}" enctype="multipart/form-data" class="flex shrink-0 flex-wrap items-center gap-2">
             @csrf
             <input type="file" name="file" accept=".xlsx" required class="max-w-[14rem] text-sm file:mr-2 file:rounded-lg file:border-0 file:bg-primary-soft file:px-3 file:py-1.5 file:font-semibold file:text-primary-dark">
-            <label class="flex items-center gap-1.5 text-xs"><input type="checkbox" name="publish" value="1" checked class="accent-primary"> Fiyatı girilen taslakları yayına al</label>
-            <button class="btn-primary btn-sm"><x-icon name="upload" class="size-4" />Fiyatları yükle</button>
+            <label class="flex items-center gap-1.5 text-xs"><input type="checkbox" name="publish" value="1" checked class="accent-primary"> Fiyatı oluşan taslakları yayına al</label>
+            <button class="btn-primary btn-sm"><x-icon name="upload" class="size-4" />Şablonu yükle</button>
         </form>
         </div>
     </div>
@@ -87,12 +87,18 @@
                 </select>
                 <button class="btn-ghost btn-sm">Uygula</button>
                 @error('ids')<span class="field-error">{{ $message }}</span>@enderror
+                {{-- Sayfa sayısı kutuları ayrı forma (products-pages) bağlıdır; formlar iç içe olamaz. --}}
+                <span class="ml-auto flex flex-wrap items-center gap-2">
+                    <label class="flex items-center gap-1.5 text-sm"><input type="checkbox" name="publish" value="1" form="products-pages" checked class="size-4 accent-primary"> Taslakları yayına al</label>
+                    <button form="products-pages" class="btn-primary btn-sm"><x-icon name="check" class="size-4" />Sayfa sayılarını kaydet</button>
+                </span>
+                @if ($errors->has('pages') || $errors->has('pages.*'))<span class="field-error w-full">{{ $errors->first('pages') ?: collect($errors->get('pages.*'))->flatten()->first() }}</span>@endif
             </div>
             <table class="table-panel">
                 <thead>
                     <tr>
                         <th class="w-0"><input type="checkbox" x-on:change="toggleAll" class="size-4 accent-primary" aria-label="Tümünü seç"></th>
-                        <th class="w-0"></th><th>Ürün</th><th>Yayınevi</th><th>Kategori</th><th class="text-right">S-B</th><th class="text-right">Renkli</th><th>Durum</th>
+                        <th class="w-0"></th><th>Ürün</th><th>Yayınevi</th><th>Kategori</th><th class="w-0" title="PDF sayfa sayısı; fiyat buradan hesaplanır">Sayfa</th><th class="text-right" title="Önlü arkalı 1'e 1">S-B</th><th class="text-right" title="Önlü arkalı 1'e 1">Renkli</th><th>Durum</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -109,6 +115,7 @@
                             </td>
                             <td class="text-muted">{{ $p->publisher?->name ?? '—' }}</td>
                             <td class="text-muted">{{ $p->category?->name ?? '—' }}</td>
+                            <td><input type="number" name="pages[{{ $p->id }}]" value="{{ $p->page_count }}" min="1" max="20000" form="products-pages" class="field-input w-24 py-1.5 text-sm" aria-label="{{ $p->title }} sayfa sayısı" placeholder="Sayfa"></td>
                             <td class="text-right whitespace-nowrap">{{ $p->price_bw !== null ? \App\Support\Money::format($p->price_bw) : '—' }}</td>
                             <td class="text-right whitespace-nowrap">{{ $p->price_color !== null ? \App\Support\Money::format($p->price_color) : '—' }}</td>
                             <td class="whitespace-nowrap">
@@ -117,11 +124,12 @@
                             </td>
                         </tr>
                     @empty
-                        <tr><td colspan="8" class="py-10 text-center text-muted">Ürün bulunamadı.</td></tr>
+                        <tr><td colspan="9" class="py-10 text-center text-muted">Ürün bulunamadı.</td></tr>
                     @endforelse
                 </tbody>
             </table>
         </div>
     </form>
+    <form method="post" action="{{ route('admin.products.pages') }}" id="products-pages">@csrf</form>
     <div class="mt-6">{{ $products->links() }}</div>
 </x-layouts.admin>

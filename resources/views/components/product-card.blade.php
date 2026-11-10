@@ -5,7 +5,9 @@
     $price = $type ? $product->price($type) : null;
     $compare = $type ? $product->comparePrice($type) : null;
     $discount = $type ? $product->discountPercent($type) : null;
-    $hasBoth = count($product->printTypes()) === 2;
+    $types = $product->printTypes();
+    $hasColor = in_array('color', $types, true);
+    $hasBoth = $type === 'bw' && $hasColor;
     $url = route('product.show', $product);
 @endphp
 <article {{ $attributes->merge(['class' => 'group relative flex h-full flex-col overflow-hidden rounded-2xl border border-line/70 bg-white transition hover:-translate-y-0.5 hover:shadow-lift']) }}>
@@ -24,7 +26,7 @@
         @if ($discount)
             <span class="absolute top-2.5 left-2.5 rounded-lg bg-danger px-2 py-0.5 text-xs font-bold text-white">%{{ $discount }}</span>
         @endif
-        @if ($product->price_color !== null)
+        @if ($hasColor)
             <span class="absolute top-2.5 right-2.5 rounded-lg bg-white/90 px-2 py-0.5 text-[11px] font-semibold text-primary-dark ring-1 ring-primary-line">Renkli</span>
         @endif
     </a>

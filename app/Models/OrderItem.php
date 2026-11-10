@@ -28,6 +28,6 @@ class OrderItem extends Model
 
     public function printTypeLabel(): ?string
     {
-        return ['bw' => 'Siyah-beyaz', 'color' => 'Renkli'][$this->print_type] ?? null;
+        return $this->print_type ? (Product::PRINT_TYPES[$this->print_type] ?? null) : null;
     }
 }

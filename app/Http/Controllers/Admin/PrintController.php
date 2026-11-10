@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Domain\Catalog\BookPricing;
 use App\Domain\Print\PrintOptions;
 use App\Domain\Print\PrintSettings;
 use App\Http\Controllers\Controller;
@@ -21,11 +22,13 @@ class PrintController extends Controller
         return view('admin.print.settings', ['s' => $settings->all(), 'warnings' => $settings->warnings()]);
     }
 
-    public function update(Request $request, PrintSettings $settings): RedirectResponse
+    public function update(Request $request, PrintSettings $settings, BookPricing $books): RedirectResponse
     {
         $settings->save($request->all());
+        // Kitap fiyatları aynı kademelerden hesaplanır: sayfa sayısı girilmiş tüm ürünler güncellenir.
+        $n = $books->refreshAll();
 
-        return redirect()->route('admin.print.edit')->with('status', 'Fotokopi ayarları kaydedildi.');
+        return redirect()->route('admin.print.edit')->with('status', 'Fotokopi ayarları kaydedildi.'.($n ? " {$n} ürünün fiyatı güncellendi." : ''));
     }
 
     /** Siyah-beyaz / renkli baskıyı aç-kapat (yazıcı arızasında hızlı geçiş). */
