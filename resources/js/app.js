@@ -21,7 +21,15 @@ document.addEventListener('submit', (event) => {
 // Header: kaydırınca süzülen gölge, fareyi izleyen ışık, sepet sayısı değişince rozet zıplar
 const siteHeader = document.querySelector('[data-site-header]');
 if (siteHeader) {
-    const onScroll = () => siteHeader.toggleAttribute('data-scrolled', window.scrollY > 8);
+    // Eşikte titremesin diye iki ayrı sınır (header boyu değişince kaydırma konumu oynayabilir)
+    const onScroll = () => {
+        const y = window.scrollY;
+        if (y > 40) {
+            siteHeader.toggleAttribute('data-scrolled', true);
+        } else if (y < 6) {
+            siteHeader.toggleAttribute('data-scrolled', false);
+        }
+    };
     window.addEventListener('scroll', onScroll, { passive: true });
     onScroll();
     siteHeader.addEventListener('pointermove', (e) => {
@@ -50,6 +58,7 @@ const sceneLoaders = {
     faq: () => import('./scenes/faq.js'),
     'footer-wave': () => import('./scenes/footer-wave.js'),
     ambient: () => import('./scenes/ambient.js'),
+    header: () => import('./scenes/header.js'),
 };
 const sceneRoots = document.querySelectorAll('[data-scene]');
 if (sceneRoots.length && 'IntersectionObserver' in window) {

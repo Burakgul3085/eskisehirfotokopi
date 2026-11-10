@@ -6,8 +6,9 @@
     $inlineRoots = array_slice($menu, 0, 6);
 @endphp
 {{-- Cam header: fareyi izleyen ışık, akan alt çizgi, 3D logo; kaydırınca süzülen gölge (resources/js/app.js → data-site-header). --}}
-<header data-site-header class="site-header sticky top-0 z-30">
+<header data-site-header data-scene="header" class="site-header sticky top-0 z-30">
     <div class="header-glow pointer-events-none absolute inset-0 -z-10 overflow-hidden" aria-hidden="true"></div>
+    <canvas data-scene-canvas class="scene-canvas header-canvas pointer-events-none absolute inset-0 -z-10 block size-full" aria-hidden="true"></canvas>
     <div class="header-line pointer-events-none absolute inset-x-0 bottom-0 h-px" aria-hidden="true"></div>
     @if ($settings['announcement'])
         <div class="header-announce relative overflow-hidden bg-primary-dark text-white">
@@ -21,7 +22,7 @@
         </div>
     @endif
 
-    <div class="container-page flex items-center gap-3 py-3 sm:gap-6 sm:py-4">
+    <div class="header-main container-page flex items-center gap-3 py-3 sm:gap-6 sm:py-4">
         <button type="button" x-on:click="toggle" class="-ml-1 rounded-lg p-2 text-ink hover:bg-surface lg:hidden" aria-label="Menü">
             <x-icon name="menu" class="size-6" />
         </button>
@@ -36,7 +37,7 @@
                 </span>
                 <span class="hidden leading-tight sm:block">
                     <span class="block font-display text-lg font-extrabold tracking-tight text-ink">{{ $settings['site_name'] }}</span>
-                    @if ($settings['site_tagline'])<span class="hidden max-w-72 truncate text-[11px] font-medium text-muted xl:block">{{ $settings['site_tagline'] }}</span>@endif
+                    @if ($settings['site_tagline'])<span class="header-tagline hidden max-w-72 truncate text-[11px] font-medium text-muted xl:block">{{ $settings['site_tagline'] }}</span>@endif
                 </span>
             @endif
         </a>
