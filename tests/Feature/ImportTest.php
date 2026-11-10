@@ -179,6 +179,34 @@ class ImportTest extends TestCase
         $this->assertSame('draft', $item->product->fresh()->status);
     }
 
+    public function test_cover_and_imprint_fill_author_year_and_description(): void
+    {
+        $ocr = $this->useOcr(new FakeOcrEngine(null, []));
+        $ocr->pageTexts = [
+            'cover' => "TYT\nTARİH\nKONU ÖZETLİ SORU BANKASI\nAycan Söylemez\n> Kavramlarla Konu Özeti\n> Kazanım Odaklı Konu Testi",
+            'imprint' => "Bu ürünün bütün hakları 4K YAYINLARI'na aittir.\nBASKI TARİHİ\nMart 2022\nBASKI\nGrupçağ Matbaa",
+        ];
+        $res = $this->postJson(route('admin.imports.store'), ['name' => 'KİTAPLAR', 'books' => [[
+            'publisher_folder' => '4K YAYINLARI EKRAN GÖRÜNTÜLERİ', 'folder' => '4K YAYINLARI TYT TARİH SORU BANKASI', 'info' => null,
+            'mockup' => '4K TYT TARİH KAPAK.png', 'cover' => '4K TYT TARİH KAPAK.png', 'imprint' => '4K TYT TARİH BASIM.png',
+        ]]])->assertOk();
+        [$batch, $id] = [$res->json('batch'), $res->json('items.0')];
+        foreach (['mockup', 'cover', 'imprint'] as $role) {
+            $this->post(route('admin.imports.upload', [$batch, $id]), ['role' => $role, 'file' => UploadedFile::fake()->image("{$role}.png", 600, 800)])->assertOk();
+        }
+
+        $item = ImportItem::findOrFail($id);
+        $p = $item->product;
+        $this->assertSame('TYT Tarih Soru Bankası', $p->title);
+        $this->assertSame('Aycan Söylemez', $p->author->name);
+        $this->assertSame(2022, $p->print_year);
+        $this->assertSame("• Kavramlarla Konu Özeti\n• Kazanım Odaklı Konu Testi", $p->description);
+        $this->assertSame('Soru Bankası › TYT › Tarih', $p->category->fullName());
+        $this->assertContains('Yazar kapaktan okundu: “Aycan Söylemez”; doğruluğunu kontrol edin.', $item->issues);
+        $this->assertNull($item->cover_path); // okunduktan sonra silinir
+        $this->assertStringContainsString('--- Kapak ---', $item->ocr_text);
+    }
+
     public function test_upload_rejects_non_images_and_wrong_batch(): void
     {
         $this->useOcr(FakeOcrEngine::sample());

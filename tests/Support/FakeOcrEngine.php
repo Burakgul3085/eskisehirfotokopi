@@ -64,6 +64,14 @@ class FakeOcrEngine implements OcrEngine
         return $words;
     }
 
+    /** @var array<string, string> rol (dosya adı: cover, imprint) => sayfa metni */
+    public array $pageTexts = [];
+
+    public function text(string $imagePath): string
+    {
+        return $this->pageTexts[pathinfo($imagePath, PATHINFO_FILENAME)] ?? '';
+    }
+
     public function line(string $imagePath, array $box, bool $digitsOnly = false): string
     {
         $this->lineReads[] = $box;

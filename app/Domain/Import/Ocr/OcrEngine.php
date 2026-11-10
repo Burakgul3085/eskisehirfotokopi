@@ -20,4 +20,7 @@ interface OcrEngine
      * @param  array{0:int,1:int,2:int,3:int}  $box  x, y, genişlik, yükseklik (words() koordinatlarında)
      */
     public function line(string $imagePath, array $box, bool $digitsOnly = false): string;
+
+    /** Sayfanın düz metni (kapak, künye): otomatik sayfa düzeni, satır satır. */
+    public function text(string $imagePath): string;
 }

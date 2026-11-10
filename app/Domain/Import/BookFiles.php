@@ -60,6 +60,32 @@ class BookFiles
         return ['info' => $info, 'mockup' => $mockup];
     }
 
+    /**
+     * Okunacak ek sayfalar: kapak (yazar, özellikler) ve künye (baskı yılı, ISBN). Kapak ürün görseliyle aynı dosya
+     * olabilir; ürün görseli küçültülerek gittiği için okuma özgün dosyadan yapılır.
+     *
+     * @param  list<string>  $names
+     * @return array{cover: ?string, imprint: ?string}
+     */
+    public static function pages(array $names): array
+    {
+        $cover = null;
+        $imprint = null;
+        foreach ($names as $n) {
+            if (! self::isImage($n)) {
+                continue;
+            }
+            $base = Text::lower(pathinfo($n, PATHINFO_FILENAME));
+            if ($imprint === null && preg_match('/bas[ıi]m|k[üu]nye/u', $base)) {
+                $imprint = $n;
+            } elseif ($cover === null && ! preg_match(self::IGNORE_PATTERN, $base) && preg_match(self::COVER_PATTERN, $base)) {
+                $cover = $n;
+            }
+        }
+
+        return ['cover' => $cover, 'imprint' => $imprint];
+    }
+
     public static function isImage(string $name): bool
     {
         return in_array(strtolower(pathinfo($name, PATHINFO_EXTENSION)), self::IMAGE_EXTENSIONS, true);

@@ -43,6 +43,13 @@ class ImportItemProcessor
             [$product, $action, $applyIssues] = $this->apply($data, $item->product);
             $issues = [...$issues, ...$applyIssues];
 
+            // Kapak ve künye yalnız okunmak içindir; işlendikten sonra silinir.
+            foreach (['cover_path', 'imprint_path'] as $col) {
+                if ($item->{$col}) {
+                    $disk->delete($item->{$col});
+                }
+            }
+
             if ($item->mockup_path && $disk->exists($item->mockup_path)) {
                 $this->images->store($product, $disk->path($item->mockup_path));
                 $disk->delete($item->mockup_path);
@@ -58,6 +65,8 @@ class ImportItemProcessor
                 'product_id' => $product->id,
                 'action' => $item->action ?? $action,
                 'mockup_path' => null,
+                'cover_path' => null,
+                'imprint_path' => null,
                 'duration_ms' => (int) ((hrtime(true) - $start) / 1e6),
             ]);
         } catch (Throwable $e) {
@@ -97,9 +106,32 @@ class ImportItemProcessor
         }
         $f = $ocr['fields'];
 
+        // Bilgi tablosu dışındaki sayfalar: kapak (yazar, özellikler) ve künye (baskı yılı, ISBN).
+        $page = ['author' => null, 'features' => [], 'isbn' => null, 'year' => null];
+        if ($this->ocr->available()) {
+            foreach (['cover' => 'Kapak', 'imprint' => 'Künye'] as $role => $label) {
+                $path = $item->{$role.'_path'} ? Storage::disk('local')->path($item->{$role.'_path'}) : null;
+                if (! $path || ! is_file($path)) {
+                    continue;
+                }
+                try {
+                    $text = $this->ocr->text($path);
+                } catch (Throwable) {
+                    continue; // kapak okunamazsa kitap yine işlenir
+                }
+                $read = $role === 'cover' ? PageReader::cover($text) : PageReader::imprint($text);
+                $page = array_merge($page, array_filter($read, fn ($v) => $v !== null && $v !== []));
+                $ocrText = trim(($ocrText ?? '')."\n\n--- {$label} ---\n".trim($text));
+            }
+        }
+
         // Kitap adı: OCR başlığı düzgün harflidir; klasör adıyla uyuşmazsa klasör adı esas alınır (insan yazdı).
         $title = $this->pick('Kitap adı', $ocr['title'], $folder['title'], $issues, 0.85);
         $author = $this->pick('Yazar', $f['author'] ?? null, $folder['author'], $issues, 0.8);
+        if ($author === null && $page['author']) {
+            $author = $page['author'];
+            $issues[] = "Yazar kapaktan okundu: “{$author}”; doğruluğunu kontrol edin.";
+        }
 
         // Yayınevi: klasör kimliği belirler; OCR adı aynı yayınevini gösteriyorsa düzgün yazımı için kullanılır.
         $publisher = $folder['publisher'] ?? ($f['publisher'] ?? null);
@@ -110,6 +142,9 @@ class ImportItemProcessor
         }
 
         $isbn = null;
+        if (empty($f['isbn']) && $page['isbn']) {
+            $isbn = $page['isbn']; // kapak/künyedeki ISBN (kontrol hanesi tutuyor)
+        }
         if (! empty($f['isbn'])) {
             $isbn = Isbn::normalize($f['isbn']);
             if ($isbn === null && $infoPath && isset($ocr['boxes']['isbn'])) {
@@ -138,7 +173,8 @@ class ImportItemProcessor
             }
         }
 
-        $year = $folder['year']; // klasör adının sonundaki yıl ("… SORU BANKASI 2023"); görseldeki yıl önceliklidir
+        // Öncelik: bilgi tablosundaki yıl → künyedeki baskı tarihi → klasör adının sonundaki yıl ("… SORU BANKASI 2023").
+        $year = $page['year'] ?? $folder['year'];
         if (! empty($f['year']) && preg_match('/\b(19|20)\d{2}\b/', $f['year'], $m) && (int) $m[0] <= (int) date('Y') + 1) {
             $year = (int) $m[0];
         }
@@ -182,6 +218,7 @@ class ImportItemProcessor
             'pages' => $pages,
             'year' => $year,
             'code' => $code,
+            'description' => $page['features'] ? implode("\n", array_map(fn ($x) => '• '.$x, $page['features'])) : null,
             'ocr' => ['title' => $ocr['title'], 'fields' => $f],
         ], $issues, $ocrText];
     }
@@ -232,6 +269,11 @@ class ImportItemProcessor
                 'page_count' => $data['pages'] ?? null,
                 'print_year' => $data['year'] ?? null,
             ], fn ($v) => $v !== null);
+
+            // Açıklama (kapaktaki özellikler) yalnız boşsa yazılır; elle girilen açıklama korunur.
+            if (! empty($data['description']) && (! $product || blank($product->description))) {
+                $values['description'] = $data['description'];
+            }
 
             if ($product) {
                 $product->fill($values)->save();

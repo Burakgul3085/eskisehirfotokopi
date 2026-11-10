@@ -14,7 +14,7 @@ use Illuminate\Support\Facades\DB;
 class ImportBatchCreator
 {
     /**
-     * @param  list<array{publisher_folder: ?string, folder: string, info: ?string, mockup: ?string}>  $books
+     * @param  list<array{publisher_folder: ?string, folder: string, info: ?string, mockup: ?string, cover?: ?string, imprint?: ?string}>  $books
      * @return array{batch: ImportBatch, items: array<int, int|null>} items: kitap sırası => kalem id (atlandıysa null)
      */
     public function create(string $name, array $books, ?int $adminId, string $source = 'upload'): array
@@ -48,7 +48,7 @@ class ImportBatchCreator
                         continue;
                     }
                     $seen[$fp] = $i;
-                    $expected = array_filter(['info' => $b['info'] ?? null, 'mockup' => $b['mockup'] ?? null]);
+                    $expected = array_filter(array_combine(ImportItem::ROLES, array_map(fn ($r) => $b[$r] ?? null, ImportItem::ROLES)));
                     $rows[] = [
                         'batch_id' => $batch->id,
                         'publisher_folder' => isset($b['publisher_folder']) ? mb_substr($b['publisher_folder'], 0, 255) : null,

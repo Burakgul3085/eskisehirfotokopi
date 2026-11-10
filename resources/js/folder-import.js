@@ -13,6 +13,7 @@ const IMAGE_EXT = ['png', 'jpg', 'jpeg', 'webp'];
 const INFO = /ekran\s*g[öo]r[üu]nt|screenshot|ekran al[ıi]nt|(^|[^\p{L}])bilgi([^\p{L}]|$)/u;
 const MOCKUP = /chatgpt|mock\s*-?\s*up|mockup/u;
 const COVER = /(^|[^\p{L}])kap(ak)?([^\p{L}]|$)/u;
+const IMPRINT = /bas[ıi]m|k[üu]nye/u;
 const IGNORE = /bas[ıi]m|[iı]?çindekiler|(^|[^\p{L}])[iı]?çin([^\p{L}]|$)|k[üu]nye/u;
 const HIDDEN = /^(\.|~\$)|^(thumbs\.db|desktop\.ini)$/i;
 const PARALLEL = 6;
@@ -53,8 +54,10 @@ export function classify(files) {
     if (!mockup) {
         mockup = cover || (others.length === 1 ? others[0] : null);
     }
+    // Okunacak ek sayfalar (BookFiles::pages): kapak (yazar, özellikler) ve künye (baskı yılı, ISBN).
+    const imprint = files.find((f) => IMPRINT.test(baseOf(f.name))) || null;
 
-    return { info, mockup };
+    return { info, mockup, cover, imprint };
 }
 
 /** [{path, file}] listesinden kitapları çıkarır. */
@@ -82,12 +85,14 @@ export function scan(entries, maxBytes) {
     const publishers = new Set();
     let tooBig = 0;
     for (const { segs, files } of folders.values()) {
-        const { info, mockup } = classify(files);
+        const { info, mockup, cover, imprint } = classify(files);
         const book = {
             publisher_folder: segs.length >= 2 ? segs[segs.length - 2] : null,
             folder: segs[segs.length - 1],
             infoFile: info && info.size <= maxBytes ? info : null,
             mockupFile: mockup && mockup.size <= maxBytes ? mockup : null,
+            coverFile: cover && cover.size <= maxBytes ? cover : null,
+            imprintFile: imprint && imprint.size <= maxBytes ? imprint : null,
         };
         tooBig += (info && !book.infoFile ? 1 : 0) + (mockup && !book.mockupFile ? 1 : 0);
         books.push(book);
@@ -298,7 +303,14 @@ export function folderImport() {
             try {
                 res = await this.request(urls.store, JSON.stringify({
                     name: rootName,
-                    books: books.map((b) => ({ publisher_folder: b.publisher_folder, folder: b.folder, info: b.infoFile ? b.infoFile.name : null, mockup: b.mockupFile ? b.mockupFile.name : null })),
+                    books: books.map((b) => ({
+                        publisher_folder: b.publisher_folder,
+                        folder: b.folder,
+                        info: b.infoFile ? b.infoFile.name : null,
+                        mockup: b.mockupFile ? b.mockupFile.name : null,
+                        cover: b.coverFile ? b.coverFile.name : null,
+                        imprint: b.imprintFile ? b.imprintFile.name : null,
+                    })),
                 }), { 'Content-Type': 'application/json' });
             } catch (err) {
                 this.fail('Yükleme başlatılamadı: ' + err.message);
@@ -321,6 +333,12 @@ export function folderImport() {
                 }
                 if (books[i].mockupFile) {
                     tasks.push({ url, role: 'mockup', file: books[i].mockupFile });
+                }
+                if (books[i].coverFile) {
+                    tasks.push({ url, role: 'cover', file: books[i].coverFile });
+                }
+                if (books[i].imprintFile) {
+                    tasks.push({ url, role: 'imprint', file: books[i].imprintFile });
                 }
             });
             this.total = tasks.length;

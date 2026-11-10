@@ -59,13 +59,15 @@ Artisan::command('katalog:klasor-yukle {yol} {--hemen : Kuyruğa atmadan bu komu
         if (! array_filter($names, fn ($n) => BookFiles::isImage($n))) {
             continue;
         }
-        $roles = BookFiles::classify($names);
+        $roles = BookFiles::classify($names) + BookFiles::pages($names);
         $parent = dirname($dir->getPathname());
         $books[] = [
             'publisher_folder' => basename($parent), // kitabın üst klasörü yayınevi klasörüdür
             'folder' => $dir->getFilename(),
             'info' => $roles['info'],
             'mockup' => $roles['mockup'],
+            'cover' => $roles['cover'],
+            'imprint' => $roles['imprint'],
         ];
         $files[] = $dir->getPathname();
     }
@@ -88,7 +90,7 @@ Artisan::command('katalog:klasor-yukle {yol} {--hemen : Kuyruğa atmadan bu komu
         }
         $item = ImportItem::find($id);
         $updates = ['status' => 'queued'];
-        foreach (['info', 'mockup'] as $role) {
+        foreach (ImportItem::ROLES as $role) {
             if ($name = $books[$i][$role]) {
                 $target = $item->storageDir().'/'.$role.'.'.strtolower(pathinfo($name, PATHINFO_EXTENSION));
                 Storage::disk('local')->put($target, file_get_contents($files[$i].DIRECTORY_SEPARATOR.$name));
@@ -112,7 +114,7 @@ Artisan::command('katalog:yukleme-temizle', function () {
     $old = ImportBatch::where('created_at', '<', now()->subDays($days))->get();
     foreach ($old as $batch) {
         Storage::disk('local')->deleteDirectory("imports/{$batch->id}");
-        $batch->items()->update(['info_path' => null, 'mockup_path' => null]);
+        $batch->items()->update(['info_path' => null, 'mockup_path' => null, 'cover_path' => null, 'imprint_path' => null]);
     }
     $this->info($old->count().' yüklemenin dosyaları silindi.');
 })->purpose('Eski toplu yükleme görsellerini siler');

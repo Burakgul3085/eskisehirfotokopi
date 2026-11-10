@@ -55,6 +55,8 @@ class ImportController extends Controller
             'books.*.folder' => ['required', 'string', 'max:255'],
             'books.*.info' => ['nullable', 'string', 'max:255'],
             'books.*.mockup' => ['nullable', 'string', 'max:255'],
+            'books.*.cover' => ['nullable', 'string', 'max:255'],
+            'books.*.imprint' => ['nullable', 'string', 'max:255'],
         ]);
 
         $result = $creator->create($data['name'], array_values($data['books']), $request->user('admin')->id);
@@ -72,7 +74,7 @@ class ImportController extends Controller
     {
         abort_unless($item->batch_id === $batch->id, 404);
         $data = $request->validate([
-            'role' => ['required', Rule::in(['info', 'mockup'])],
+            'role' => ['required', Rule::in(ImportItem::ROLES)],
             'file' => ['required', 'file', 'mimes:jpg,jpeg,png,webp', 'max:'.(config('catalog.import_max_mb') * 1024)],
         ]);
         if ($item->status !== 'waiting_files') {

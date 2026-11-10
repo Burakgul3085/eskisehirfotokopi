@@ -18,7 +18,10 @@ class ImportItem extends Model
         'skipped' => 'Atlandı',
     ];
 
-    protected $fillable = ['batch_id', 'publisher_folder', 'folder', 'fingerprint', 'status', 'expected', 'info_path', 'mockup_path',
+    /** Kalem dosya rolleri: bilgi tablosu, ürün görseli, kapak (yazar/özellik okuması) ve künye (baskı yılı/ISBN). */
+    public const ROLES = ['info', 'mockup', 'cover', 'imprint'];
+
+    protected $fillable = ['batch_id', 'publisher_folder', 'folder', 'fingerprint', 'status', 'expected', 'info_path', 'mockup_path', 'cover_path', 'imprint_path',
         'ocr_text', 'parsed', 'issues', 'product_id', 'action', 'error', 'duration_ms', 'reviewed_at'];
 
     protected function casts(): array
@@ -52,8 +55,13 @@ class ImportItem extends Model
     public function hasAllFiles(): bool
     {
         $e = $this->expected ?? [];
+        foreach (self::ROLES as $role) {
+            if (! empty($e[$role]) && ! $this->{$role.'_path'}) {
+                return false;
+            }
+        }
 
-        return (empty($e['info']) || $this->info_path) && (empty($e['mockup']) || $this->mockup_path);
+        return true;
     }
 
     public function statusLabel(): string

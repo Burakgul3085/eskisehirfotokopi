@@ -7,6 +7,7 @@ use App\Domain\Import\FolderName;
 use App\Domain\Import\ImportItemProcessor;
 use App\Domain\Import\InfoSheetParser;
 use App\Domain\Import\Isbn;
+use App\Domain\Import\PageReader;
 use App\Domain\Import\TitleCategory;
 use PHPUnit\Framework\TestCase;
 use Tests\Support\FakeOcrEngine;
@@ -105,6 +106,40 @@ class ImportParsingTest extends TestCase
         // Üst klasör olmadan da "… YAYINLARI" öneki yayınevi sayılır.
         $b = FolderName::book('4K YAYINLARI TYT TARİH SORU BANKASI');
         $this->assertSame(['publisher' => '4K YAYINLARI', 'title' => 'TYT TARİH SORU BANKASI', 'author' => null, 'year' => null], $b);
+    }
+
+    public function test_cover_and_imprint_pages(): void
+    {
+        // Gerçek kapakların Tesseract çıktısı (KİTAPLAR klasörü)
+        $c = PageReader::cover("AYT\nBiYOLOJİ\nSORU BANKASI\nKerim-Korkmaz\naad\n=\nDETAYLI ©\nVİDEO\nÇÖZÜMLÜ YAYILLARI");
+        $this->assertSame('Kerim Korkmaz', $c['author']);
+        $this->assertSame([], $c['features']);
+
+        $c = PageReader::cover("BiYOLOJİ\nKONU ÖZETLİ SORU BANKASI\nElif Sarıışık\n> Kavramlarla Konu Özeti\n> Kazanım Odaklı Konu Testi\n"
+            ."> Kazandıran ÖSYM Testi\n> Kurgusal Beceri Temelli Testler\n> Kişiye Özel Kazanım Tarama Testi\nUR\n(CD cözcesiyorctden\nDETAYLI");
+        $this->assertSame('Elif Sarıışık', $c['author']);
+        $this->assertSame(['Kavramlarla Konu Özeti', 'Kazanım Odaklı Konu Testi', 'Kazandıran ÖSYM Testi', 'Kurgusal Beceri Temelli Testler',
+            'Kişiye Özel Kazanım Tarama Testi'], $c['features']);
+        $this->assertSame('Kağan Kerem Kıvanç', PageReader::cover("b ıZıK\nKONU ÖZETLİ SORU BANKASI\nKağan Kerem Kıvanç\n> Kavramlarla Konu Özeti")['author']);
+        $this->assertSame('Özgür Balcı', PageReader::cover("GEOMETRİ\nSORU BANKASI\nEditör: Özgür Balcı")['author']);
+        $this->assertSame('Ali Rıza Özata, Fatih Kazova, Şerif Karataş', PageReader::cover(
+            "MATEMATIiK\nKONU OZETLi SORU BANKASI\nAli Rıza Özata - Fatih Kazova - Şerif Karataş Editör: Özgür Balcı\n> Kavramlarla Konu Özeti")['author']);
+        $this->assertNull(PageReader::cover("TYT\nFİZİK\nVİDEO DESTEKLİ\nDEFTER\nAlper Hoca'dan")['author']); // slogan ad sayılmaz
+
+        $i = PageReader::imprint("Kapak\n3D Grafik\nBaskı Tarihi\nMart 2022\nBaskı\nÖzyurt Matbaacılık\nSertifika No: 46772");
+        $this->assertSame(['year' => 2022, 'isbn' => null], $i);
+        $this->assertSame(2022, PageReader::imprint("BASKI TARİHİ\nMart 2022")['year']); // büyük "İ"
+        $this->assertSame(2022, PageReader::imprint("4K Yayınları Dizgi Birimi\n(CeaskıTarini )\nMart 2022\nBASKI")['year']); // bozuk etiket
+        $this->assertSame(2021, PageReader::imprint("Dizgi\nEylül 2021\nBaskı Yeri")['year']); // etiketsiz ay + yıl
+        $this->assertNull(PageReader::imprint('Sertifika No: 51788 TEL: 0312 394 35 39')['year']);
+        $this->assertSame('Özgür Balcı', PageReader::cover("GEOMETRİ\nSORU BANKASI\nEDİTÖR: Özgür Balcı")['author']);
+        $this->assertSame('Ali Veli', PageReader::cover("FASİKÜL\nAli Veli EDİTÖR: Can Cem")['author']);
+        $this->assertNull(PageReader::imprint('Baskı Tarihi 2028')['year']); // OCR hatası: gelecek yıl kabul edilmez
+        $this->assertSame('9789754184426', PageReader::imprint("ISBN: 978-975-418-442-6\nBaskı Tarihi: Ocak 2024")['isbn']);
+        $this->assertNull(PageReader::isbn('978-975-418-442-7')); // kontrol hanesi tutmuyor
+
+        $this->assertSame(['cover' => '3D TYT KİMYA KAP..png', 'imprint' => '3D TYT KİMYA BASIM.png'],
+            BookFiles::pages(['3D TYT KİMYA BASIM.png', '3D TYT KİMYA KAP..png', '3D TYT KİMYA İÇİN-1.png', 'MOCKUP.png']));
     }
 
     public function test_category_guessed_from_title(): void

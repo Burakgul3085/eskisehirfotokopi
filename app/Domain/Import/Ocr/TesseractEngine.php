@@ -68,6 +68,12 @@ class TesseractEngine implements OcrEngine
         }
     }
 
+    public function text(string $imagePath): string
+    {
+        // Kapak/künye yazısı büyük ve renkli zeminli: ön işlem yerine özgün görsel, otomatik düzen (--psm 3).
+        return $this->run([$imagePath, 'stdout', '-l', config('catalog.ocr_languages'), '--psm', '3', '--oem', '1']);
+    }
+
     public function __destruct()
     {
         foreach ($this->prepared as $file) {
