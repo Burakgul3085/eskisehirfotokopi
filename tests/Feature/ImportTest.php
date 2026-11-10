@@ -153,6 +153,32 @@ class ImportTest extends TestCase
         $this->assertSame(0, Category::count());
     }
 
+    public function test_soru_bankasi_folder_without_separators_and_bulk_approve(): void
+    {
+        $this->useOcr(new FakeOcrEngine(null, [], ready: false));
+        // "İ" ayrık yazılmış (I + birleşik nokta) klasör adı; bilgi görseli yok, kapak ürün görseli.
+        $folder = "3D YAYINLARI AYT SI\u{0307}STEMLER SORU BANKASI 2024";
+        $res = $this->postJson(route('admin.imports.store'), ['name' => 'soru banka', 'books' => [
+            ['publisher_folder' => '3D YAYINLARI EKRAN GÖRÜNTÜLERİ', 'folder' => $folder, 'info' => null, 'mockup' => '3D AYT SİSTEMLER KAPAK.png'],
+            ['publisher_folder' => '3D YAYINLARI EKRAN GÖRÜNTÜLERİ', 'folder' => '3D YAYINLARI TYT FİZİK VİDEO DESTEKLİ DEFTER', 'info' => null, 'mockup' => null],
+        ]])->assertOk();
+        [$id, $id2] = $res->json('items');
+        $batch = $res->json('batch');
+        $this->post(route('admin.imports.upload', [$batch, $id]), ['role' => 'mockup', 'file' => UploadedFile::fake()->image('kapak.png', 600, 800)])->assertOk();
+
+        $item = ImportItem::findOrFail($id);
+        $this->assertSame('review', $item->status);
+        $this->assertSame('AYT Sistemler Soru Bankası 2024', $item->product->title);
+        $this->assertSame(2024, $item->product->print_year);
+        $this->assertSame('3D Yayınları', $item->product->publisher->name);
+        $this->assertNotNull($item->product->image_key);
+        $this->assertSame('review', ImportItem::findOrFail($id2)->status); // görselsiz kitap da atlanmaz, kontrole düşer
+
+        $this->post(route('admin.imports.approve-all', $batch))->assertSessionHas('status');
+        $this->assertSame(0, ImportItem::where('batch_id', $batch)->where('status', 'review')->count());
+        $this->assertSame('draft', $item->product->fresh()->status);
+    }
+
     public function test_upload_rejects_non_images_and_wrong_batch(): void
     {
         $this->useOcr(FakeOcrEngine::sample());

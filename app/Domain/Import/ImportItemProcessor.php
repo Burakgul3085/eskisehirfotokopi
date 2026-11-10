@@ -47,7 +47,7 @@ class ImportItemProcessor
                 $this->images->store($product, $disk->path($item->mockup_path));
                 $disk->delete($item->mockup_path);
             } elseif (! $product->image_key) {
-                $issues[] = 'Mockup görseli yok.';
+                $issues[] = 'Ürün görseli yok (klasörde MOCKUP veya KAPAK adlı görsel bulunamadı); ürün sayfasından ekleyin.';
             }
 
             $item->update([
@@ -138,7 +138,7 @@ class ImportItemProcessor
             }
         }
 
-        $year = null;
+        $year = $folder['year']; // klasör adının sonundaki yıl ("… SORU BANKASI 2023"); görseldeki yıl önceliklidir
         if (! empty($f['year']) && preg_match('/\b(19|20)\d{2}\b/', $f['year'], $m) && (int) $m[0] <= (int) date('Y') + 1) {
             $year = (int) $m[0];
         }

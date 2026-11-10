@@ -54,10 +54,12 @@ Artisan::command('katalog:klasor-yukle {yol} {--hemen : Kuyruğa atmadan bu komu
             continue;
         }
         $names = array_values(array_filter(scandir($dir->getPathname()), fn ($n) => is_file($dir->getPathname().DIRECTORY_SEPARATOR.$n)));
-        $roles = BookFiles::classify($names);
-        if (! $roles['info'] && ! $roles['mockup']) {
+        // İçinde görsel olan her klasör bir kitaptır (tarayıcıdaki yükleyiciyle aynı); kullanılabilir görseli olmasa da
+        // kontrol ekranına düşer, sessizce atlanmaz.
+        if (! array_filter($names, fn ($n) => BookFiles::isImage($n))) {
             continue;
         }
+        $roles = BookFiles::classify($names);
         $parent = dirname($dir->getPathname());
         $books[] = [
             'publisher_folder' => basename($parent), // kitabın üst klasörü yayınevi klasörüdür

@@ -184,6 +184,17 @@ class ImportController extends Controller
         return $this->afterReview($item, 'Onaylandı.');
     }
 
+    /** Kontrol bekleyen tüm kalemleri değiştirmeden onaylar (ürünler taslak kalır; fiyat Excel ile gelir, K2). */
+    public function approveAll(ImportBatch $batch): RedirectResponse
+    {
+        $count = $batch->items()->where('status', 'review')->whereNotNull('product_id')
+            ->update(['status' => 'imported', 'reviewed_at' => now()]);
+        $batch->refreshStatus();
+        Activity::log('import.approved_all', null, ['batch' => $batch->id, 'count' => $count]);
+
+        return back()->with('status', "{$count} kitap onaylandı. Ürünler taslakta; fiyatları Excel ile yükleyip yayına alabilirsiniz.");
+    }
+
     public function retry(ImportItem $item): RedirectResponse
     {
         if ($item->status === 'failed' || $item->status === 'review') {

@@ -10,21 +10,28 @@
  */
 
 const IMAGE_EXT = ['png', 'jpg', 'jpeg', 'webp'];
-const INFO = /ekran\s*g[öo]r[üu]nt|screenshot|ekran al[ıi]nt|bilgi/u;
+const INFO = /ekran\s*g[öo]r[üu]nt|screenshot|ekran al[ıi]nt|(^|[^\p{L}])bilgi([^\p{L}]|$)/u;
 const MOCKUP = /chatgpt|mock\s*-?\s*up|mockup/u;
+const COVER = /(^|[^\p{L}])kap(ak)?([^\p{L}]|$)/u;
+const IGNORE = /bas[ıi]m|[iı]?çindekiler|(^|[^\p{L}])[iı]?çin([^\p{L}]|$)|k[üu]nye/u;
 const HIDDEN = /^(\.|~\$)|^(thumbs\.db|desktop\.ini)$/i;
 const PARALLEL = 6;
 const MOCKUP_EDGE = 1800;
 const SHOWN = 8;
 
 const extOf = (name) => (name.includes('.') ? name.split('.').pop().toLowerCase() : '');
-const baseOf = (name) => name.replace(/\.[^.]+$/, '').toLowerCase();
+// Türkçe küçük harf: "İ" → "i", "I" → "ı" (toLowerCase "İ"yi "i̇" yapar ve kalıplar kaçar).
+const baseOf = (name) => name.replace(/\.[^.]+$/, '').toLocaleLowerCase('tr');
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-/** Klasördeki dosyalardan bilgi ve mockup görselini seçer. */
+/**
+ * Klasördeki dosyalardan bilgi ve ürün görselini seçer (App\Domain\Import\BookFiles ile aynı kural):
+ * mockup → kapak → adı tanınmayan tek görsel; "1.jpg" (K5), künye ve içindekiler sayfaları yok sayılır.
+ */
 export function classify(files) {
     let info = null;
     let mockup = null;
+    let cover = null;
     const others = [];
     for (const f of files) {
         const base = baseOf(f.name);
@@ -35,12 +42,16 @@ export function classify(files) {
             info = f;
         } else if (!mockup && MOCKUP.test(base)) {
             mockup = f;
+        } else if (IGNORE.test(base)) {
+            continue;
+        } else if (!cover && COVER.test(base)) {
+            cover = f;
         } else {
             others.push(f);
         }
     }
-    if (!mockup && others.length === 1) {
-        mockup = others[0];
+    if (!mockup) {
+        mockup = cover || (others.length === 1 ? others[0] : null);
     }
 
     return { info, mockup };

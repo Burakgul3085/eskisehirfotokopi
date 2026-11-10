@@ -1,5 +1,10 @@
 <x-layouts.admin :title="$batch->name">
     <x-slot:actions>
+        @if ($counts['review'])
+            <form method="post" action="{{ route('admin.imports.approve-all', $batch) }}" data-confirm="Kontrol bekleyen {{ $counts['review'] }} kitap değiştirilmeden onaylansın mı? Ürünler taslak kalır.">
+                @csrf<button class="btn-primary btn-sm"><x-icon name="check" class="size-4" />Hepsini onayla ({{ $counts['review'] }})</button>
+            </form>
+        @endif
         @if ($counts['failed'])
             <form method="post" action="{{ route('admin.imports.retry-failed', $batch) }}">@csrf<button class="btn-ghost btn-sm">Hatalıları yeniden işle</button></form>
         @endif
@@ -8,6 +13,7 @@
         </form>
     </x-slot:actions>
 
+    <x-flash class="mb-5" />
 
     <div class="mb-5 flex flex-wrap gap-2 text-sm">
         <a href="{{ route('admin.imports.show', $batch) }}" class="badge {{ $status ? 'bg-white text-muted ring-1 ring-line' : 'bg-primary text-white' }} px-3 py-1.5">Tümü ({{ array_sum($counts) }})</a>

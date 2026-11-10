@@ -76,6 +76,7 @@ Route::prefix('yonetim')->name('admin.')->group(function () {
             Route::post('/{batch}/kalem/{item}/dosya', 'upload')->name('upload')->middleware('throttle:import-upload');
             Route::get('/{batch}/durum', 'status')->name('status');
             Route::post('/{batch}/hatalari-tekrarla', 'retryFailed')->name('retry-failed');
+            Route::post('/{batch}/hepsini-onayla', 'approveAll')->name('approve-all');
             Route::delete('/{batch}', 'destroy')->name('destroy');
             Route::get('/{batch}', 'show')->name('show');
             Route::get('/kalem/{item}', 'review')->name('review');
