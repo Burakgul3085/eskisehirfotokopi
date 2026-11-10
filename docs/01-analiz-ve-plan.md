@@ -43,7 +43,7 @@ Sitede **statik hiçbir şey yok**: header, menüler, ana sayfa blokları, foote
 | Dil / çatı | PHP 8.4 + **Laravel** | B2B projesiyle aynı. Fotokopi modülü, mail altyapısı, panel ve deploy betikleri doğrudan taşınır. |
 | Veritabanı | MySQL 8.4 | İstenen |
 | Önbellek / kuyruk / oturum | Redis | Sayfalar hızlı açılır. OCR ve görsel işleme arka planda çalışır. |
-| Arama | **Meilisearch** (Laravel Scout) | 10.000+ üründe yazım hatasına dayanıklı, Türkçe uyumlu, anlık (milisaniyede) arama |
+| Arama | **MySQL** (`products.search_text`, Türkçe karakterden bağımsız normalize metin) | 10.000 üründe ek sunucu hizmeti gerektirmeden milisaniyeler içinde arama. *(Güncelleme, Aşama 3: Meilisearch yerine seçildi; KVM2'de bellek ve bakım yükü olmaz. Ürün sayısı 100.000'i aşarsa Meilisearch'e geçiş kolaydır.)* |
 | Ön yüz | Blade + Alpine.js + Tailwind (Vite) | Hafif. SPA yükü olmadan hızlı açılır. |
 | Görsel | libvips / Intervention → WebP, 3 boyut | Kartta küçük görsel yüklenir, `srcset` ve lazy-load kullanılır |
 | OCR | **Tesseract 5 (Türkçe)** + etiket tabanlı ayrıştırıcı. İsteğe bağlı yapay zekâ yedeği. | §6 |
@@ -131,7 +131,7 @@ Bilgi tablosundaki alanlar: Ürün Kodu, Yazar, Yayınevi, Türü (`Tarih / Avru
 ## 8. Performans hedefleri
 
 - Ana sayfa ve kategori sayfası sunucu yanıtı < 200 ms (Redis önbelleği; ürün değişince ilgili önbellek temizlenir).
-- Arama sonucu < 50 ms (Meilisearch).
+- Arama sonucu < 50 ms (MySQL, normalize arama metni).
 - Kartlarda yaklaşık 20–30 KB WebP, lazy-load, `width/height` ile kayma olmaz. LCP < 2,5 sn (mobil).
 - Kategori sayfaları sayfalamalı; aynı anda yalnızca görünen ürünler yüklenir.
 - 10.000 ürünlük deneme verisiyle yük testi (Aşama 9).
@@ -148,7 +148,7 @@ Bilgi tablosundaki alanlar: Ürün Kodu, Yazar, Yayınevi, Türü (`Tarih / Avru
 | 1 | Altyapı | Laravel kurulumu, müşteri ve yönetici girişleri, ayarlar sistemi, panel iskeleti, tasarım sistemi |
 | 2 | Katalog çekirdeği | Kategori ağacı, yayınevleri, yazarlar, ürünler, görsel işleme, panel ekranları |
 | 3 | **Toplu yükleme ve OCR** | Klasör sürükle-bırak, kuyruk, OCR, eşleştirme, kontrol ekranı (kullanıcının gerçek klasörüyle test) |
-| 4 | Vitrin | Ana sayfa blokları, mega menü, kategori/yayınevi/ürün sayfaları, Meilisearch araması |
+| 4 | Vitrin | Ana sayfa blokları, mega menü, kategori/yayınevi/ürün sayfaları, anlık arama (MySQL) |
 | 5 | Sepet ve sipariş | Kapıda ödeme, teslimat bölgeleri, ücret ve eşik, sipariş durumları |
 | 6 | Fotokopi modülü | B2B'den taşıma ve uyarlama |
 | 7 | Mail ve mesajlaşma | Şablon, tüm olay mailleri, destek mesajları |

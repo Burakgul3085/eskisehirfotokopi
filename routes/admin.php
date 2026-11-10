@@ -6,6 +6,7 @@ use App\Http\Controllers\Admin\AuthController;
 use App\Http\Controllers\Admin\AuthorController;
 use App\Http\Controllers\Admin\CategoryController;
 use App\Http\Controllers\Admin\DashboardController;
+use App\Http\Controllers\Admin\ImportController;
 use App\Http\Controllers\Admin\ProductController;
 use App\Http\Controllers\Admin\PublisherController;
 use App\Http\Controllers\Admin\SettingsController;
@@ -32,6 +33,23 @@ Route::prefix('yonetim')->name('admin.')->group(function () {
         Route::post('/yayinevleri/{publisher}/birlestir', [PublisherController::class, 'merge'])->name('publishers.merge');
         Route::resource('yayinevleri', PublisherController::class)->parameters(['yayinevleri' => 'publisher'])->except('show')->names('publishers');
         Route::get('/yazarlar', [AuthorController::class, 'index'])->name('authors.index');
+
+        // Toplu klasör yükleme ve OCR
+        Route::prefix('toplu-yukleme')->name('imports.')->controller(ImportController::class)->group(function () {
+            Route::get('/', 'index')->name('index');
+            Route::get('/yeni', 'create')->name('create');
+            Route::post('/', 'store')->name('store');
+            Route::post('/{batch}/kalem/{item}/dosya', 'upload')->name('upload')->middleware('throttle:import-upload');
+            Route::get('/{batch}/durum', 'status')->name('status');
+            Route::post('/{batch}/hatalari-tekrarla', 'retryFailed')->name('retry-failed');
+            Route::delete('/{batch}', 'destroy')->name('destroy');
+            Route::get('/{batch}', 'show')->name('show');
+            Route::get('/kalem/{item}', 'review')->name('review');
+            Route::put('/kalem/{item}', 'update')->name('update');
+            Route::post('/kalem/{item}/onayla', 'approve')->name('approve');
+            Route::post('/kalem/{item}/tekrarla', 'retry')->name('retry');
+            Route::get('/kalem/{item}/gorsel', 'image')->name('image');
+        });
         Route::put('/yazarlar/{author}', [AuthorController::class, 'update'])->name('authors.update');
 
         Route::get('/ayarlar/{group}', [SettingsController::class, 'edit'])->name('settings.edit');

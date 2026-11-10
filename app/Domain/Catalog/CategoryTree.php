@@ -17,6 +17,9 @@ class CategoryTree
 {
     public const CACHE_KEY = 'catalog.category_tree';
 
+    /** Büyük harfle kalacak kısaltmalar (ünlü içerdiği için kuralla yakalanamayanlar). */
+    private const ACRONYMS = ['ALES', 'AYT', 'ÖABT', 'TUS', 'DUS', 'MSÜ', 'YÖKDİL', 'İELTS', 'IELTS', 'TOEFL', 'AÖF', 'AB', 'ABD', 'TC', 'TBMM', 'İSG', 'EKPSS', 'PMYO', 'POMEM', 'GRE', 'GMAT', 'İHL', 'TEOG', 'AUZEF', 'İÜ', 'ODTÜ', 'İTÜ', 'TDK', 'UK', 'USA', 'AİHM', 'AYM', 'HMGS', 'İYÖS', 'YÖS', 'ÖSYM', 'MEB', 'YDS', 'YDT', 'LGS', 'DGS', 'KPSS', 'TYT'];
+
     public function create(array $data, ?Category $parent = null): Category
     {
         return DB::transaction(function () use ($data, $parent) {
@@ -94,27 +97,32 @@ class CategoryTree
                 continue;
             }
             $existing = Category::where('parent_id', $parent?->id)->where('normalized_name', Text::key($name))->first();
-            $parent = $existing ?? $this->create(['name' => $this->displayName($name)], $parent);
+            $parent = $existing ?? $this->create(['name' => self::displayName($name)], $parent);
         }
 
         return $parent;
     }
 
     /** Tamamı büyük harfli adlar başlık biçimine çevrilir ("SORU BANKASI" → "Soru Bankası"); kısaltmalar korunur. */
-    private function displayName(string $name): string
+    public static function displayName(string $name): string
     {
         if (Text::upper($name) !== $name) {
             return $name; // zaten düzgün yazılmış
         }
 
-        // Kelime bazında: 4 harfe kadar olan veya rakam içeren kelimeler kısaltma sayılır (KPSS, YKS, ÖABT, 2026, 12.).
+        // Kelime bazında: bilinen sınav/kurum kısaltmaları, ünlüsüz kelimeler (KPSS, YKS), Romen rakamları ve rakam
+        // içeren kelimeler (2026, 12.) korunur; diğerleri başlık biçimine çevrilir ("KISA" → "Kısa").
         return collect(explode(' ', $name))->map(function ($w, $i) {
-            if ($i > 0 && in_array(Text::lower($w), ['ve', 'ile', 'veya', 'için'], true)) {
+            if ($i > 0 && in_array(Text::lower($w), ['ve', 'ile', 'veya', 'için', 'de', 'da'], true)) {
                 return Text::lower($w);
             }
             $letters = preg_replace('/[^\p{L}]/u', '', $w);
+            $isAcronym = $letters === '' || preg_match('/\d/', $w)
+                || in_array($letters, self::ACRONYMS, true)
+                || (mb_strlen($letters) <= 5 && ! preg_match('/[AEIİOÖUÜ]/u', $letters))
+                || preg_match('/^[IVXLC]+$/u', $letters) && mb_strlen($letters) <= 4 && $letters !== 'CIVIL';
 
-            return mb_strlen($letters) <= 4 || preg_match('/\d/', $w) ? $w : Text::title($w);
+            return $isAcronym ? $w : Text::title($w);
         })->implode(' ');
     }
 
