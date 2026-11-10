@@ -11,4 +11,4 @@
 - Tailwind v4: başka sınıfların `@apply` edeceği temel sınıflar `@utility` ile tanımlanır (ör. `btn`).
 - Yöneticiler ayrı tablo ve `admin` guard'ı (`/yonetim`). Müşteriler `web` guard'ı. İlk yönetici: `php artisan yonetici:olustur e-posta "Ad"`.
 - Yerel geliştirme yöneticisi bilgisi: `storage/app/private/gelistirme-yonetici.txt` (git'e girmez).
-- Dev sunucu: `.claude/launch.json` (port 8010).
+- Dev sunucu: `.claude/launch.json` (port 8010) → `php artisan yerel:sunucu`: web sunucusu + kuyruk işçisi (print, import, default). İşçi yoksa fotokopi belgeleri "Sayfalar sayılıyor…"da kalır, e-posta gitmez.

@@ -11,6 +11,7 @@ use App\Models\Publisher;
 use App\Models\User;
 use App\Support\Settings;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
 use Tests\TestCase;
 
@@ -81,6 +82,16 @@ class HardeningTest extends TestCase
         $response = $this->get(route('publishers.index'))->assertOk();
         $response->assertSee('Alfa')->assertDontSee('Beta'); // yayında ürünü olmayan (öne çıkmamış) yayınevi listelenmez
         $this->assertSame(2, $response->viewData('groups')->flatten()->firstWhere('id', $a->id)->products_count);
+    }
+
+    public function test_dashboard_warns_when_queue_worker_is_not_running(): void
+    {
+        $this->actingAs(Admin::factory()->create(), 'admin');
+        $this->get(route('admin.dashboard'))->assertDontSee('Arka plan işleri bekliyor');
+
+        DB::table('jobs')->insert(['queue' => 'print', 'payload' => '{}', 'attempts' => 0,
+            'available_at' => now()->subMinutes(10)->getTimestamp(), 'created_at' => now()->subMinutes(10)->getTimestamp()]);
+        $this->get(route('admin.dashboard'))->assertSee('Arka plan işleri bekliyor (1)');
     }
 
     public function test_security_headers_are_sent(): void

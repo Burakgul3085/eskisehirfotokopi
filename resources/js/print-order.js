@@ -89,7 +89,7 @@ export function printOrder() {
             f.isBusy = f.isUploading || f.isProcessing;
             f.isReady = f.status === 'ready';
             f.isFailed = f.status === 'failed';
-            f.statusText = f.isUploading ? 'Yükleniyor… %' + f.progress : f.isProcessing ? 'Sayfalar sayılıyor…' : f.isReady ? f.pages + ' sayfa' : 'Yüklenemedi';
+            f.statusText = f.isUploading ? 'Yükleniyor… %' + f.progress : f.isProcessing ? ((f.polls || 0) > 15 ? 'Hâlâ işleniyor; büyük belgelerde birkaç dakika sürebilir…' : 'Sayfalar sayılıyor…') : f.isReady ? f.pages + ' sayfa' : 'Yüklenemedi';
             f.sizeText = sizeText(f.size);
             f.progressStyle = 'width: ' + f.progress + '%';
             f.extLabel = (f.name.split('.').pop() || '').toUpperCase().slice(0, 4);
@@ -236,6 +236,7 @@ export function printOrder() {
                     return;
                 }
                 const res = await this.request(fileUrl(f.token), 'GET').catch(() => ({ ok: false }));
+                f.polls = (f.polls || 0) + 1;
                 if (res.ok) {
                     Object.assign(f, res.data, { error: res.data.error || '' });
                 }

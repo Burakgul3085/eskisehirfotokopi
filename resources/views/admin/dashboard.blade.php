@@ -3,6 +3,14 @@
     use App\Support\Money;
 @endphp
 <x-layouts.admin title="Gösterge paneli">
+    @if ($stuckJobs)
+        <p class="mb-4 flex items-start gap-2 rounded-xl bg-danger-soft px-4 py-3 text-sm text-danger"><x-icon name="alert" class="mt-0.5 size-4 shrink-0" />
+            <span><strong>Arka plan işleri bekliyor ({{ $stuckJobs }}).</strong> Kuyruk işçisi çalışmıyor olabilir: fotokopi belgeleri işlenmez, toplu yükleme ilerlemez, e-postalar gitmez. Sunucuda supervisor'ı, yerelde <code>php artisan yerel:sunucu</code> komutunu kontrol edin.</span></p>
+    @endif
+    @if ($failedJobs)
+        <p class="mb-4 flex items-start gap-2 rounded-xl bg-accent-soft px-4 py-3 text-sm text-accent-ink"><x-icon name="alert" class="mt-0.5 size-4 shrink-0" />
+            <span>Son 24 saatte {{ $failedJobs }} arka plan işi hata verdi. Ayrıntı: <a href="{{ route('admin.mail-logs', ['durum' => 'hata']) }}" class="font-semibold underline">E-posta kayıtları</a> ve sunucu günlüğü.</span></p>
+    @endif
     <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         @foreach ([
             ['Bugünkü sipariş', $todayOrders, Money::format($todayTotal), 'cart', route('admin.orders.index', ['baslangic' => today()->toDateString()])],

@@ -4,7 +4,11 @@
     {
       "name": "eskisehirfotokopi",
       "runtimeExecutable": "php",
-      "runtimeArgs": ["artisan", "serve", "--port=8010"],
+      "runtimeArgs": [
+        "artisan",
+        "yerel:sunucu",
+        "--port=8010"
+      ],
       "port": 8010
     }
   ]
