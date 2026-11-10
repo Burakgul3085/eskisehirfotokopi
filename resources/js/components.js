@@ -67,6 +67,25 @@ export function colorField() {
     };
 }
 
+/** Tablo satırı seçimi (toplu işlemler). Kapsayıcıdaki name="ids[]" kutularını yönetir. */
+export function bulkSelect() {
+    return {
+        count: 0,
+        boxes() {
+            return [...this.$el.querySelectorAll('input[name="ids[]"]')];
+        },
+        toggleAll(event) {
+            this.boxes().forEach((b) => {
+                b.checked = event.target.checked;
+            });
+            this.recount();
+        },
+        recount() {
+            this.count = this.boxes().filter((b) => b.checked).length;
+        },
+    };
+}
+
 /** Seçilen görselin önizlemesi (logo, favicon). */
 export function imagePreview() {
     return {

@@ -1,8 +1,17 @@
 @props(['title' => 'Yönetim'])
 @php
     $admin = auth('admin')->user();
-    $nav = [
-        ['label' => 'Gösterge paneli', 'icon' => 'home', 'route' => 'admin.dashboard', 'match' => 'admin.dashboard'],
+    // Menü grupları: [başlık => [[etiket, ikon, rota, eşleşme]]]. Yeni modüller buraya eklenir.
+    $navGroups = [
+        '' => [
+            ['Gösterge paneli', 'home', 'admin.dashboard', 'admin.dashboard'],
+        ],
+        'Katalog' => [
+            ['Ürünler', 'book', 'admin.products.index', 'admin.products.*'],
+            ['Kategoriler', 'layers', 'admin.categories.index', 'admin.categories.*'],
+            ['Yayınevleri', 'list', 'admin.publishers.index', 'admin.publishers.*'],
+            ['Yazarlar', 'user', 'admin.authors.index', 'admin.authors.*'],
+        ],
     ];
     $settingsNav = collect(\App\Http\Controllers\Admin\SettingsController::GROUPS)
         ->map(fn ($label, $group) => ['label' => $label, 'url' => route('admin.settings.edit', $group), 'active' => request()->routeIs('admin.settings.*') && request()->route('group') === $group]);
@@ -32,13 +41,20 @@
         </div>
 
         <nav class="flex-1 space-y-6 overflow-y-auto px-3 pb-6">
-            <div class="space-y-1">
-                @foreach ($nav as $item)
-                    <a href="{{ route($item['route']) }}" class="nav-admin-link" @if (request()->routeIs($item['match'])) aria-current="page" @endif>
-                        <x-icon :name="$item['icon']" class="size-[18px]" />{{ $item['label'] }}
-                    </a>
-                @endforeach
-            </div>
+            @foreach ($navGroups as $groupLabel => $items)
+                <div>
+                    @if ($groupLabel)<p class="px-3 pb-2 text-[11px] font-semibold tracking-wider text-slate-500 uppercase">{{ $groupLabel }}</p>@endif
+                    <div class="space-y-1">
+                        @foreach ($items as [$label, $icon, $route, $match])
+                            @if (\Illuminate\Support\Facades\Route::has($route))
+                                <a href="{{ route($route) }}" class="nav-admin-link" @if (request()->routeIs($match)) aria-current="page" @endif>
+                                    <x-icon :name="$icon" class="size-[18px]" />{{ $label }}
+                                </a>
+                            @endif
+                        @endforeach
+                    </div>
+                </div>
+            @endforeach
 
             <div>
                 <p class="px-3 pb-2 text-[11px] font-semibold tracking-wider text-slate-500 uppercase">Ayarlar</p>
