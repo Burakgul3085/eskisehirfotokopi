@@ -51,13 +51,11 @@ class TesseractEngine implements OcrEngine
         $src = imagecreatefrompng($this->prepare($imagePath));
         $pad = 6;
         $crop = imagecrop($src, ['x' => max(0, $x - $pad), 'y' => max(0, $y - $pad), 'width' => $w + 2 * $pad, 'height' => $h + 2 * $pad]);
-        imagedestroy($src);
         if ($crop === false) {
             return '';
         }
         $tmp = tempnam(sys_get_temp_dir(), 'ocrl').'.png';
         imagepng($crop, $tmp);
-        imagedestroy($crop);
         try {
             $args = [$tmp, 'stdout', '-l', $digitsOnly ? 'eng' : config('catalog.ocr_languages'), '--psm', '7', '--oem', '1'];
             if ($digitsOnly) {
@@ -105,7 +103,7 @@ class TesseractEngine implements OcrEngine
         return $n > 0 && $sum / $n < 110;
     }
 
-    /** Gri tonlama + 2× büyütme + (koyu zeminde ters çevirme) + kontrast; PNG olarak geçici dosyaya yazılır. */
+    /** Gri tonlama + 2× büyütme + (koyu zeminde ters çevirme); PNG olarak geçici dosyaya yazılır. */
     private function prepare(string $path): string
     {
         if (isset($this->prepared[$path])) {
@@ -121,15 +119,13 @@ class TesseractEngine implements OcrEngine
         $big = imagecreatetruecolor($w * self::SCALE, $h * self::SCALE);
         imagefill($big, 0, 0, imagecolorallocate($big, 255, 255, 255));
         imagecopyresampled($big, $img, 0, 0, 0, 0, $w * self::SCALE, $h * self::SCALE, $w, $h);
-        imagedestroy($img);
         imagefilter($big, IMG_FILTER_GRAYSCALE);
         if ($this->isDark($big)) {
             imagefilter($big, IMG_FILTER_NEGATE); // koyu temalı ekran görüntüsü: Tesseract açık zeminde koyu yazıyı daha iyi okur
         }
-        imagefilter($big, IMG_FILTER_CONTRAST, -25);
+        // Kontrast artırma kullanılmaz: gerçek Tesseract denemesinde "ğ, ç, Ü" işaretlerini silip "Bogazici" okutuyordu.
         $tmp = tempnam(sys_get_temp_dir(), 'ocr').'.png';
         imagepng($big, $tmp);
-        imagedestroy($big);
 
         return $this->prepared[$path] = $tmp;
     }

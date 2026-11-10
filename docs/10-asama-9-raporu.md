@@ -60,7 +60,10 @@ Yerel süreler Windows'taki `artisan serve` sunucusunda, önbelleksiz ve hata ay
 - Toplam: 89 test, hepsi geçiyor.
 
 ## Yerelde denenemeyenler (sunucuda denenecek)
-- **Tesseract OCR:** Toplu yükleme, Tesseract yoksa bilgi tablosunu okuyamaz; kalemler elle kontrol edilir.
+- ~~**Tesseract OCR**~~ → 2026-11-10'da yerelde kuruldu (choco, 5.5.3 + `tur` tessdata_best; `.env` → `OCR_TESSERACT`) ve denendi:
+  - Plan §6 düzenindeki bilgi tablosu (açık ve koyu tema) tüm alanlarıyla doğru okundu; kitap kontrole düşmeden eklendi (~1,3 sn).
+  - Düzeltme: ön işlemdeki kontrast adımı Türkçe işaretleri siliyordu ("Bogazici"); kaldırıldı.
+  - "soru banka" arşivinde bilgi tablosu yok (KAPAK, BASIM, İÇİNDEKİLER); bilgiler klasör adından gelir, kitaplar "Hepsini onayla" ile onaylanır.
 - **LibreOffice:** Word, PowerPoint ve Excel dosyalarının PDF'e çevrilmesi.
 - **poppler (`pdfinfo`, `pdftoppm`):** PDF sayfa sayımı yerelde yedek yöntemle çalıştı. İlk sayfa önizlemesi denenemedi.
 
