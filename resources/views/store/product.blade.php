@@ -16,14 +16,14 @@
     $canBuy = $product->isPurchasable() && \Illuminate\Support\Facades\Route::has('cart.add');
     $schema = array_filter([
         '@context' => 'https://schema.org', '@type' => 'Product', 'name' => $product->title,
-        'image' => $product->imageUrl('lg'), 'sku' => $product->code, 'gtin13' => $product->isbn,
+        'image' => $product->imageAbsoluteUrl('lg'), 'sku' => $product->code, 'gtin13' => $product->isbn,
         'brand' => $product->publisher ? ['@type' => 'Brand', 'name' => $product->publisher->name] : null,
         'offers' => $types ? ['@type' => 'AggregateOffer', 'priceCurrency' => 'TRY', 'lowPrice' => min(array_map(fn ($t) => (float) $product->price($t), $types)),
             'highPrice' => max(array_map(fn ($t) => (float) $product->price($t), $types)), 'offerCount' => count($types), 'availability' => 'https://schema.org/InStock'] : null,
     ]);
 @endphp
 <x-layouts.store :title="$product->meta_title ?: $product->title" :description="$product->meta_description ?: \Illuminate\Support\Str::limit(trim($product->title.'. '.collect($specs)->only(['Yazar', 'Yayınevi', 'Sayfa sayısı'])->map(fn ($v, $k) => $k.': '.$v)->implode(', ')), 160)"
-                 :image="$product->imageUrl('lg')" :noindex="$preview">
+                 :image="$product->imageAbsoluteUrl('lg')" :noindex="$preview">
     <div class="container-page py-6 sm:py-8">
         @if ($preview)
             <p class="mb-4 rounded-xl bg-warning-soft px-4 py-3 text-sm font-medium text-warning">Önizleme: bu ürün yayında değil, yalnızca yöneticiler görebilir.</p>

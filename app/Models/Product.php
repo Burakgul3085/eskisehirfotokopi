@@ -134,9 +134,23 @@ class Product extends Model
 
     // ---- Görsel ----
 
+    /**
+     * Göreli adres ("/storage/products/…"): site hangi adresten açılırsa açılsın (localhost, 127.0.0.1, alan adı) görsel
+     * aynı kaynaktan gelir; aksi hâlde CSP (img-src 'self') farklı ana makinedeki görseli engeller.
+     * Paylaşım etiketleri ve yapılandırılmış veri için imageAbsoluteUrl() kullanılır.
+     */
     public function imageUrl(string $size = 'md'): ?string
     {
-        return $this->image_key ? Storage::disk('public')->url("products/{$this->image_key}/{$size}.webp") : null;
+        if (! $this->image_key) {
+            return null;
+        }
+
+        return '/'.ltrim((string) parse_url(Storage::disk('public')->url("products/{$this->image_key}/{$size}.webp"), PHP_URL_PATH), '/');
+    }
+
+    public function imageAbsoluteUrl(string $size = 'lg'): ?string
+    {
+        return $this->image_key ? url($this->imageUrl($size)) : null;
     }
 
     /** Boyut sınıfları için srcset. */

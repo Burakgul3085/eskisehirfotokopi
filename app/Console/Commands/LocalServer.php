@@ -10,6 +10,7 @@ use Symfony\Component\Process\Process;
  * Yerel geliştirme: web sunucusu ile kuyruk işçisini (print, import, default) birlikte çalıştırır.
  * Kuyruk işçisi olmadan fotokopi belgeleri "Sayfalar sayılıyor…" durumunda kalır, toplu yükleme ilerlemez ve
  * e-postalar gitmez. Sunucuda bunun yerine supervisor kullanılır (Aşama 9 kurulum notları).
+ * Yerelde queue:listen kullanılır: her iş güncel kodla çalışır (queue:work kodu bellekte tutar, değişiklikten sonra eski kodla işlerdi).
  */
 class LocalServer extends Command
 {
@@ -27,7 +28,7 @@ class LocalServer extends Command
         $php = (new PhpExecutableFinder)->find(false) ?: 'php';
         $artisan = base_path('artisan');
 
-        $worker = new Process([$php, $artisan, 'queue:work', '--queue=print,import,default', '--sleep=1', '--tries=3'], base_path(), null, null, null);
+        $worker = new Process([$php, $artisan, 'queue:listen', '--queue=print,import,default', '--sleep=1', '--tries=3'], base_path(), null, null, null);
         $server = new Process([$php, $artisan, 'serve', '--port='.(int) $this->option('port')], base_path(), null, null, null);
         $worker->start(fn ($type, $out) => $this->output->write('[kuyruk] '.$out));
         $server->start(fn ($type, $out) => $this->output->write($out));
