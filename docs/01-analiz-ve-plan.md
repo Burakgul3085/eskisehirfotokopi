@@ -120,7 +120,7 @@ Bilgi tablosundaki alanlar: Ürün Kodu, Yazar, Yayınevi, Türü (`Tarih / Avru
 
 **Hız:** Tesseract 2 çekirdekte görsel başına yaklaşık 0,5–1,5 sn sürer. 10.000 kitap 2 işçiyle birkaç saatte arka planda biter; panel bu sürede kullanılabilir. Asıl sınır **internet yükleme hızı**. Bu yüzden ikinci bir yol da olacak: klasör SFTP/rsync ile sunucuya atılır, panelden "sunucudaki klasörden içe aktar" çalıştırılır.
 
-**Yapay zekâ yedeği (isteğe bağlı):** Tesseract'ın zorlandığı görseller (bulanık, farklı düzen) bir görsel-dil modeline gönderilir. Görsel başına çok düşük ücretlidir ve yalnızca sorunlu görseller için kullanılır. API anahtarı panelden girilir. Anahtar yoksa ürün kontrol ekranına düşer.
+**Ücretli yapay zekâ kullanılmaz (K10).** OCR ayrıntısı §6.1'de. "1" adlı kapak dosyası kullanılmaz (K5).
 
 ## 7. Sipariş durumları ve mailler
 
@@ -164,7 +164,34 @@ Her aşama sonunda testler çalışır, `docs/` altına aşama raporu yazılır 
 - **Yükleme süresi:** 10.000 kitap × 3 görsel büyük bir veri. İnternet yavaşsa SFTP yolu kullanılır.
 - **OCR doğruluğu:** Bilgi tabloları tek tip ekran görüntüsü olduğu için yüksek doğruluk bekleniyor. Yine de kontrol ekranı zorunlu bir güvenlik ağı olarak kalacak.
 
-## 12. Açık sorular
+## 12. Kararlar (2026-11-10, kullanıcı yanıtları)
+
+| # | Karar |
+|---|---|
+| K1 | **Müşteri belgeleri:** Fiyat yapbozkırtasiye.com/fotokopi mantığıyla otomatik hesaplanır (B2B `PrintSettings/PrintPricing` taşınır). |
+| K2 | **Katalog ürünleri:** Fiyatı yönetim girer. Yükleme bittikten sonra panelden **Excel fiyat şablonu** indirilir. Şablonda tüm aktif ürünler satır satır gelir (ID, ürün kodu, ISBN, ad, yayınevi, mevcut fiyatlar). Yönetim yalnızca fiyat sütunlarını doldurup geri yükler; sistem doğrular ve uygular. Fiyatı olmayan ürün vitrinde "fiyat bekliyor" durumunda kalır ve satılmaz. |
+| K3 | **İki fiyat:** Her katalog ürününün **Siyah-beyaz** ve **Renkli** fiyatı vardır. Müşteri ürün sayfasında baskı tipini seçer. Bir fiyat boşsa o seçenek satılmaz. Excel şablonunda iki ayrı sütun bulunur (isteğe bağlı üstü çizili fiyat sütunlarıyla). |
+| K4 | Bilgi tablolarındaki sayfa sayıları doğrulanmıştır. Sayfa sayısı zorunlu alan sayılır. |
+| K5 | "1" adlı düz kapak dosyası **kullanılmaz**; her klasörde bulunmuyor. Ürün görseli yalnızca mockup'tır. Dosya sınıflandırma: bilgi tablosu (OCR) + mockup; diğer dosyalar yok sayılır. |
+| K6 | **Teslimat kuralları tamamen panelden yönetilir:** ilçe/mahalle listesi, bölge ücreti, ücretsiz teslimat eşiği, en düşük sipariş, teslim süresi (aynı gün / ertesi gün / saat aralığı, sipariş kesim saati). Kodda sabit değer yok. |
+| K7 | Domain: **eskisehirfotokopi.com** |
+| K8 | **Üyeliksiz sipariş** açık. Takip sipariş no + telefon/e-posta ile yapılır. İsteyen sipariş sonrası tek tıkla üye olabilir. |
+| K9 | Kitap PDF'leri siteye **yüklenmez**, mağaza bilgisayarında kalır. Siteye yalnızca mockup (≤10 MB) ve bilgi görseli yüklenir. |
+| K10 | **Ücretli yapay zekâ/API yok.** OCR tamamen yerel ve ücretsiz araçlarla yapılır (§6.1). Doğruluk ve hız öncelik. |
+
+### 6.1 Ücretsiz OCR — doğruluk ve hız tasarımı (K10)
+
+Bilgi görselleri aynı şablonda üretilmiş temiz ekran görüntüleri (iki sütunlu tablo). Bu nedenle genel amaçlı bir yapay zekâ yerine **şablona özel bir okuyucu** hem daha doğru hem daha hızlıdır:
+
+1. **Motor:** Tesseract 5 (LSTM, `tur` + `eng`, açık kaynak, ücretsiz). Yerel çalışır; ağ ve API yok.
+2. **Ön işleme:** gri tonlama, 2× büyütme, kontrast/eşikleme. Ekran görüntüsünde bu adım hata oranını belirgin düşürür.
+3. **Düzen okuma:** Tesseract'ın TSV çıktısından kelime koordinatları alınır. Satırlar y eksenine göre gruplanır. Sol sütun **etiket**, sağ sütun **değer** olarak ayrılır. Etiketler bulanık eşleştirilir ("Yazar", "Yayınevi", "Türü", "ISBN / Barkod", "Sayfa Sayısı", "Ürün Kodu"), yani OCR bir harfi yanlış okusa da etiket tanınır.
+4. **Alan bazlı ikinci okuma:** Değer hücresi kırpılıp alan türüne uygun ayarla yeniden okunur. ISBN ve sayfa sayısı yalnızca rakam listesiyle okunur. Bu, rakamlarda en yüksek doğruluğu verir.
+5. **Doğrulama:** ISBN-10/13 kontrol hanesi, sayfa sayısı makul aralıkta, ürün kodu biçimi. Yazar, yayınevi ve kitap adı **klasör adıyla çapraz kontrol** edilir (`YAYINEVİ - KİTAP - YAZAR`). İki kaynak uyuşmazsa ürün kontrol ekranına düşer; uyuşuyorsa doğrudan kabul edilir.
+6. **Hız:** 2 çekirdekte paralel işçilerle görsel başına < 1 sn hedeflenir. Sonuç dosya özetiyle önbelleğe alınır; aynı görsel ikinci kez okunmaz.
+7. **İkinci motor (gerekirse, yine ücretsiz):** Aşama 3'teki gerçek klasör testinde Tesseract'ın doğruluğu yetersiz kalırsa PaddleOCR (açık kaynak, yerel) yedek motor olarak eklenir. Karar ölçüme göre verilir.
+
+## 13. Eski açık sorular (yanıtlandı, bkz. §12)
 
 1. **Fiyat:** Bilgi görselinde fiyat yok. Ürün fiyatı nasıl belirlenecek? (a) sayfa sayısı × sayfa başı fiyat (kademeli, + cilt), (b) yayınevi veya kategori bazlı sabit fiyat, (c) yüklemeden sonra Excel ile toplu fiyat. Sayfa sayısı yoksa ne olacak?
 2. **Baskı tipi:** Ürünler renkli ve siyah-beyaz seçenekli mi satılacak (aynı kitabın iki fiyatı)?
