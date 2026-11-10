@@ -8,6 +8,7 @@
             <form method="post" action="{{ route('logout') }}">@csrf<button class="btn-ghost"><x-icon name="logout" class="size-4" /> Çıkış yap</button></form>
         </div>
 
+        @include('account._nav')
         <x-flash class="mt-6" />
 
         <div class="mt-8 grid gap-6 lg:grid-cols-2">
@@ -34,6 +35,5 @@
             </section>
         </div>
 
-        <p class="mt-8 text-sm text-muted">Siparişleriniz, adresleriniz ve favorileriniz yakında bu sayfada.</p>
     </div>
 </x-layouts.store>

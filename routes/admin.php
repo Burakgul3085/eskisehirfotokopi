@@ -6,8 +6,10 @@ use App\Http\Controllers\Admin\AuthController;
 use App\Http\Controllers\Admin\AuthorController;
 use App\Http\Controllers\Admin\CategoryController;
 use App\Http\Controllers\Admin\DashboardController;
+use App\Http\Controllers\Admin\DeliveryDistrictController;
 use App\Http\Controllers\Admin\HomeBlockController;
 use App\Http\Controllers\Admin\ImportController;
+use App\Http\Controllers\Admin\OrderController;
 use App\Http\Controllers\Admin\ProductController;
 use App\Http\Controllers\Admin\PublisherController;
 use App\Http\Controllers\Admin\SettingsController;
@@ -23,6 +25,16 @@ Route::prefix('yonetim')->name('admin.')->group(function () {
     Route::middleware(['auth:admin', 'admin.active'])->group(function () {
         Route::post('/cikis', [AuthController::class, 'logout'])->name('logout');
         Route::get('/', DashboardController::class)->name('dashboard');
+
+        // Siparişler ve teslimat
+        Route::get('/siparisler/teslimat-listesi', [OrderController::class, 'deliveries'])->name('orders.deliveries');
+        Route::get('/siparisler', [OrderController::class, 'index'])->name('orders.index');
+        Route::get('/siparisler/{order}', [OrderController::class, 'show'])->name('orders.show');
+        Route::get('/siparisler/{order}/fis', [OrderController::class, 'slip'])->name('orders.slip');
+        Route::put('/siparisler/{order}/durum', [OrderController::class, 'updateStatus'])->name('orders.status');
+        Route::put('/siparisler/{order}/not', [OrderController::class, 'updateNote'])->name('orders.note');
+        Route::post('/teslimat-bolgeleri/{district}/ac-kapat', [DeliveryDistrictController::class, 'toggle'])->name('districts.toggle');
+        Route::resource('teslimat-bolgeleri', DeliveryDistrictController::class)->parameters(['teslimat-bolgeleri' => 'district'])->except('show')->names('districts');
 
         // Katalog
         Route::get('/urunler/fiyat-sablonu', [ProductController::class, 'priceTemplate'])->name('products.price-template');

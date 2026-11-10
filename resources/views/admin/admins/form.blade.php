@@ -8,7 +8,7 @@
             <label class="field-label" for="f_role">Rol</label>
             <select id="f_role" name="role" class="field-input">
                 @foreach (\App\Models\Admin::ROLES as $v => $l)
-                    <option value="{{ $v }}" @selected(old('role', $admin->role) === $v)>{{ $l }}</option>
+                    <option value="{{ $v }}" @selected(old('role', $admin->role) === (string) $v)>{{ $l }}</option>
                 @endforeach
             </select>
             <p class="field-help">Süper yönetici, yönetici hesaplarını ve işlem günlüğünü de yönetir.</p>

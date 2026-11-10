@@ -298,3 +298,133 @@ export function filterList() {
         },
     };
 }
+
+/** Tutarı "1.234,50 ₺" biçiminde yazar. */
+function money(value) {
+    return new Intl.NumberFormat('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value) + ' ₺';
+}
+
+/**
+ * Sipariş sayfası: ilçe/mahalle seçimine göre teslimat ücreti, ücretsiz teslimata kalan, en düşük tutar ve tahmini
+ * teslim günü anında hesaplanır (gösterim amaçlı; asıl tutar sunucuda yeniden hesaplanır). Veri, sayfadaki
+ * <script type="application/json" data-checkout> içinden okunur.
+ */
+export function checkout() {
+    return {
+        data: { districts: {}, addresses: {}, subtotal: 0, initial: {} },
+        name: '',
+        phone: '',
+        districtId: '',
+        neighborhood: '',
+        address: '',
+        hoods: [],
+        hasHoods: false,
+        noHoods: true,
+        feeText: '—',
+        totalText: '',
+        etaText: '',
+        freeText: '',
+        minText: '',
+        belowMin: false,
+        blocked: false,
+        hasDistrict: false,
+        init() {
+            const node = this.$el.querySelector('[data-checkout]');
+            this.data = JSON.parse(node.textContent);
+            const i = this.data.initial;
+            this.name = i.name || '';
+            this.phone = i.phone || '';
+            this.districtId = i.district_id ? String(i.district_id) : '';
+            this.neighborhood = i.neighborhood || '';
+            this.address = i.address || '';
+            this.refresh();
+        },
+        pickDistrict() {
+            this.neighborhood = '';
+            this.refresh();
+        },
+        refresh() {
+            const d = this.data.districts[this.districtId];
+            const subtotal = this.data.subtotal;
+            this.hasDistrict = Boolean(d);
+            this.hoods = d ? d.hoods : [];
+            this.hasHoods = this.hoods.length > 0;
+            this.noHoods = !this.hasHoods;
+            if (!d) {
+                this.feeText = '—';
+                this.totalText = money(subtotal);
+                this.etaText = this.freeText = this.minText = '';
+                this.belowMin = false;
+                this.blocked = Boolean(this.data.closed);
+                return;
+            }
+            const hood = this.hoods.find((h) => h.name === this.neighborhood);
+            const free = d.free !== null && subtotal >= d.free;
+            const fee = free ? 0 : hood && hood.fee !== null ? hood.fee : d.fee;
+            this.feeText = fee === 0 ? 'Ücretsiz' : money(fee);
+            this.totalText = money(subtotal + fee);
+            this.etaText = d.eta;
+            this.freeText = d.free !== null && !free ? money(d.free - subtotal) + ' daha ekleyin, teslimat ücretsiz olsun.' : '';
+            this.belowMin = d.min !== null && subtotal < d.min;
+            this.minText = this.belowMin ? 'Bu bölge için en düşük sipariş tutarı ' + money(d.min) + '.' : '';
+            this.blocked = Boolean(this.data.closed) || this.belowMin;
+            this.$nextTick(() => {
+                if (this.$refs.hood) {
+                    this.$refs.hood.value = this.neighborhood;
+                }
+            });
+        },
+        /** Kayıtlı adresi forma doldurur. */
+        useAddress(event) {
+            const a = this.data.addresses[event.currentTarget.dataset.address];
+            if (!a) {
+                return;
+            }
+            this.name = a.name;
+            this.phone = a.phone;
+            this.districtId = String(a.district_id || '');
+            this.neighborhood = a.neighborhood;
+            this.address = a.address;
+            this.refresh();
+        },
+    };
+}
+
+/** Favori düğmesi: sayfa yenilenmeden ekler/çıkarır. */
+export function favoriteButton() {
+    return {
+        active: false,
+        busy: false,
+        init() {
+            this.active = this.$el.dataset.active === '1';
+        },
+        async toggle(event) {
+            const form = event.currentTarget.closest('form');
+            if (!form || this.busy) {
+                return;
+            }
+            event.preventDefault();
+            this.busy = true;
+            try {
+                const res = await fetch(form.action, {
+                    method: 'POST',
+                    headers: { Accept: 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content },
+                });
+                if (res.status === 401) {
+                    window.location.href = form.dataset.login;
+                    return;
+                }
+                const json = await res.json();
+                this.active = json.favorite;
+            } finally {
+                this.busy = false;
+            }
+        },
+        label() {
+            return this.active ? 'Favorilerde' : 'Favorilere ekle';
+        },
+        iconClass() {
+            return this.active ? 'fill-danger text-danger' : '';
+        },
+    };
+}

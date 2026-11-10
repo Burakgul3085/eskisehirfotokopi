@@ -89,6 +89,13 @@
                                 <button class="btn-primary flex-1 py-3 text-base" @disabled(! $canBuy)><x-icon name="cart" class="size-5" />Sepete ekle</button>
                             </div>
                         </form>
+                        @auth('web')
+                            <form method="post" action="{{ route('favorites.toggle', $product) }}" class="mt-3" x-data="favoriteButton" data-active="{{ auth('web')->user()->favorites()->whereKey($product->id)->exists() ? '1' : '0' }}">@csrf
+                                <button class="inline-flex items-center gap-2 text-sm font-semibold text-muted hover:text-danger" x-on:click="toggle" x-bind:disabled="busy"><x-icon name="heart" class="size-4" x-bind:class="iconClass" /><span x-text="label">Favorilere ekle</span></button>
+                            </form>
+                        @else
+                            <a href="{{ route('login') }}" class="mt-3 inline-flex items-center gap-2 text-sm font-semibold text-muted hover:text-danger"><x-icon name="heart" class="size-4" />Favorilere ekle</a>
+                        @endauth
                     @else
                         <p class="text-sm text-muted">Bu ürünün fiyatı henüz belirlenmedi. Bilgi için bize ulaşın.</p>
                         @if ($wa = \App\Support\Settings::whatsappUrl($product->title.' hakkında bilgi almak istiyorum.'))

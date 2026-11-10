@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Domain\Cart\Cart;
 use App\Domain\Import\Ocr\OcrEngine;
 use App\Domain\Import\Ocr\TesseractEngine;
 use App\Support\Settings;
@@ -19,6 +20,9 @@ class AppServiceProvider extends ServiceProvider
     {
         // OCR motoru: yerel Tesseract (K10, ücretli API yok). Testlerde sahte motor bağlanır.
         $this->app->singleton(OcrEngine::class, TesseractEngine::class);
+
+        // Sepet istek başına tek örnek (oturuma bağlı).
+        $this->app->scoped(Cart::class, fn ($app) => new Cart($app['session.store']));
 
         // Yönetimden girilen SMTP ayarları, e-posta yöneticisi ilk kullanıldığında uygulanır (testlerde uygulanmaz).
         $this->app->beforeResolving('mail.manager', function () {
@@ -55,6 +59,8 @@ class AppServiceProvider extends ServiceProvider
         RateLimiter::for('customer-login', fn (Request $r) => [Limit::perMinute(10)->by('ip:'.$r->ip()), Limit::perMinute(5)->by('email:'.mb_strtolower((string) $r->input('email')))]);
         RateLimiter::for('search', fn (Request $r) => Limit::perMinute(120)->by('ip:'.$r->ip()));
         RateLimiter::for('import-upload', fn (Request $r) => Limit::perMinute(1200)->by('admin:'.($r->user('admin')?->id ?? $r->ip())));
+        RateLimiter::for('checkout', fn (Request $r) => [Limit::perMinute(6)->by('ip:'.$r->ip()), Limit::perHour(30)->by('ip:'.$r->ip())]);
+        RateLimiter::for('order-track', fn (Request $r) => Limit::perMinute(10)->by('ip:'.$r->ip()));
         RateLimiter::for('customer-register', fn (Request $r) => Limit::perHour(10)->by('ip:'.$r->ip()));
         RateLimiter::for('password-email', fn (Request $r) => [Limit::perMinute(3)->by('ip:'.$r->ip()), Limit::perHour(5)->by('email:'.mb_strtolower((string) $r->input('email')))]);
 

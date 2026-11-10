@@ -6,6 +6,11 @@
         '' => [
             ['Gösterge paneli', 'home', 'admin.dashboard', 'admin.dashboard'],
         ],
+        'Satış' => [
+            ['Siparişler', 'package', 'admin.orders.index', 'admin.orders.index|admin.orders.show'],
+            ['Teslimat listesi', 'truck', 'admin.orders.deliveries', 'admin.orders.deliveries'],
+            ['Teslimat bölgeleri', 'pin', 'admin.districts.index', 'admin.districts.*'],
+        ],
         'Katalog' => [
             ['Ürünler', 'book', 'admin.products.index', 'admin.products.*'],
             ['Kategoriler', 'layers', 'admin.categories.index', 'admin.categories.*'],
@@ -51,7 +56,7 @@
                     <div class="space-y-1">
                         @foreach ($items as [$label, $icon, $route, $match])
                             @if (\Illuminate\Support\Facades\Route::has($route))
-                                <a href="{{ route($route) }}" class="nav-admin-link" @if (request()->routeIs($match)) aria-current="page" @endif>
+                                <a href="{{ route($route) }}" class="nav-admin-link" @if (request()->routeIs(...explode("|", $match))) aria-current="page" @endif>
                                     <x-icon :name="$icon" class="size-[18px]" />{{ $label }}
                                 </a>
                             @endif

@@ -6,9 +6,9 @@
         <button type="button" x-on:click="dismiss" class="text-success/70 hover:text-success" aria-label="Kapat"><x-icon name="x" class="size-4" /></button>
     </div>
 @endif
-@if ($errors->hasAny(['admin', 'role']))
+@if ($errors->hasAny(['admin', 'role', 'cart']))
     <div {{ $attributes->merge(['class' => 'flex items-start gap-3 rounded-xl border border-danger/20 bg-danger-soft px-4 py-3 text-sm text-danger']) }} role="alert">
         <x-icon name="alert" class="mt-0.5 size-4 shrink-0" />
-        <p class="font-medium">{{ $errors->first('admin') ?: $errors->first('role') }}</p>
+        <p class="font-medium">{{ $errors->first('admin') ?: ($errors->first('role') ?: $errors->first('cart')) }}</p>
     </div>
 @endif

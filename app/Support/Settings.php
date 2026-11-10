@@ -54,6 +54,19 @@ Sipariş Takibi|/siparis-takip', // Etiket|Adres
 cash|Kapıda ödeme|Nakit veya kredi kartı ile
 printer|Belge baskısı|Belgeni yükle, biz basalım', // simge|Başlık|Açıklama
 
+        // Teslimat ve ödeme (K6: hepsi panelden; ilçe ücretleri Yönetim › Teslimat bölgeleri)
+        'delivery_free_threshold' => '500',   // bu tutar ve üstü ücretsiz teslimat (boşsa yok)
+        'delivery_min_order' => '100',        // en düşük sipariş tutarı (boşsa yok)
+        'delivery_cutoff' => '15:00',         // bu saate kadar verilen sipariş aynı gün çıkar
+        'delivery_same_day' => '1',
+        'delivery_closed_days' => '7',        // teslimat yapılmayan günler (1=Pazartesi … 7=Pazar, virgülle)
+        'delivery_slots' => "10:00 - 13:00\n13:00 - 17:00\n17:00 - 20:00", // boşsa saat seçimi sorulmaz
+        'delivery_info' => 'Siparişleriniz Eskişehir içinde belirlenen bölgelere kapıya teslim edilir. Ödemeyi teslimatta nakit veya kartla yaparsınız.',
+        'payment_cash' => '1',
+        'payment_card' => '1',
+        'orders_open' => '1',                 // kapalıyken sepet çalışır, sipariş alınmaz
+        'orders_closed_message' => 'Şu anda sipariş alamıyoruz. Lütfen daha sonra tekrar deneyin.',
+
         // Alt bilgi
         'footer_about' => 'Eskişehir içinde kitap, soru bankası ve belge baskısında hızlı ve güvenilir hizmet. Siparişiniz kapınıza gelir, ödemenizi kapıda nakit veya kartla yaparsınız.',
         'copyright' => null,             // boşsa "© {yıl} {site adı}"

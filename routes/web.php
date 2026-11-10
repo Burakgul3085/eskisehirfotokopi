@@ -1,9 +1,15 @@
 <?php
 
+use App\Http\Controllers\Account\AddressController;
+use App\Http\Controllers\Account\FavoriteController;
+use App\Http\Controllers\Account\OrderController as AccountOrderController;
 use App\Http\Controllers\AccountController;
 use App\Http\Controllers\Auth\CustomerAuthController;
 use App\Http\Controllers\HomeController;
+use App\Http\Controllers\Store\CartController;
 use App\Http\Controllers\Store\CatalogController;
+use App\Http\Controllers\Store\CheckoutController;
+use App\Http\Controllers\Store\OrderTrackingController;
 use App\Http\Controllers\Store\ProductController;
 use Illuminate\Support\Facades\Route;
 
@@ -22,6 +28,18 @@ Route::middleware('store.open')->group(function () {
     Route::get('/ara', [CatalogController::class, 'search'])->name('search');
     Route::get('/ara/oneri', [CatalogController::class, 'suggest'])->middleware('throttle:search')->name('search.suggest');
 
+    // Sepet ve sipariş (misafir de sipariş verebilir — K8)
+    Route::get('/sepet', [CartController::class, 'index'])->name('cart.index');
+    Route::post('/sepet', [CartController::class, 'add'])->name('cart.add');
+    Route::patch('/sepet', [CartController::class, 'update'])->name('cart.update');
+    Route::delete('/sepet', [CartController::class, 'remove'])->name('cart.remove');
+    Route::get('/siparis', [CheckoutController::class, 'show'])->name('checkout.show');
+    Route::post('/siparis', [CheckoutController::class, 'store'])->middleware('throttle:checkout')->name('checkout.store');
+    Route::get('/siparis/tamamlandi/{order}', [CheckoutController::class, 'done'])->name('checkout.done');
+    Route::get('/siparis-takip', [OrderTrackingController::class, 'form'])->name('orders.track');
+    Route::post('/siparis-takip', [OrderTrackingController::class, 'lookup'])->middleware('throttle:order-track');
+    Route::get('/siparis/{order}/{token}', [OrderTrackingController::class, 'show'])->name('orders.track.show');
+
     Route::middleware('guest:web')->group(function () {
         Route::get('/giris', [CustomerAuthController::class, 'showLogin'])->name('login');
         Route::post('/giris', [CustomerAuthController::class, 'login'])->middleware('throttle:customer-login');
@@ -38,5 +56,11 @@ Route::middleware('store.open')->group(function () {
         Route::get('/hesabim', [AccountController::class, 'index'])->name('account.index');
         Route::put('/hesabim/bilgiler', [AccountController::class, 'updateProfile'])->name('account.profile');
         Route::put('/hesabim/parola', [AccountController::class, 'updatePassword'])->name('account.password');
+        Route::get('/hesabim/siparisler', [AccountOrderController::class, 'index'])->name('account.orders');
+        Route::get('/hesabim/siparisler/{order}', [AccountOrderController::class, 'show'])->name('account.orders.show');
+        Route::post('/hesabim/siparisler/{order}/tekrar', [AccountOrderController::class, 'reorder'])->name('account.orders.reorder');
+        Route::resource('/hesabim/adresler', AddressController::class)->parameters(['adresler' => 'address'])->except('show')->names('account.addresses');
+        Route::get('/hesabim/favoriler', [FavoriteController::class, 'index'])->name('account.favorites');
+        Route::post('/favori/{product}', [FavoriteController::class, 'toggle'])->name('favorites.toggle');
     });
 });

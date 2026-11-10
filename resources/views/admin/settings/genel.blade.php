@@ -13,7 +13,7 @@
             <div class="flex flex-wrap gap-3">
                 @foreach (['1' => 'Açık', '0' => 'Bakımda (ziyaretçilere kapalı)'] as $v => $l)
                     <label class="flex items-center gap-2 rounded-xl border border-line px-4 py-2.5 text-sm has-checked:border-primary has-checked:bg-primary-soft">
-                        <input type="radio" name="store_open" value="{{ $v }}" @checked(old('store_open', $s['store_open']) === $v) class="accent-primary"> {{ $l }}
+                        <input type="radio" name="store_open" value="{{ $v }}" @checked(old('store_open', $s['store_open']) === (string) $v) class="accent-primary"> {{ $l }}
                     </label>
                 @endforeach
             </div>

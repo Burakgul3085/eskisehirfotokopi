@@ -75,7 +75,7 @@
                             <legend class="mb-2 text-sm font-bold">Baskı</legend>
                             @foreach (['' => 'Tümü', 'siyah-beyaz' => 'Siyah-beyaz', 'renkli' => 'Renkli'] as $v => $l)
                                 <label class="flex cursor-pointer items-center gap-2 rounded-lg px-1.5 py-1 text-sm hover:bg-surface">
-                                    <input type="radio" name="tip" value="{{ $v }}" @checked(request('tip', '') === $v) class="accent-primary" data-autosubmit> {{ $l }}
+                                    <input type="radio" name="tip" value="{{ $v }}" @checked(request('tip', '') === (string) $v) class="accent-primary" data-autosubmit> {{ $l }}
                                 </label>
                             @endforeach
                         </fieldset>

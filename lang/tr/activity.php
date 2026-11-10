@@ -25,4 +25,9 @@ return [
     'home_block.deleted' => 'Ana sayfa bloğunu sildi',
     'import.started' => 'Toplu klasör yüklemesi başlattı',
     'import.reviewed' => 'Toplu yükleme kalemini kontrol etti',
+    'order.status' => 'Sipariş durumunu değiştirdi',
+    'order.note' => 'Siparişe iç not yazdı',
+    'district.created' => 'Teslimat bölgesi ekledi',
+    'district.updated' => 'Teslimat bölgesini güncelledi',
+    'district.deleted' => 'Teslimat bölgesi sildi',
 ];

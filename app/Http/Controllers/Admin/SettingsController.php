@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Support\Activity;
+use App\Support\Money;
 use App\Support\Settings;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -16,6 +17,7 @@ class SettingsController extends Controller
 {
     public const GROUPS = [
         'genel' => 'Genel',
+        'teslimat' => 'Teslimat ve sipariş',
         'iletisim' => 'İletişim ve sosyal medya',
         'gorunum' => 'Görünüm',
         'seo' => 'SEO',
@@ -59,6 +61,7 @@ class SettingsController extends Controller
                 'youtube' => ['nullable', 'url', 'max:255'],
                 'tiktok' => ['nullable', 'url', 'max:255'],
             ]),
+            'teslimat' => $this->delivery($request),
             'gorunum' => $this->appearance($request),
             'seo' => $request->validate([
                 'meta_title' => ['nullable', 'string', 'max:70'],
@@ -71,6 +74,40 @@ class SettingsController extends Controller
         Activity::log('settings.updated', null, ['group' => $group, 'keys' => array_keys($values)]);
 
         return redirect()->route('admin.settings.edit', $group)->with('status', 'Ayarlar kaydedildi.');
+    }
+
+    private function delivery(Request $request): array
+    {
+        foreach (['delivery_free_threshold', 'delivery_min_order'] as $f) {
+            if (filled($request->input($f))) {
+                $request->merge([$f => Money::parse($request->input($f)) ?? $request->input($f)]);
+            }
+        }
+        $data = $request->validate([
+            'orders_open' => ['required', 'in:0,1'],
+            'orders_closed_message' => ['nullable', 'string', 'max:300'],
+            'delivery_free_threshold' => ['nullable', 'numeric', 'min:0', 'max:1000000'],
+            'delivery_min_order' => ['nullable', 'numeric', 'min:0', 'max:1000000'],
+            'delivery_cutoff' => ['required', 'date_format:H:i'],
+            'delivery_same_day' => ['required', 'in:0,1'],
+            'delivery_closed_days' => ['nullable', 'array'],
+            'delivery_closed_days.*' => ['integer', 'between:1,7'],
+            'delivery_slots' => ['nullable', 'string', 'max:500'],
+            'delivery_info' => ['nullable', 'string', 'max:500'],
+            'payment_cash' => ['nullable', 'boolean'],
+            'payment_card' => ['nullable', 'boolean'],
+        ]);
+        if (! $request->boolean('payment_cash') && ! $request->boolean('payment_card')) {
+            throw ValidationException::withMessages(['payment_cash' => 'En az bir ödeme yöntemi açık olmalı.']);
+        }
+        $data['delivery_closed_days'] = implode(',', array_unique(array_map('intval', $data['delivery_closed_days'] ?? [])));
+        $data['payment_cash'] = $request->boolean('payment_cash') ? '1' : '0';
+        $data['payment_card'] = $request->boolean('payment_card') ? '1' : '0';
+        foreach (['delivery_free_threshold', 'delivery_min_order'] as $f) {
+            $data[$f] = filled($data[$f] ?? null) ? (string) $data[$f] : null;
+        }
+
+        return $data;
     }
 
     private function appearance(Request $request): array

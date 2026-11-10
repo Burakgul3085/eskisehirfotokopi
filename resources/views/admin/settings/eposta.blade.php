@@ -12,7 +12,7 @@
                 <label class="field-label" for="f_mail_encryption">Şifreleme</label>
                 <select id="f_mail_encryption" name="mail_encryption" class="field-input">
                     @foreach (['tls' => 'TLS (587)', 'ssl' => 'SSL (465)', 'none' => 'Yok'] as $v => $l)
-                        <option value="{{ $v }}" @selected(old('mail_encryption', $s['mail_encryption']) === $v)>{{ $l }}</option>
+                        <option value="{{ $v }}" @selected(old('mail_encryption', $s['mail_encryption']) === (string) $v)>{{ $l }}</option>
                     @endforeach
                 </select>
             </div>
