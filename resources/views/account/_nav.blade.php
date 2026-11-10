@@ -5,6 +5,7 @@
         ['Siparişlerim', 'account.orders', 'account.orders*', 'package'],
         ['Adreslerim', 'account.addresses.index', 'account.addresses.*', 'pin'],
         ['Favorilerim', 'account.favorites', 'account.favorites', 'heart'],
+        ['Mesajlarım', 'account.messages', 'account.messages', 'chat'],
     ];
 @endphp
 <nav class="-mx-4 mt-6 flex gap-1 overflow-x-auto px-4 [scrollbar-width:none] sm:mx-0 sm:px-0" aria-label="Hesap menüsü">

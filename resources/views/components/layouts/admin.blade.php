@@ -12,6 +12,11 @@
             ['Teslimat bölgeleri', 'pin', 'admin.districts.index', 'admin.districts.*'],
             ['Fotokopi', 'printer', 'admin.print.edit', 'admin.print.*'],
         ],
+        'Müşteri' => [
+            ['Mesajlar', 'chat', 'admin.messages.index', 'admin.messages.*'],
+            ['Müşteriler', 'users', 'admin.customers.index', 'admin.customers.*'],
+            ['E-posta kayıtları', 'mail', 'admin.mail-logs', 'admin.mail-logs'],
+        ],
         'Katalog' => [
             ['Ürünler', 'book', 'admin.products.index', 'admin.products.*'],
             ['Kategoriler', 'layers', 'admin.categories.index', 'admin.categories.*'],
@@ -23,6 +28,7 @@
             ['Ana sayfa', 'home', 'admin.home-blocks.index', 'admin.home-blocks.*'],
         ],
     ];
+    $unreadMessages = \App\Models\MessageThread::where('unread_admin', true)->count();
     $settingsNav = collect(\App\Http\Controllers\Admin\SettingsController::GROUPS)
         ->map(fn ($label, $group) => ['label' => $label, 'url' => route('admin.settings.edit', $group), 'active' => request()->routeIs('admin.settings.*') && request()->route('group') === $group]);
 @endphp
@@ -59,6 +65,7 @@
                             @if (\Illuminate\Support\Facades\Route::has($route))
                                 <a href="{{ route($route) }}" class="nav-admin-link" @if (request()->routeIs(...explode("|", $match))) aria-current="page" @endif>
                                     <x-icon :name="$icon" class="size-[18px]" />{{ $label }}
+                                    @if ($route === 'admin.messages.index' && $unreadMessages)<span class="ml-auto rounded-full bg-accent px-2 py-0.5 text-[11px] font-bold text-ink">{{ $unreadMessages }}</span>@endif
                                 </a>
                             @endif
                         @endforeach

@@ -3,12 +3,14 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
+use App\Mail\SiteMail;
 use App\Models\User;
 use App\Rules\TurkishPhone;
 use Illuminate\Auth\Events\PasswordReset;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rules\Password as PasswordRule;
@@ -69,6 +71,7 @@ class CustomerAuthController extends Controller
 
         Auth::guard('web')->login($user);
         $request->session()->regenerate();
+        Mail::to($user->email, $user->name)->send(SiteMail::welcome($user));
 
         return redirect()->route('account.index')->with('status', 'Hoş geldiniz! Hesabınız oluşturuldu.');
     }

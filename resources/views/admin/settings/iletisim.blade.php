@@ -11,6 +11,10 @@
         <x-field name="address" type="textarea" rows="2" label="Adres" :value="$s['address']" />
         <x-field name="working_hours" type="textarea" rows="3" label="Çalışma saatleri" :value="$s['working_hours']" help="Her satıra bir gün aralığı yazın (ör. Pzt–Cmt 09:00–20:00)." />
 
+        <h2 class="border-t border-line pt-5 font-bold">İletişim sayfası</h2>
+        <x-field name="contact_intro" type="textarea" rows="2" label="Sayfa açıklaması" :value="$s['contact_intro']" />
+        <x-field name="contact_consent" label="Onay kutusu metni" :value="$s['contact_consent']" />
+
         <h2 class="border-t border-line pt-5 font-bold">Sosyal medya</h2>
         <div class="grid gap-5 sm:grid-cols-2">
             @foreach (['instagram' => 'Instagram', 'facebook' => 'Facebook', 'x' => 'X (Twitter)', 'youtube' => 'YouTube', 'tiktok' => 'TikTok'] as $key => $label)

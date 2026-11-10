@@ -32,4 +32,9 @@ return [
     'district.deleted' => 'Teslimat bölgesi sildi',
     'print.settings' => 'Fotokopi ayarlarını güncelledi',
     'print.download' => 'Baskı dosyasını indirdi',
+    'settings.test_mail' => 'Deneme e-postası gönderdi',
+    'message.replied' => 'Müşteri mesajını yanıtladı',
+    'message.status' => 'Mesaj konusunun durumunu değiştirdi',
+    'message.deleted' => 'Mesaj konusunu sildi',
+    'customer.toggled' => 'Müşteri hesabını açtı/kapattı',
 ];

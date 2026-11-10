@@ -32,6 +32,8 @@ class Settings
         'address' => null,
         'working_hours' => null,         // satır satır
         'maps_url' => null,
+        'contact_intro' => 'Sipariş, belge baskısı veya ürünlerle ilgili sorularınızı yazın; en kısa sürede e-postayla yanıt verelim.',
+        'contact_consent' => 'Bilgilerimin mesajıma yanıt verilmesi amacıyla işlenmesini kabul ediyorum.',
 
         // Sosyal medya
         'instagram' => null,

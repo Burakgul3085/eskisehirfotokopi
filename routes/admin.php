@@ -5,10 +5,13 @@ use App\Http\Controllers\Admin\AdminUserController;
 use App\Http\Controllers\Admin\AuthController;
 use App\Http\Controllers\Admin\AuthorController;
 use App\Http\Controllers\Admin\CategoryController;
+use App\Http\Controllers\Admin\CustomerController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\DeliveryDistrictController;
 use App\Http\Controllers\Admin\HomeBlockController;
 use App\Http\Controllers\Admin\ImportController;
+use App\Http\Controllers\Admin\MailLogController;
+use App\Http\Controllers\Admin\MessageController;
 use App\Http\Controllers\Admin\OrderController;
 use App\Http\Controllers\Admin\PrintController;
 use App\Http\Controllers\Admin\ProductController;
@@ -39,6 +42,18 @@ Route::prefix('yonetim')->name('admin.')->group(function () {
         Route::put('/fotokopi', [PrintController::class, 'update'])->name('print.update');
         Route::post('/teslimat-bolgeleri/{district}/ac-kapat', [DeliveryDistrictController::class, 'toggle'])->name('districts.toggle');
         Route::resource('teslimat-bolgeleri', DeliveryDistrictController::class)->parameters(['teslimat-bolgeleri' => 'district'])->except('show')->names('districts');
+
+        // Müşteriler ve mesajlar
+        Route::get('/musteriler', [CustomerController::class, 'index'])->name('customers.index');
+        Route::get('/musteriler/{customer}', [CustomerController::class, 'show'])->name('customers.show');
+        Route::post('/musteriler/{customer}/ac-kapat', [CustomerController::class, 'toggle'])->name('customers.toggle');
+        Route::get('/mesajlar', [MessageController::class, 'index'])->name('messages.index');
+        Route::get('/mesajlar/{thread}', [MessageController::class, 'show'])->name('messages.show');
+        Route::post('/mesajlar/{thread}/yanit', [MessageController::class, 'reply'])->name('messages.reply');
+        Route::put('/mesajlar/{thread}/durum', [MessageController::class, 'status'])->name('messages.status');
+        Route::delete('/mesajlar/{thread}', [MessageController::class, 'destroy'])->name('messages.destroy');
+        Route::get('/e-posta-kayitlari', MailLogController::class)->name('mail-logs');
+        Route::post('/ayarlar/eposta/deneme', [SettingsController::class, 'testMail'])->name('settings.test-mail');
 
         // Katalog
         Route::get('/urunler/fiyat-sablonu', [ProductController::class, 'priceTemplate'])->name('products.price-template');

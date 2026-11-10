@@ -3,14 +3,17 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Mail\SiteMail;
 use App\Support\Activity;
 use App\Support\Money;
 use App\Support\Settings;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
+use Throwable;
 
 /** Site ayarları, gruplar halinde (genel, iletişim, görünüm, SEO, e-posta). */
 class SettingsController extends Controller
@@ -55,6 +58,8 @@ class SettingsController extends Controller
                 'address' => ['nullable', 'string', 'max:300'],
                 'working_hours' => ['nullable', 'string', 'max:300'],
                 'maps_url' => ['nullable', 'url', 'max:500'],
+                'contact_intro' => ['nullable', 'string', 'max:500'],
+                'contact_consent' => ['nullable', 'string', 'max:300'],
                 'instagram' => ['nullable', 'url', 'max:255'],
                 'facebook' => ['nullable', 'url', 'max:255'],
                 'x' => ['nullable', 'url', 'max:255'],
@@ -74,6 +79,20 @@ class SettingsController extends Controller
         Activity::log('settings.updated', null, ['group' => $group, 'keys' => array_keys($values)]);
 
         return redirect()->route('admin.settings.edit', $group)->with('status', 'Ayarlar kaydedildi.');
+    }
+
+    /** Kayıtlı SMTP ayarlarıyla hemen (kuyruğa koymadan) deneme e-postası gönderir; hata ekranda görünür. */
+    public function testMail(Request $request): RedirectResponse
+    {
+        $data = $request->validate(['to' => ['required', 'email', 'max:190']]);
+        try {
+            Mail::to($data['to'])->sendNow(SiteMail::test());
+        } catch (Throwable $e) {
+            return back()->withInput()->withErrors(['to' => 'Gönderilemedi: '.mb_substr($e->getMessage(), 0, 300)]);
+        }
+        Activity::log('settings.test_mail', null, ['to' => $data['to']]);
+
+        return back()->with('status', 'Deneme e-postası '.$data['to'].' adresine gönderildi.');
     }
 
     private function delivery(Request $request): array

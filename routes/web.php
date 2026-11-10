@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Account\AddressController;
 use App\Http\Controllers\Account\FavoriteController;
+use App\Http\Controllers\Account\MessageController as AccountMessageController;
 use App\Http\Controllers\Account\OrderController as AccountOrderController;
 use App\Http\Controllers\AccountController;
 use App\Http\Controllers\Auth\CustomerAuthController;
@@ -9,6 +10,7 @@ use App\Http\Controllers\HomeController;
 use App\Http\Controllers\Store\CartController;
 use App\Http\Controllers\Store\CatalogController;
 use App\Http\Controllers\Store\CheckoutController;
+use App\Http\Controllers\Store\ContactController;
 use App\Http\Controllers\Store\OrderTrackingController;
 use App\Http\Controllers\Store\PrintController;
 use App\Http\Controllers\Store\ProductController;
@@ -53,6 +55,12 @@ Route::middleware('store.open')->group(function () {
     Route::post('/siparis-takip', [OrderTrackingController::class, 'lookup'])->middleware('throttle:order-track');
     Route::get('/siparis/{order}/{token}', [OrderTrackingController::class, 'show'])->name('orders.track.show');
 
+    // İletişim ve mesajlar (konuya e-postadaki gizli bağlantıyla dönülür)
+    Route::get('/iletisim', [ContactController::class, 'show'])->name('contact');
+    Route::post('/iletisim', [ContactController::class, 'store'])->middleware('throttle:contact')->name('contact.store');
+    Route::get('/mesaj/{thread}/{token}', [ContactController::class, 'thread'])->name('messages.show');
+    Route::post('/mesaj/{thread}/{token}', [ContactController::class, 'reply'])->middleware('throttle:contact')->name('messages.reply');
+
     Route::middleware('guest:web')->group(function () {
         Route::get('/giris', [CustomerAuthController::class, 'showLogin'])->name('login');
         Route::post('/giris', [CustomerAuthController::class, 'login'])->middleware('throttle:customer-login');
@@ -73,6 +81,7 @@ Route::middleware('store.open')->group(function () {
         Route::get('/hesabim/siparisler/{order}', [AccountOrderController::class, 'show'])->name('account.orders.show');
         Route::post('/hesabim/siparisler/{order}/tekrar', [AccountOrderController::class, 'reorder'])->name('account.orders.reorder');
         Route::resource('/hesabim/adresler', AddressController::class)->parameters(['adresler' => 'address'])->except('show')->names('account.addresses');
+        Route::get('/hesabim/mesajlar', AccountMessageController::class)->name('account.messages');
         Route::get('/hesabim/favoriler', [FavoriteController::class, 'index'])->name('account.favorites');
         Route::post('/favori/{product}', [FavoriteController::class, 'toggle'])->name('favorites.toggle');
     });
