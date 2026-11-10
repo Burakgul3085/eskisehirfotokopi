@@ -58,8 +58,6 @@
         <section class="card grid gap-5 p-6 sm:grid-cols-2">
             <x-field name="spiral_price" label="Spiral cilt (kopya başı, ₺)" :value="$money($s['spiral_price'])" inputmode="decimal" required />
             <x-field name="a3_multiplier" label="A3 fiyat çarpanı" :value="$money($s['a3_multiplier'])" inputmode="decimal" help="Ör. 2,00: A3 yaprak fiyatı A4'ün iki katı." />
-            <x-field name="quote_threshold" type="number" min="2" label="Özel teklif eşiği (sayfa)" :value="$s['quote_threshold']" help="Ör. 1000: bu sayfa ve üzerinde fiyat verilmez, müşteri sizi arar. Boş: sınır yok." />
-            <x-field name="quote_text" type="textarea" rows="2" label="Özel teklif metni" :value="$s['quote_text']" />
         </section>
 
         <section class="card grid gap-5 p-6 sm:grid-cols-2 lg:grid-cols-4">

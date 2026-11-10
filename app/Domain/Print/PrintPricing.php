@@ -12,7 +12,7 @@ use DomainException;
  *    Örnek (1–99: 2 ₺, 100–199: 1,50 ₺): 100 sayfa tek yüz = 100 yaprak × 1,50; 100 sayfa önlü arkalı = 50 yaprak × 2;
  *    200 sayfa önlü arkalı = 100 yaprak × 1,50.
  *  - Tutar = kademenin yaprak fiyatı × kopya başı yaprak × kopya.
- *  - Basılacak sayfa özel teklif eşiğine ulaşırsa fiyat verilmez (SpecialQuoteRequired): sepete eklenemez, sipariş verilemez.
+ *  - Sayfa sınırı yoktur: her belgenin fiyatı hesaplanır (özel teklif / "mağazayla iletişime geçin" yok).
  *  - A3 seçilirse yaprak fiyatı çarpanla çarpılır.
  *  - Ciltleme yalnızca spiraldir: tek sabit fiyat, kopya başına (yaprak sınırı yok). Zımba sunulmaz.
  */
@@ -24,17 +24,12 @@ class PrintPricing
      * @return array{pages: int, sides: int, sheets: int, copies: int, all_sheets: int, sheet_price: string, print_total: string,
      *               binding_unit: string, binding_total: string, total: string, lines: list<array{0: string, 1: string}>}
      *
-     * @throws SpecialQuoteRequired basılacak sayfa özel teklif eşiğindeyse
      * @throws DomainException ciltleme artık sunulmuyorsa (eski kayıtta zımba)
      */
     public function quote(int $totalPages, PrintOptions $o): array
     {
         $s = $this->settings->all();
         $pages = $o->selectedPages($totalPages);
-        $threshold = $s['quote_threshold'];
-        if ($threshold !== null && $pages >= $threshold) {
-            throw new SpecialQuoteRequired($pages, $threshold, $s['quote_text']);
-        }
 
         $sides = (int) ceil($pages / $o->layout);
         $sheets = $o->duplex ? (int) ceil($sides / 2) : $sides;

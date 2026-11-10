@@ -12,8 +12,7 @@ use Illuminate\Validation\ValidationException;
  * ve saklama süreleri. Settings "print" anahtarında JSON olarak tutulur (B2B'den uyarlandı; KDV ve fatura yok).
  *
  * Kademe kopya başı yaprak sayısına göre seçilir (önlü arkalı yaprağı yarıya indirir; kopya kademeyi değiştirmez); her kademede siyah-beyaz
- * ve renkli yaprak fiyatı vardır. Basılacak sayfa özel teklif eşiğine ulaşırsa fiyat verilmez, müşteriye quote_text
- * ve iletişim bilgileri gösterilir; eşik boşsa sınır yoktur.
+ * ve renkli yaprak fiyatı vardır. Sayfa sınırı yoktur: her belgenin fiyatı hesaplanır.
  */
 class PrintSettings
 {
@@ -29,8 +28,6 @@ class PrintSettings
         'a3_enabled' => false,
         'a3_multiplier' => '2.00',
         'spiral_price' => '40.00',
-        'quote_threshold' => null,
-        'quote_text' => 'Bu kadar sayfalı baskılarda size özel indirimli fiyat veriyoruz. Lütfen bizimle iletişime geçin.',
         'max_mb' => 200,
         'max_copies' => 100,
         'unordered_days' => 7,
@@ -50,8 +47,6 @@ class PrintSettings
         $saved = json_decode((string) Settings::get('print'), true);
         $all = array_replace(self::DEFAULTS, is_array($saved) ? $saved : []);
         $all['tiers'] = array_map(fn (array $t) => ['from' => (int) $t['from'], 'bw' => (string) $t['bw'], 'color' => (string) $t['color']], $all['tiers']);
-        $all['quote_threshold'] = $all['quote_threshold'] === null ? null : (int) $all['quote_threshold'];
-        $all['quote_text'] = trim((string) $all['quote_text']) ?: self::DEFAULTS['quote_text'];
 
         return $this->cache = $all;
     }
@@ -158,8 +153,6 @@ class PrintSettings
             $errors['tiers'] = 'Her kademenin başlangıcı farklı olmalıdır.';
         }
 
-        $threshold = blank($input['quote_threshold'] ?? null) ? null : $int($input['quote_threshold'], 'quote_threshold', 2, 1000000);
-
         $bw = filter_var($input['bw_enabled'] ?? false, FILTER_VALIDATE_BOOL);
         $color = filter_var($input['color_enabled'] ?? false, FILTER_VALIDATE_BOOL);
         if (! $bw && ! $color) {
@@ -174,8 +167,6 @@ class PrintSettings
             'a3_enabled' => filter_var($input['a3_enabled'] ?? false, FILTER_VALIDATE_BOOL),
             'a3_multiplier' => $money($input['a3_multiplier'] ?? '2', 'a3_multiplier'),
             'spiral_price' => $money($input['spiral_price'] ?? null, 'spiral_price'),
-            'quote_threshold' => $threshold,
-            'quote_text' => mb_substr(trim((string) ($input['quote_text'] ?? '')), 0, 300) ?: self::DEFAULTS['quote_text'],
             'max_mb' => $int($input['max_mb'] ?? 200, 'max_mb', 1, 500),
             'max_copies' => $int($input['max_copies'] ?? 100, 'max_copies', 1, 1000),
             'unordered_days' => $int($input['unordered_days'] ?? 7, 'unordered_days', 1, 90),

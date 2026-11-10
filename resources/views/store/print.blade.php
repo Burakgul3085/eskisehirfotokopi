@@ -117,13 +117,6 @@
                             </div>
 
                             <div class="flex flex-col rounded-2xl bg-surface p-4">
-                                <template x-if="f.hasSpecial">
-                                    <div class="space-y-3 text-sm">
-                                        <p class="font-semibold text-accent-ink" x-text="f.specialText"></p>
-                                        @if ($settings['phone'])<a href="tel:{{ preg_replace('/\s+/', '', $settings['phone']) }}" class="btn-ghost w-full"><x-icon name="phone" class="size-4" />{{ $settings['phone'] }}</a>@endif
-                                        @if ($wa = \App\Support\Settings::whatsappUrl('Fotokopi için fiyat almak istiyorum.'))<a href="{{ $wa }}" target="_blank" rel="noopener" class="btn-ghost w-full"><x-icon name="whatsapp" class="size-4" />WhatsApp</a>@endif
-                                    </div>
-                                </template>
                                 <div x-show="f.hasTotal" class="flex flex-1 flex-col">
                                     <ul class="space-y-1 text-xs text-muted">
                                         <template x-for="l in f.lineItems" x-bind:key="l.key">

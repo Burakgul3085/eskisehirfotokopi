@@ -8,7 +8,6 @@ use App\Domain\Print\PrintFiles;
 use App\Domain\Print\PrintOptions;
 use App\Domain\Print\PrintOwner;
 use App\Domain\Print\PrintSettings;
-use App\Domain\Print\SpecialQuoteRequired;
 use App\Http\Controllers\Controller;
 use App\Models\PrintFile;
 use App\Support\Money;
@@ -129,7 +128,6 @@ class PrintController extends Controller
     {
         return match (true) {
             $e instanceof ValidationException => response()->json(['message' => collect($e->errors())->flatten()->first(), 'errors' => $e->errors()], 422),
-            $e instanceof SpecialQuoteRequired => response()->json(['message' => $e->getMessage(), 'special' => ['pages' => $e->pages, 'threshold' => $e->threshold]], 422),
             default => response()->json(['message' => $e->getMessage()], 422),
         };
     }

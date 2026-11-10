@@ -7,7 +7,6 @@ use App\Domain\Print\PrintCart;
 use App\Domain\Print\PrintOptions;
 use App\Domain\Print\PrintPricing;
 use App\Domain\Print\PrintSettings;
-use App\Domain\Print\SpecialQuoteRequired;
 use App\Models\Admin;
 use App\Models\DeliveryDistrict;
 use App\Models\Order;
@@ -89,7 +88,7 @@ class PrintTest extends TestCase
         return $state;
     }
 
-    public function test_pricing_tiers_layout_duplex_binding_and_quote_threshold(): void
+    public function test_pricing_tiers_layout_duplex_and_binding(): void
     {
         $pricing = app(PrintPricing::class);
         // 10 sayfa, tek yüz, S-B: 10 yaprak × 2,00
@@ -110,10 +109,9 @@ class PrintTest extends TestCase
         // Sayfa aralığı kademeyi belirler
         $this->assertSame(5, $pricing->quote(200, new PrintOptions(range: '1-3, 10-11'))['pages']);
 
-        app(PrintSettings::class)->save(['tiers' => PrintSettings::DEFAULTS['tiers'], 'enabled' => '1', 'bw_enabled' => '1', 'color_enabled' => '1',
-            'spiral_price' => '40', 'a3_multiplier' => '2', 'quote_threshold' => '1000', 'max_mb' => 200, 'max_copies' => 100, 'unordered_days' => 7, 'ordered_days' => 30]);
-        $this->expectException(SpecialQuoteRequired::class);
-        app(PrintPricing::class)->quote(1200, new PrintOptions);
+        // Sayfa sınırı yok: 800 sayfa da fiyatlanır (özel teklif yok). 800 sayfa önlü arkalı = 400 yaprak × 1,00
+        $this->assertSame('400.00', $pricing->quote(800, new PrintOptions(duplex: true))['total']);
+        $this->assertSame('5000.00', $pricing->quote(5000, new PrintOptions)['total']);
     }
 
     public function test_upload_count_quote_add_to_cart_and_order(): void
@@ -200,7 +198,7 @@ class PrintTest extends TestCase
         $this->get(route('admin.print.edit'))->assertOk()->assertSee('Yaprak başı fiyat kademeleri');
 
         $form = ['enabled' => '1', 'bw_enabled' => '1', 'color_enabled' => '1', 'spiral_price' => '35,50', 'a3_multiplier' => '2', 'max_mb' => 100,
-            'max_copies' => 50, 'unordered_days' => 5, 'ordered_days' => 20, 'quote_threshold' => '',
+            'max_copies' => 50, 'unordered_days' => 5, 'ordered_days' => 20,
             'tiers' => [['from' => 1, 'bw' => '1,75', 'color' => '5'], ['from' => 51, 'bw' => '2,00', 'color' => '4,50'], ['from' => '', 'bw' => '', 'color' => '']]];
         $this->put(route('admin.print.update'), $form)->assertSessionHasNoErrors();
         $s = app(PrintSettings::class)->all();

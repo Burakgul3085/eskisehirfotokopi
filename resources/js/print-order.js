@@ -74,7 +74,7 @@ export function printOrder() {
 
         prepare(f) {
             const file = Object.assign(
-                { uid: ++uid, progress: 100, total: null, summary: '', lines: [], special: null, busy: false, added: false, opts: defaults(), timer: null, cls: {} },
+                { uid: ++uid, progress: 100, total: null, summary: '', lines: [], busy: false, added: false, opts: defaults(), timer: null, cls: {} },
                 f,
                 { error: f.error || '' },
             );
@@ -95,8 +95,6 @@ export function printOrder() {
             f.extLabel = (f.name.split('.').pop() || '').toUpperCase().slice(0, 4);
             f.extClass = extClass(f.name);
             f.hasTotal = f.total !== null;
-            f.hasSpecial = f.special !== null;
-            f.specialText = f.special ? f.special.text : '';
             f.hasError = f.error !== '';
             f.canAdd = f.isReady && f.total !== null && !f.busy && !f.added;
             f.cannotAdd = !f.canAdd;
@@ -261,15 +259,11 @@ export function printOrder() {
             const res = await this.request(fileUrl(f.token, '/fiyat'), 'POST', f.opts);
             f.total = null;
             f.lines = [];
-            f.special = null;
             f.error = '';
             if (res.ok) {
                 f.total = res.data.total;
                 f.summary = res.data.summary;
                 f.lines = res.data.quote.lines;
-            } else if (res.data.special) {
-                // Özel teklif eşiği: fiyat verilmez, sepete eklenemez; iletişim bilgileri gösterilir.
-                f.special = { text: res.data.message };
             } else {
                 f.error = res.data.message || 'Fiyat hesaplanamadı.';
             }
