@@ -93,8 +93,9 @@ export function colorField() {
 export function bulkSelect() {
     return {
         count: 0,
+        // $root: bileşenin kendisi (form). $el, olayı tetikleyen kutuyu gösterir; "Tümünü seç" içinde kutu bulunmuyordu.
         boxes() {
-            return [...this.$el.querySelectorAll('input[name="ids[]"]')];
+            return [...this.$root.querySelectorAll('input[name="ids[]"]')];
         },
         toggleAll(event) {
             this.boxes().forEach((b) => {

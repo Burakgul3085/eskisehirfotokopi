@@ -126,6 +126,17 @@ class CatalogAdminTest extends TestCase
         $this->assertSame('draft', $b->fresh()->status);
     }
 
+    public function test_bulk_delete_removes_selected_products(): void
+    {
+        $keep = Product::create(['title' => 'Kalsın', 'slug' => 'kalsin']);
+        $ids = collect(range(1, 3))->map(fn ($i) => Product::create(['title' => "Sil {$i}", 'slug' => "sil-{$i}"])->id)->all();
+        $this->get(route('admin.products.index'))->assertSee('aria-label="Tümünü seç"', false);
+
+        $this->post(route('admin.products.bulk'), ['ids' => $ids, 'action' => 'delete'])->assertSessionHas('status', '3 ürün silindi.');
+        $this->assertSame([$keep->id], Product::pluck('id')->all());
+        $this->post(route('admin.products.bulk'), ['action' => 'delete'])->assertSessionHasErrors('ids'); // seçim yoksa uyarı
+    }
+
     public function test_price_sheet_roundtrip(): void
     {
         $a = Product::create(['title' => 'Kitap A', 'slug' => 'a', 'price_bw' => '50']);

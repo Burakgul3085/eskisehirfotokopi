@@ -161,7 +161,7 @@ class ProductController extends Controller
                 break;
         }
         Activity::log('products.bulk', null, ['action' => $data['action'], 'count' => $n]);
-        $msg = "{$n} ürün güncellendi.";
+        $msg = $data['action'] === 'delete' ? "{$n} ürün silindi." : "{$n} ürün güncellendi.";
         if (! empty($skipped)) {
             $msg .= " {$skipped} ürün fiyatı olmadığı için yayına alınmadı.";
         }
