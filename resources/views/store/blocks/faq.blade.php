@@ -7,6 +7,7 @@
                 <div class="scene-fallback pointer-events-none absolute inset-0 flex items-center justify-center" aria-hidden="true">
                     <div class="size-36 rounded-full bg-gradient-to-br from-primary/30 to-accent/25 blur-2xl"></div>
                 </div>
+                <div class="faq-floor pointer-events-none absolute inset-x-[24%] bottom-1 h-7 rounded-[100%] bg-primary/25 blur-xl" aria-hidden="true"></div>
                 <canvas data-scene-canvas class="scene-canvas absolute inset-0 block size-full" aria-hidden="true"></canvas>
             </div>
             @if ($block->title)<h2 class="text-2xl font-extrabold tracking-tight sm:text-3xl">{{ $block->title }}</h2>@endif

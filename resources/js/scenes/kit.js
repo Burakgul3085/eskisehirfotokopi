@@ -106,10 +106,10 @@ export function createStage(root, opts = {}) {
     const target = new THREE.Vector2(0, 0);
     const host = opts.pointerHost || root;
     host.addEventListener('pointermove', (e) => {
-        const r = host.getBoundingClientRect();
+        const r = host === window ? { left: 0, top: 0, width: innerWidth, height: innerHeight } : host.getBoundingClientRect();
         target.set(((e.clientX - r.left) / r.width) * 2 - 1, -(((e.clientY - r.top) / r.height) * 2 - 1));
     }, { passive: true });
-    host.addEventListener('pointerleave', () => target.set(0, 0));
+    (host === window ? document.documentElement : host).addEventListener('pointerleave', () => target.set(0, 0));
 
     let frameFn = () => {};
     const render = () => renderer.render(scene, camera);
@@ -139,6 +139,7 @@ export function createStage(root, opts = {}) {
     let raf = 0;
     let last = performance.now();
     let elapsed = 0;
+    let acc = 0;
 
     const frame = () => {
         if (!running) {
@@ -149,8 +150,13 @@ export function createStage(root, opts = {}) {
         last = now;
         elapsed += dt;
         pointer.lerp(target, 0.06);
-        frameFn(dt, elapsed);
-        render();
+        // İsteğe bağlı kare sınırı (geniş arka plan sahnesi için GPU tasarrufu)
+        acc += dt;
+        if (!opts.fps || acc >= 1 / opts.fps - 0.004) {
+            frameFn(acc, elapsed);
+            acc = 0;
+            render();
+        }
         raf = requestAnimationFrame(frame);
     };
     const run = () => {

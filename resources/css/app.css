@@ -305,3 +305,38 @@
     .faq-card[open] .faq-answer { animation: none; }
     .trust-tile, .trust-tile:hover, .trust-icon, .trust-tile:hover .trust-icon { transform: none; transition: none; }
 }
+
+/* ---- Ana sayfa arka zemini ---- */
+.ambient-orb {
+    position: absolute;
+    border-radius: 9999px;
+    filter: blur(90px);
+    will-change: transform;
+    animation: ambient-drift 28s ease-in-out infinite alternate;
+}
+.ambient-orb-1 { width: 46vw; height: 46vw; top: -14vw; left: -14vw; background: color-mix(in oklab, var(--color-primary) 22%, transparent); }
+.ambient-orb-2 { width: 38vw; height: 38vw; top: 32vh; right: -12vw; background: color-mix(in oklab, var(--color-accent) 18%, transparent); animation-duration: 34s; animation-direction: alternate-reverse; }
+.ambient-orb-3 { width: 34vw; height: 34vw; bottom: -16vw; left: 28vw; background: color-mix(in oklab, var(--color-primary) 14%, var(--color-accent) 6%); animation-duration: 40s; }
+@keyframes ambient-drift {
+    0% { transform: translate3d(0, 0, 0) scale(1); }
+    50% { transform: translate3d(5vw, 4vh, 0) scale(1.1); }
+    100% { transform: translate3d(-3vw, -3vh, 0) scale(0.94); }
+}
+/* Noktalı ızgara: kenarlarda görünür, ortada (içerik) söner */
+.ambient-dots {
+    background-image: radial-gradient(color-mix(in oklab, var(--color-primary) 28%, transparent) 1px, transparent 1.6px);
+    background-size: 26px 26px;
+    mask-image: radial-gradient(ellipse 75% 70% at 50% 45%, transparent 35%, black 100%);
+}
+/* 3D yapraklar: kenarlarda tam, orta sütunda hafif — yazılar okunaklı kalır */
+.ambient-canvas {
+    mask-image: linear-gradient(90deg, black 0%, black 14%, rgb(0 0 0 / 0.35) 32%, rgb(0 0 0 / 0.35) 68%, black 86%, black 100%);
+}
+.faq-floor { animation: faq-floor 2.9s ease-in-out infinite; }
+@keyframes faq-floor {
+    0%, 100% { transform: scaleX(1); opacity: 1; }
+    50% { transform: scaleX(0.86); opacity: 0.7; }
+}
+@media (prefers-reduced-motion: reduce) {
+    .ambient-orb, .faq-floor { animation: none; }
+}

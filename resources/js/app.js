@@ -30,6 +30,7 @@ const sceneLoaders = {
     'print-banner': () => import('./scenes/print-banner.js'),
     faq: () => import('./scenes/faq.js'),
     'footer-wave': () => import('./scenes/footer-wave.js'),
+    ambient: () => import('./scenes/ambient.js'),
 };
 const sceneRoots = document.querySelectorAll('[data-scene]');
 if (sceneRoots.length && 'IntersectionObserver' in window) {
