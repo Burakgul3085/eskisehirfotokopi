@@ -91,27 +91,28 @@ class PrintTest extends TestCase
     public function test_pricing_tiers_layout_duplex_and_binding(): void
     {
         $pricing = app(PrintPricing::class);
-        // 10 sayfa, tek yüz, S-B: 10 yaprak × 2,00
-        $this->assertSame('20.00', $pricing->quote(10, new PrintOptions)['total']);
+        // Fiyat motoru eski kayıtlar için tek yüzü de hesaplar (artık seçilemez): 10 sayfa tek yüz S-B = 10 yaprak × 2,00
+        $this->assertSame('20.00', $pricing->quote(10, new PrintOptions(duplex: false))['total']);
         // Kademe yaprağa göre (1–99: 2,00 · 100–199: 1,50 · 200+: 1,00) — yöneticinin verdiği örnekler:
-        $this->assertSame('150.00', $pricing->quote(100, new PrintOptions)['total']);                // 100 sayfa tek yüz = 100 yaprak × 1,50
+        $this->assertSame('150.00', $pricing->quote(100, new PrintOptions(duplex: false))['total']);  // 100 sayfa tek yüz = 100 yaprak × 1,50
         $this->assertSame('100.00', $pricing->quote(100, new PrintOptions(duplex: true))['total']);  // 100 sayfa önlü arkalı = 50 yaprak × 2,00
         $this->assertSame('150.00', $pricing->quote(200, new PrintOptions(duplex: true))['total']);  // 200 sayfa önlü arkalı = 100 yaprak × 1,50
-        $this->assertSame('198.00', $pricing->quote(99, new PrintOptions)['total']);                 // 99 yaprak hâlâ ilk kademe
-        $this->assertSame('200.00', $pricing->quote(200, new PrintOptions)['total']);                // 200 yaprak × 1,00
-        $this->assertSame('500.00', $pricing->quote(100, new PrintOptions(color: 'color'))['total']); // renkli 100 yaprak × 5,00
+        $this->assertSame('198.00', $pricing->quote(198, new PrintOptions)['total']);                 // 198 sayfa önlü arkalı = 99 yaprak hâlâ ilk kademe
+        $this->assertSame('200.00', $pricing->quote(400, new PrintOptions)['total']);                // 400 sayfa = 200 yaprak × 1,00
+        $this->assertSame('500.00', $pricing->quote(200, new PrintOptions(color: 'color'))['total']); // renkli 200 sayfa = 100 yaprak × 5,00
         // Kopya kademeyi değiştirmez: 150 sayfa önlü arkalı = 75 yaprak (ilk kademe), 2 kopya, spiral 40 × 2
         $q = $pricing->quote(150, new PrintOptions(duplex: true, copies: 2, binding: 'spiral'));
         $this->assertSame(75, $q['sheets']);
         $this->assertSame('380.00', $q['total']); // 75 × 2 × 2,00 = 300 + 80
-        // Bir yüze 4 sayfa, renkli: 10 sayfa → 3 yüz → 3 yaprak × 6,00
-        $this->assertSame('18.00', $pricing->quote(10, new PrintOptions(color: 'color', layout: 4))['total']);
+        // Önlü arkalı 2'ye 2, renkli: 10 sayfa → 5 yüz → 3 yaprak × 6,00 (1 yaprakta 4 sayfa)
+        $q = $pricing->quote(10, new PrintOptions(color: 'color', layout: 2));
+        $this->assertSame([3, '18.00'], [$q['sheets'], $q['total']]);
         // Sayfa aralığı kademeyi belirler
         $this->assertSame(5, $pricing->quote(200, new PrintOptions(range: '1-3, 10-11'))['pages']);
 
         // Sayfa sınırı yok: 800 sayfa da fiyatlanır (özel teklif yok). 800 sayfa önlü arkalı = 400 yaprak × 1,00
         $this->assertSame('400.00', $pricing->quote(800, new PrintOptions(duplex: true))['total']);
-        $this->assertSame('5000.00', $pricing->quote(5000, new PrintOptions)['total']);
+        $this->assertSame('2500.00', $pricing->quote(5000, new PrintOptions)['total']);
     }
 
     public function test_upload_count_quote_add_to_cart_and_order(): void
@@ -131,9 +132,9 @@ class PrintTest extends TestCase
         $this->postJson(route('print.quote', $pdf['token']), ['range' => '5-40'])->assertStatus(422)->assertJsonPath('errors.range.0', fn ($m) => str_contains($m, '1-12'));
 
         $this->postJson(route('print.add', $pdf['token']), ['color' => 'bw', 'duplex' => '1', 'copies' => 2])->assertOk()->assertJson(['added' => true, 'count' => 1]);
-        $this->postJson(route('print.add', $doc['token']), ['color' => 'color', 'binding' => 'spiral'])->assertOk(); // 3 × 6 + 40 = 58
+        $this->postJson(route('print.add', $doc['token']), ['color' => 'color', 'binding' => 'spiral', 'duplex' => '0'])->assertOk(); // tek yüz istense de önlü arkalı: 2 yaprak × 6 + 40 = 52
 
-        $this->get(route('cart.index'))->assertOk()->assertSee('ders-notu.pdf')->assertSee('Önlü arkalı')->assertSee('82,00 ₺');
+        $this->get(route('cart.index'))->assertOk()->assertSee('ders-notu.pdf')->assertSee('Önlü arkalı')->assertSee('76,00 ₺')->assertSee("Önlü arkalı · 1'e 1");
 
         Settings::put(['delivery_min_order' => null]);
         $district = DeliveryDistrict::where('name', 'Odunpazarı')->firstOrFail();
@@ -143,7 +144,7 @@ class PrintTest extends TestCase
         ])->assertSessionHasNoErrors();
 
         $order = Order::firstOrFail();
-        $this->assertSame('82.00', $order->subtotal);
+        $this->assertSame('76.00', $order->subtotal);
         $this->assertSame(2, $order->items()->where('kind', 'print')->count());
         $job = PrintJob::where('order_id', $order->id)->firstOrFail();
         $this->assertTrue($job->file->expires_at->gt(now()->addDays(20)), 'Siparişteki belge uzun saklanır');
@@ -239,5 +240,25 @@ class PrintTest extends TestCase
     {
         $this->expectException(ValidationException::class);
         PrintOptions::fromInput(['layout' => 3, 'copies' => 0], 10, app(PrintSettings::class));
+    }
+
+    public function test_only_duplex_one_or_two_up_layouts(): void
+    {
+        $settings = app(PrintSettings::class);
+        $this->assertSame([1, 2], array_keys(PrintOptions::LAYOUTS));
+        $o = PrintOptions::fromInput(['layout' => 2, 'duplex' => '0'], 10, $settings);
+        $this->assertTrue($o->duplex);
+        $this->assertStringContainsString("Önlü arkalı · 2'ye 2", $o->summary(10));
+        foreach ([4, 8] as $layout) {
+            try {
+                PrintOptions::fromInput(['layout' => $layout], 10, $settings);
+                $this->fail("{$layout} kabul edilmemeli");
+            } catch (ValidationException $e) {
+                $this->assertArrayHasKey('layout', $e->errors());
+            }
+        }
+        // Eski kayıtlar bozulmadan özetlenir
+        $this->assertStringContainsString('Bir yüze 4 sayfa', PrintOptions::fromArray(['duplex' => false, 'layout' => 4])->summary(8));
+        $this->get(route('print.index'))->assertSee("2'ye 2")->assertDontSee('Tek yüz');
     }
 }

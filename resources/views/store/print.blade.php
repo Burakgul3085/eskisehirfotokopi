@@ -75,17 +75,21 @@
                                     </div>
                                 @endif
                                 <div>
-                                    <p class="mb-1.5 text-xs font-semibold text-muted uppercase">Yüz</p>
+                                    <p class="mb-1.5 text-xs font-semibold text-muted uppercase">Baskı düzeni</p>
                                     <div class="grid grid-cols-2 gap-2">
-                                        <button type="button" data-key="duplex" data-value="0" x-on:click="choose" x-bind:class="f.cls.duplex_0" class="rounded-xl border px-3 py-2.5 text-sm font-semibold transition">Tek yüz</button>
-                                        <button type="button" data-key="duplex" data-value="1" x-on:click="choose" x-bind:class="f.cls.duplex_1" class="rounded-xl border px-3 py-2.5 text-sm font-semibold transition">Önlü arkalı</button>
-                                    </div>
-                                </div>
-                                <div>
-                                    <p class="mb-1.5 text-xs font-semibold text-muted uppercase">Bir yüze sayfa</p>
-                                    <div class="grid grid-cols-4 gap-2">
-                                        @foreach (array_keys(PrintOptions::LAYOUTS) as $l)
-                                            <button type="button" data-key="layout" data-value="{{ $l }}" x-on:click="choose" x-bind:class="f.cls.layout_{{ $l }}" class="rounded-xl border px-3 py-2.5 text-sm font-semibold transition">{{ $l }}</button>
+                                        @foreach (PrintOptions::LAYOUTS as $l => $label)
+                                            <button type="button" data-key="layout" data-value="{{ $l }}" x-on:click="choose" x-bind:class="f.cls.layout_{{ $l }}" class="flex flex-col items-center gap-1.5 rounded-xl border px-3 py-3 text-center transition">
+                                                {{-- Kâğıt simgesi: ön ve arka yüz, her yüzde $l sayfa --}}
+                                                <span class="flex gap-1" aria-hidden="true">
+                                                    @foreach ([0, 1] as $side)
+                                                        <span class="flex h-9 w-7 gap-0.5 rounded-sm border border-current/40 bg-white p-0.5">
+                                                            @for ($i = 0; $i < $l; $i++)<span class="flex-1 rounded-[1px] bg-current/25"></span>@endfor
+                                                        </span>
+                                                    @endforeach
+                                                </span>
+                                                <span class="text-sm font-semibold">{{ $label }}</span>
+                                                <span class="text-xs leading-snug opacity-75">{{ PrintOptions::LAYOUT_HINTS[$l] }}</span>
+                                            </button>
                                         @endforeach
                                     </div>
                                 </div>

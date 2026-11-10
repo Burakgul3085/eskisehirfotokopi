@@ -5,14 +5,18 @@ namespace App\Domain\Print;
 use Illuminate\Validation\ValidationException;
 
 /**
- * Bir baskı işinin seçenekleri: renk, tek yüz / önlü arkalı, bir yüze kaç sayfa (1, 2, 4, 8), kağıt boyutu, sayfa aralığı,
+ * Bir baskı işinin seçenekleri: renk, baskı düzeni (her zaman önlü arkalı; yüze 1 ya da 2 sayfa), kağıt boyutu, sayfa aralığı,
  * kopya, ciltleme ve not. Tarayıcıdan gelen değerler burada doğrulanır; fiyat yalnızca PrintPricing ile hesaplanır.
  */
 final class PrintOptions
 {
     public const COLORS = ['bw' => 'Siyah-beyaz', 'color' => 'Renkli'];
 
-    public const LAYOUTS = [1 => 'Bir yüze 1 sayfa', 2 => 'Bir yüze 2 sayfa', 4 => 'Bir yüze 4 sayfa', 8 => 'Bir yüze 8 sayfa'];
+    /** Seçilebilen düzenler: yalnız önlü arkalı. Yüze 1 sayfa (1 yaprakta 2 sayfa) ya da yüze 2 sayfa (1 yaprakta 4 sayfa). */
+    public const LAYOUTS = [1 => "Önlü arkalı · 1'e 1", 2 => "Önlü arkalı · 2'ye 2"];
+
+    /** Düzen kartlarındaki açıklama */
+    public const LAYOUT_HINTS = [1 => 'Ön yüze 1, arka yüze 1 sayfa — bir kâğıtta 2 sayfa', 2 => 'Ön yüze 2, arka yüze 2 sayfa — bir kâğıtta 4 sayfa'];
 
     /** Seçilebilen ciltlemeler. */
     public const BINDINGS = ['none' => 'Ciltsiz', 'spiral' => 'Spiral cilt'];
@@ -24,7 +28,7 @@ final class PrintOptions
 
     public function __construct(
         public readonly string $color = 'bw',
-        public readonly bool $duplex = false,
+        public readonly bool $duplex = true,
         public readonly int $layout = 1,
         public readonly string $size = 'A4',
         public readonly ?string $range = null,
@@ -74,7 +78,8 @@ final class PrintOptions
             throw ValidationException::withMessages($errors);
         }
 
-        return new self($color, filter_var($input['duplex'] ?? false, FILTER_VALIDATE_BOOL), $layout, $size, $range, (int) $copies, $binding, $note);
+        // Tek yüz baskı artık seçilemez: tarayıcı ne gönderirse göndersin önlü arkalı basılır.
+        return new self($color, true, $layout, $size, $range, (int) $copies, $binding, $note);
     }
 
     public static function fromArray(array $data): self
@@ -123,8 +128,9 @@ final class PrintOptions
             $pages.' sayfa'.($this->range ? " ({$this->range})" : ''),
             $this->size !== 'A4' ? $this->size : null,
             self::COLORS[$this->color] ?? $this->color,
-            $this->duplex ? 'Önlü arkalı' : 'Tek yüz',
-            $this->layout > 1 ? "Bir yüze {$this->layout} sayfa" : null,
+            // Eski kayıtlar (tek yüz, yüze 4/8 sayfa) eski biçimde yazılır.
+            $this->duplex && isset(self::LAYOUTS[$this->layout]) ? self::LAYOUTS[$this->layout] : ($this->duplex ? 'Önlü arkalı' : 'Tek yüz'),
+            $this->duplex && isset(self::LAYOUTS[$this->layout]) ? null : ($this->layout > 1 ? "Bir yüze {$this->layout} sayfa" : null),
             $this->binding !== 'none' ? (self::BINDING_LABELS[$this->binding] ?? $this->binding) : null,
             $this->copies.' kopya',
             $sheets !== null ? 'toplam '.($sheets * $this->copies).' yaprak' : null,

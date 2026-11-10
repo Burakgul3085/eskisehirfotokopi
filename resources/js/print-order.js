@@ -12,8 +12,7 @@ const ON = 'border-primary bg-primary-soft text-primary-dark ring-2 ring-primary
 const OFF = 'border-line bg-white text-ink hover:border-primary/50';
 const CHOICES = {
     color: ['bw', 'color'],
-    duplex: ['0', '1'],
-    layout: ['1', '2', '4', '8'],
+    layout: ['1', '2'],
     size: ['A4', 'A3'],
     binding: ['none', 'spiral'],
 };
@@ -44,7 +43,7 @@ export function printOrder() {
     let uid = 0;
     const csrf = () => document.querySelector('meta[name="csrf-token"]').content;
     const fileUrl = (token, suffix) => config.urls.file.replace('__T__', token) + (suffix || '');
-    const defaults = () => ({ color: config.colors[0] || 'bw', duplex: '0', layout: '1', size: 'A4', range: '', copies: 1, binding: 'none', note: '' });
+    const defaults = () => ({ color: config.colors[0] || 'bw', duplex: '1', layout: '1', size: 'A4', range: '', copies: 1, binding: 'none', note: '' });
 
     return {
         files: [],

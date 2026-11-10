@@ -36,7 +36,7 @@
         <section class="card overflow-x-auto">
             <div class="p-6 pb-0">
                 <h2 class="font-bold">Yaprak başı fiyat kademeleri (₺)</h2>
-                <p class="mt-1 text-sm text-muted">Kademe, kopya başı yaprak sayısına göre seçilir: tek yüzde yaprak = sayfa, önlü arkalıda yaprak = sayfa ÷ 2. Ör. 100 sayfa önlü arkalı = 50 yaprak → ilk kademe. İlk kademe 1. yapraktan başlamalı. Satırı silmek için başlangıcı boş bırakın.</p>
+                <p class="mt-1 text-sm text-muted">Kademe, kopya başı yaprak sayısına göre seçilir: önlü arkalı 1'e 1'de yaprak = sayfa ÷ 2, 2'ye 2'de yaprak = sayfa ÷ 4. Ör. 100 sayfa 1'e 1 = 50 yaprak → ilk kademe. İlk kademe 1. yapraktan başlamalı. Satırı silmek için başlangıcı boş bırakın.</p>
             </div>
             @error('tiers')<p class="px-6 pt-3 text-sm text-danger">{{ $message }}</p>@enderror
             @foreach ($warnings as $warning)

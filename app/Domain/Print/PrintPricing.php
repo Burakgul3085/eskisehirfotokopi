@@ -9,7 +9,7 @@ use DomainException;
  * Baskı fiyatı (her zaman sunucuda) yaprak başınadır:
  *  - Yaprak: basılacak sayfa (aralık yoksa tümü) → bir yüze sığan sayfaya göre yüz → önlü arkalıysa yüz ÷ 2 (yukarı).
  *  - Kademe kopya başı YAPRAK sayısına göre seçilir; kopya sayısı kademeyi değiştirmez (siyah-beyaz ve renkli ayrı fiyat).
- *    Örnek (1–99: 2 ₺, 100–199: 1,50 ₺): 100 sayfa tek yüz = 100 yaprak × 1,50; 100 sayfa önlü arkalı = 50 yaprak × 2;
+ *    Örnek (1–99: 2 ₺, 100–199: 1,50 ₺): 100 sayfa önlü arkalı 1'e 1 = 50 yaprak × 2; 2'ye 2 = 25 yaprak × 2;
  *    200 sayfa önlü arkalı = 100 yaprak × 1,50.
  *  - Tutar = kademenin yaprak fiyatı × kopya başı yaprak × kopya.
  *  - Sayfa sınırı yoktur: her belgenin fiyatı hesaplanır (özel teklif / "mağazayla iletişime geçin" yok).
