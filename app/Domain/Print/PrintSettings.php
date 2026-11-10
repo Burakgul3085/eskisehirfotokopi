@@ -153,8 +153,9 @@ class PrintSettings
             $errors['tiers'] = 'Her kademenin başlangıcı farklı olmalıdır.';
         }
 
-        $bw = filter_var($input['bw_enabled'] ?? false, FILTER_VALIDATE_BOOL);
-        $color = filter_var($input['color_enabled'] ?? false, FILTER_VALIDATE_BOOL);
+        // Renkler hızlı düğmelerle (toggleColor) yönetilir; formda yoksa mevcut değer korunur.
+        $bw = array_key_exists('bw_enabled', $input) ? filter_var($input['bw_enabled'], FILTER_VALIDATE_BOOL) : (bool) $this->get('bw_enabled');
+        $color = array_key_exists('color_enabled', $input) ? filter_var($input['color_enabled'], FILTER_VALIDATE_BOOL) : (bool) $this->get('color_enabled');
         if (! $bw && ! $color) {
             $errors['color_enabled'] = 'Siyah-beyaz ve renkliden en az biri açık olmalıdır. Fotokopiyi tamamen kapatmak için "Fotokopi siparişi" seçeneğini kapatın.';
         }
@@ -181,5 +182,32 @@ class PrintSettings
         Settings::put(['print' => json_encode($data, JSON_UNESCAPED_UNICODE)]);
         $this->cache = null;
         Activity::log('print.settings', null, ['enabled' => $data['enabled'], 'bw_enabled' => $bw, 'color_enabled' => $color]);
+    }
+
+    /**
+     * Siyah-beyaz veya renkli baskıyı tek tıkla açar/kapatır (ör. renkli yazıcı arızası). En az biri açık kalmalıdır.
+     *
+     * @return bool yeni durum
+     *
+     * @throws ValidationException son açık renk kapatılmak istenirse
+     */
+    public function toggleColor(string $color): bool
+    {
+        $key = $color.'_enabled';
+        $all = $this->all();
+        $new = ! $all[$key];
+        $other = $color === 'bw' ? 'color' : 'bw';
+        if (! $new && ! $all[$other.'_enabled']) {
+            throw ValidationException::withMessages(['color' => PrintOptions::COLORS[$color].' kapatılamaz: en az bir baskı türü açık olmalıdır. Önce '.PrintOptions::COLORS[$other].' baskıyı açın.']);
+        }
+
+        $saved = json_decode((string) Settings::get('print'), true);
+        $saved = is_array($saved) ? $saved : [];
+        $saved[$key] = $new;
+        Settings::put(['print' => json_encode($saved, JSON_UNESCAPED_UNICODE)]);
+        $this->cache = null;
+        Activity::log('print.color', null, [$key => $new]);
+
+        return $new;
     }
 }

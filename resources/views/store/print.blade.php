@@ -64,7 +64,15 @@
                                         </div>
                                     </div>
                                 @else
-                                    <p class="text-sm"><span class="font-semibold">Renk:</span> {{ PrintOptions::COLORS[$colors[0] ?? 'bw'] }}</p>
+                                    {{-- Tek baskı türü açık (ör. renkli yazıcı arızası): seçim yerine ortalı bilgi rozeti --}}
+                                    <div>
+                                        <p class="mb-1.5 text-xs font-semibold text-muted uppercase">Renk</p>
+                                        <div class="flex justify-center">
+                                            <span class="inline-flex items-center gap-2 rounded-xl border border-primary bg-primary-soft px-6 py-2.5 text-sm font-semibold text-primary">
+                                                <x-icon name="check" class="size-4" />{{ PrintOptions::COLORS[$colors[0] ?? 'bw'] }} baskı
+                                            </span>
+                                        </div>
+                                    </div>
                                 @endif
                                 <div>
                                     <p class="mb-1.5 text-xs font-semibold text-muted uppercase">Yüz</p>

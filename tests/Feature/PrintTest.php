@@ -210,6 +210,31 @@ class PrintTest extends TestCase
         $this->put(route('admin.print.update'), ['bw_enabled' => '0', 'color_enabled' => '0'] + $form)->assertSessionHasErrors('color_enabled');
     }
 
+    public function test_admin_toggles_color_and_storefront_shows_single_option(): void
+    {
+        $this->actingAs(Admin::factory()->create(), 'admin');
+        $this->get(route('admin.print.edit'))->assertSee('Baskı türleri')->assertSee('Aktif — vitrinde görünüyor');
+
+        // Renkli yazıcı arızası: renkli kapatılır, vitrinde yalnızca siyah-beyaz ortalı rozet olarak görünür.
+        $this->post(route('admin.print.color', 'color'))->assertSessionHas('status');
+        $this->assertSame(['bw'], app(PrintSettings::class)->colors());
+        $this->get(route('print.index'))->assertSee('Siyah-beyaz baskı')->assertDontSee('data-value="color"', false);
+
+        // Ana form kaydı renk durumunu değiştirmez.
+        $form = ['enabled' => '1', 'spiral_price' => '40', 'a3_multiplier' => '2', 'max_mb' => 100, 'max_copies' => 50,
+            'unordered_days' => 5, 'ordered_days' => 20, 'tiers' => PrintSettings::DEFAULTS['tiers']];
+        $this->put(route('admin.print.update'), $form)->assertSessionHasNoErrors();
+        $this->assertSame(['bw'], app(PrintSettings::class)->colors());
+
+        // Son açık tür kapatılamaz.
+        $this->post(route('admin.print.color', 'bw'))->assertSessionHasErrors('color');
+        $this->assertSame(['bw'], app(PrintSettings::class)->colors());
+
+        $this->post(route('admin.print.color', 'color'));
+        $this->assertSame(['bw', 'color'], app(PrintSettings::class)->colors());
+        $this->post(route('admin.print.color', 'mor'))->assertNotFound();
+    }
+
     public function test_options_reject_invalid_input(): void
     {
         $this->expectException(ValidationException::class);

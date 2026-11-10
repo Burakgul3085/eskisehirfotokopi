@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Domain\Print\PrintOptions;
 use App\Domain\Print\PrintSettings;
 use App\Http\Controllers\Controller;
 use App\Models\PrintJob;
@@ -25,6 +26,16 @@ class PrintController extends Controller
         $settings->save($request->all());
 
         return redirect()->route('admin.print.edit')->with('status', 'Fotokopi ayarları kaydedildi.');
+    }
+
+    /** Siyah-beyaz / renkli baskıyı aç-kapat (yazıcı arızasında hızlı geçiş). */
+    public function toggleColor(Request $request, PrintSettings $settings, string $color): RedirectResponse
+    {
+        abort_unless(in_array($color, ['bw', 'color'], true), 404);
+        $on = $settings->toggleColor($color);
+        $label = PrintOptions::COLORS[$color];
+
+        return back()->with('status', $label.' baskı '.($on ? 'açıldı; müşteriler yeniden seçebilir.' : 'kapatıldı; vitrinde gösterilmiyor ve sepetteki bu baskılar çıkarılır.'));
     }
 
     /** Siparişe bağlı baskı işinin dosyası (çevrilmiş PDF veya özgün dosya). */

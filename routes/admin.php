@@ -41,6 +41,7 @@ Route::prefix('yonetim')->name('admin.')->group(function () {
         Route::get('/baski-dosyasi/{job}', [PrintController::class, 'download'])->name('print.download');
         Route::get('/fotokopi', [PrintController::class, 'edit'])->name('print.edit');
         Route::put('/fotokopi', [PrintController::class, 'update'])->name('print.update');
+        Route::post('/fotokopi/renk/{color}', [PrintController::class, 'toggleColor'])->name('print.color');
         Route::post('/teslimat-bolgeleri/{district}/ac-kapat', [DeliveryDistrictController::class, 'toggle'])->name('districts.toggle');
         Route::resource('teslimat-bolgeleri', DeliveryDistrictController::class)->parameters(['teslimat-bolgeleri' => 'district'])->except('show')->names('districts');
 

@@ -14,20 +14,21 @@
         <div class="mb-5 rounded-xl border border-danger/20 bg-danger-soft px-4 py-3 text-sm font-medium text-danger" role="alert">Lütfen işaretli alanları düzeltin.</div>
     @endif
 
+    <div class="mb-6 max-w-4xl"><x-admin.print-colors :settings="$s" /></div>
+
     <form method="post" action="{{ route('admin.print.update') }}" class="max-w-4xl space-y-6">
         @csrf @method('put')
 
         <section class="card space-y-4 p-6">
             <h2 class="font-bold">Genel</h2>
             <div class="flex flex-wrap gap-3">
-                @foreach (['enabled' => 'Fotokopi siparişi açık', 'bw_enabled' => 'Siyah-beyaz baskı', 'color_enabled' => 'Renkli baskı', 'a3_enabled' => 'A3 baskı'] as $key => $label)
+                @foreach (['enabled' => 'Fotokopi siparişi açık', 'a3_enabled' => 'A3 baskı'] as $key => $label)
                     <label class="flex items-center gap-2 rounded-xl border border-line px-4 py-2.5 text-sm has-checked:border-primary has-checked:bg-primary-soft">
                         <input type="checkbox" name="{{ $key }}" value="1" @checked($check($key)) class="accent-primary"> {{ $label }}
                     </label>
                 @endforeach
             </div>
-            @error('color_enabled')<p class="field-error">{{ $message }}</p>@enderror
-            <p class="field-help">Makine arızasında bir renk geçici kapatılabilir. Fotokopi kapalıyken /fotokopi sayfası ve sepetteki baskılar gizlenir.</p>
+            <p class="field-help">Fotokopi kapalıyken /fotokopi sayfası ve sepetteki baskılar gizlenir.</p>
             <x-field name="intro" type="textarea" rows="2" label="Sayfa tanıtım metni" :value="$s['intro']" />
             <x-field name="prep_text" label="Hazırlık bilgisi" :value="$s['prep_text']" maxlength="200" />
         </section>
