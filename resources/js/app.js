@@ -25,6 +25,23 @@ if (heroScene) {
     'requestIdleCallback' in window ? window.requestIdleCallback(load, { timeout: 1200 }) : setTimeout(load, 300);
 }
 
+// Diğer 3D sahneler (belge bandı, SSS, alt bilgi): yalnız ekrana yaklaşınca yüklenir; Three.js ortak parçadır.
+const sceneLoaders = {
+    'print-banner': () => import('./scenes/print-banner.js'),
+    faq: () => import('./scenes/faq.js'),
+    'footer-wave': () => import('./scenes/footer-wave.js'),
+};
+const sceneRoots = document.querySelectorAll('[data-scene]');
+if (sceneRoots.length && 'IntersectionObserver' in window) {
+    const sceneObserver = new IntersectionObserver((entries) => {
+        entries.filter((e) => e.isIntersecting).forEach(({ target }) => {
+            sceneObserver.unobserve(target);
+            sceneLoaders[target.dataset.scene]?.().then((m) => m.mount(target)).catch(() => {});
+        });
+    }, { rootMargin: '400px' });
+    sceneRoots.forEach((el) => sceneObserver.observe(el));
+}
+
 document.addEventListener('change', (event) => {
     if (event.target.matches('[data-autosubmit]') && event.target.form) {
         event.target.form.requestSubmit();

@@ -4,13 +4,18 @@
     $columnTitles = ['corporate' => $settings['footer_title_corporate'], 'help' => $settings['footer_title_help']];
     $gridCols = ['lg:grid-cols-[1.4fr_1fr_1fr]', 'lg:grid-cols-[1.4fr_1fr_1fr_1fr]', 'lg:grid-cols-[1.4fr_1fr_1fr_1fr_1fr]'][count($pageColumns)];
 @endphp
-<footer class="mt-16 bg-ink text-slate-300">
+{{-- Alt bilgi: arkada dalgalanan 3D ışık noktaları (resources/js/scenes/footer-wave.js), üzerine gelince ikonu dönen cam kartlar. --}}
+<footer data-scene="footer-wave" class="footer-3d relative isolate mt-16 overflow-hidden bg-ink text-slate-300">
+    <canvas data-scene-canvas class="scene-canvas footer-wave pointer-events-none absolute inset-0 -z-10 block size-full" aria-hidden="true"></canvas>
+    <div class="pointer-events-none absolute inset-x-0 top-0 -z-10 h-px bg-gradient-to-r from-transparent via-primary/60 to-transparent" aria-hidden="true"></div>
     @if ($trust = \App\Support\Settings::trustItems())
         <div class="border-b border-white/10">
-            <div class="container-page grid gap-6 py-8 sm:grid-cols-2 {{ [1 => 'lg:grid-cols-1', 2 => 'lg:grid-cols-2', 3 => 'lg:grid-cols-3'][count($trust)] ?? 'lg:grid-cols-4' }}">
+            <div class="container-page grid gap-4 py-8 sm:grid-cols-2 {{ [1 => 'lg:grid-cols-1', 2 => 'lg:grid-cols-2', 3 => 'lg:grid-cols-3'][count($trust)] ?? 'lg:grid-cols-4' }}">
                 @foreach ($trust as $item)
-                    <div class="flex items-center gap-4">
-                        <span class="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-white/5 text-accent"><x-icon :name="$item['icon']" class="size-6" /></span>
+                    <div class="trust-tile group flex items-center gap-4 rounded-2xl border border-white/[0.07] bg-white/[0.03] p-4 backdrop-blur-sm">
+                        <span class="trust-icon relative flex size-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-white/10 to-white/[0.02] text-accent ring-1 ring-white/10">
+                            <x-icon :name="$item['icon']" class="size-6" />
+                        </span>
                         <div>
                             <p class="font-display font-semibold text-white">{{ $item['title'] }}</p>
                             @if ($item['text'])<p class="text-sm text-slate-400">{{ $item['text'] }}</p>@endif

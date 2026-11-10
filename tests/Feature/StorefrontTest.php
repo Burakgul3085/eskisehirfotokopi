@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Domain\Catalog\CategoryTree;
+use App\Domain\Storefront\HomePage;
 use App\Models\Admin;
 use App\Models\Category;
 use App\Models\HomeBlock;
@@ -65,13 +66,23 @@ class StorefrontTest extends TestCase
         $this->assertTrue(HomeBlock::where('type', 'hero')->where('is_active', true)->exists());
         Product::where('title', 'KPSS Tarih Denemeleri')->update(['image_key' => 'abc123', 'is_featured' => true]);
         Product::where('title', 'Taslak Kitap')->update(['image_key' => 'gizli']);
-        \App\Domain\Storefront\HomePage::flush();
+        HomePage::flush();
 
         $html = $this->get('/')->assertOk()->assertSee('data-hero-scene', false)->getContent();
         preg_match('/<script type="application\/json" data-hero-books>(.*?)<\/script>/s', $html, $m);
         $books = json_decode($m[1], true);
         $this->assertSame(['KPSS Tarih Denemeleri'], array_column($books, 'title')); // görselsiz ve taslak ürün yok
         $this->assertStringContainsString('/storage/products/abc123/', $books[0]['img']);
+    }
+
+    public function test_home_sections_carry_3d_scene_mounts(): void
+    {
+        $response = $this->get('/')->assertOk()->assertSee('data-scene="footer-wave"', false);
+        foreach (['print_banner' => 'print-banner', 'faq' => 'faq'] as $type => $scene) {
+            if (HomeBlock::where('type', $type)->where('is_active', true)->exists()) {
+                $response->assertSee('data-scene="'.$scene.'"', false);
+            }
+        }
     }
 
     public function test_category_page_lists_subtree_with_filters_and_sorting(): void
