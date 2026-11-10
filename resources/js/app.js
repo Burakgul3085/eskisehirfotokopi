@@ -18,6 +18,25 @@ document.addEventListener('submit', (event) => {
     }
 }, true);
 
+// Header: kaydırınca süzülen gölge, fareyi izleyen ışık, sepet sayısı değişince rozet zıplar
+const siteHeader = document.querySelector('[data-site-header]');
+if (siteHeader) {
+    const onScroll = () => siteHeader.toggleAttribute('data-scrolled', window.scrollY > 8);
+    window.addEventListener('scroll', onScroll, { passive: true });
+    onScroll();
+    siteHeader.addEventListener('pointermove', (e) => {
+        const r = siteHeader.getBoundingClientRect();
+        siteHeader.style.setProperty('--hx', `${e.clientX - r.left}px`);
+    }, { passive: true });
+    siteHeader.querySelectorAll('[data-cart-count]').forEach((badge) => {
+        new MutationObserver(() => {
+            badge.classList.remove('cart-bump');
+            void badge.offsetWidth; // animasyonu yeniden başlat
+            badge.classList.add('cart-bump');
+        }).observe(badge, { childList: true, characterData: true, subtree: true });
+    });
+}
+
 // Ana sayfa 3D sahnesi: Three.js ayrı parça olarak yalnız bu sayfada ve sayfa boştayken yüklenir.
 const heroScene = document.querySelector('[data-hero-scene]');
 if (heroScene) {

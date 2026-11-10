@@ -340,3 +340,180 @@
 @media (prefers-reduced-motion: reduce) {
     .ambient-orb, .faq-floor { animation: none; }
 }
+
+/* ---- Header: cam zemin, fareyi izleyen ışık, akan alt çizgi ---- */
+.site-header {
+    --hx: 50%;
+    background: color-mix(in oklab, white 86%, transparent);
+    backdrop-filter: saturate(1.6) blur(18px);
+    -webkit-backdrop-filter: saturate(1.6) blur(18px);
+    transition: box-shadow 0.4s ease, background-color 0.4s ease;
+}
+.site-header[data-scrolled] {
+    background: color-mix(in oklab, white 88%, transparent);
+    box-shadow: 0 18px 40px -26px rgb(15 23 42 / 0.35), 0 1px 0 rgb(15 23 42 / 0.04);
+}
+.header-glow {
+    background: radial-gradient(420px 120px at var(--hx) 0%, color-mix(in oklab, var(--color-primary) 14%, transparent), transparent 70%);
+    opacity: 0;
+    transition: opacity 0.5s ease;
+}
+.site-header:hover .header-glow { opacity: 1; }
+.header-line {
+    background: linear-gradient(90deg, transparent, var(--color-primary) 25%, var(--color-accent) 50%, var(--color-primary) 75%, transparent);
+    background-size: 200% 100%;
+    opacity: 0.55;
+    animation: header-line 9s linear infinite;
+}
+@keyframes header-line {
+    to { background-position: -200% 0; }
+}
+/* Duyuru şeridinde yavaş geçen parıltı */
+.header-announce::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(100deg, transparent 30%, rgb(255 255 255 / 0.16) 50%, transparent 70%);
+    transform: translateX(-100%);
+    animation: header-sheen 7s ease-in-out infinite;
+    pointer-events: none;
+}
+@keyframes header-sheen {
+    0%, 55% { transform: translateX(-100%); }
+    100% { transform: translateX(100%); }
+}
+
+/* 3D logo: parlak kutu, üzerine gelince eğilir ve yazıcıdan kâğıt çıkar */
+.logo-tile {
+    background: linear-gradient(145deg, color-mix(in oklab, var(--color-primary) 80%, white), var(--color-primary) 45%, var(--color-primary-dark));
+    box-shadow:
+        inset 0 1px 0 rgb(255 255 255 / 0.35),
+        inset 0 -2px 4px rgb(0 0 0 / 0.18),
+        0 10px 22px -10px var(--color-primary);
+    transform-style: preserve-3d;
+    transition: transform 0.6s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.4s ease;
+}
+.logo-tile::after {
+    content: "";
+    position: absolute;
+    inset: 1px 1px 50% 1px;
+    border-radius: 0.9rem 0.9rem 40% 40%;
+    background: linear-gradient(to bottom, rgb(255 255 255 / 0.28), transparent);
+    pointer-events: none;
+}
+.header-brand:hover .logo-tile {
+    transform: perspective(300px) rotateX(10deg) rotateY(-14deg) translateZ(4px);
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.35), inset 0 -2px 4px rgb(0 0 0 / 0.18), 0 16px 28px -10px var(--color-primary);
+}
+.logo-paper {
+    position: absolute;
+    left: 50%;
+    top: 30%;
+    width: 46%;
+    height: 56%;
+    border-radius: 2px;
+    background:
+        linear-gradient(var(--color-accent), var(--color-accent)) 3px 4px / 45% 2px no-repeat,
+        repeating-linear-gradient(to bottom, #cbd5e1 0 1.5px, transparent 1.5px 4px) 3px 9px / calc(100% - 6px) calc(100% - 12px) no-repeat,
+        #fff;
+    box-shadow: 0 2px 6px rgb(0 0 0 / 0.2);
+    transform: translate(-50%, 0) scaleY(0.2);
+    transform-origin: bottom;
+    opacity: 0;
+    transition: transform 0.55s cubic-bezier(0.3, 1.4, 0.4, 1), opacity 0.25s ease;
+}
+.header-brand:hover .logo-paper {
+    opacity: 1;
+    transform: translate(-50%, -78%) rotate(-6deg) scaleY(1);
+}
+
+/* Arama: odakta parlayan çerçeve */
+.header-search form > input {
+    background: color-mix(in oklab, white 70%, var(--color-surface));
+    border-color: color-mix(in oklab, var(--color-line) 80%, transparent);
+    box-shadow: inset 0 1px 2px rgb(15 23 42 / 0.04);
+}
+.header-search form > input:hover { border-color: var(--color-primary-line); }
+.header-search form > input:focus {
+    background: #fff;
+    border-color: transparent;
+    box-shadow:
+        0 0 0 1.5px var(--color-primary),
+        0 0 0 6px color-mix(in oklab, var(--color-primary) 12%, transparent),
+        0 12px 30px -14px color-mix(in oklab, var(--color-primary) 60%, transparent);
+}
+.header-search form > button {
+    background: linear-gradient(145deg, color-mix(in oklab, var(--color-primary) 85%, white), var(--color-primary-dark));
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.25), 0 6px 14px -6px var(--color-primary);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+.header-search form > button:hover { transform: translateY(-1px) scale(1.04); }
+
+/* Hesap ve sepet */
+.header-action { transition: background-color 0.25s ease, color 0.25s ease; }
+.header-action:hover { background: var(--color-primary-soft); color: var(--color-primary-dark); }
+.header-cart {
+    background: linear-gradient(145deg, color-mix(in oklab, var(--color-primary) 85%, white), var(--color-primary) 50%, var(--color-primary-dark));
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.25), 0 10px 22px -12px var(--color-primary);
+    transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.3s ease;
+}
+.header-cart:hover { transform: translateY(-2px); box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.25), 0 16px 28px -12px var(--color-primary); }
+.header-cart:active { transform: translateY(0) scale(0.97); }
+.cart-badge.cart-bump { animation: cart-bump 0.6s cubic-bezier(0.3, 1.6, 0.4, 1); }
+@keyframes cart-bump {
+    0% { transform: scale(1); }
+    40% { transform: scale(1.45) rotate(-8deg); }
+    100% { transform: scale(1); }
+}
+
+/* Kategori menüsü: kayan alt çizgi, açılır panel 3D aşağı katlanır */
+.header-nav { border-top: 1px solid color-mix(in oklab, var(--color-line) 60%, transparent); }
+.nav-link { position: relative; transition: color 0.25s ease; }
+.nav-link::after {
+    content: "";
+    position: absolute;
+    left: 0.75rem;
+    right: 0.75rem;
+    bottom: 0.3rem;
+    height: 2px;
+    border-radius: 2px;
+    background: linear-gradient(90deg, var(--color-primary), var(--color-accent));
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform 0.35s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.nav-link:hover, .group:focus-within > .nav-link { color: var(--color-primary); }
+.nav-link:hover::after, .group:hover > .nav-link::after, .group:focus-within > .nav-link::after { transform: scaleX(1); }
+.nav-link-strong { color: var(--color-primary-dark); }
+.nav-all {
+    position: relative;
+    overflow: hidden;
+    background: linear-gradient(145deg, color-mix(in oklab, var(--color-primary) 85%, white), var(--color-primary-dark));
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.25), 0 8px 18px -10px var(--color-primary);
+}
+.nav-all::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(100deg, transparent 30%, rgb(255 255 255 / 0.3) 50%, transparent 70%);
+    transform: translateX(-120%);
+    transition: transform 0.8s ease;
+}
+.group:hover > .nav-all::after { transform: translateX(120%); }
+.mega-panel {
+    background: color-mix(in oklab, white 92%, transparent);
+    backdrop-filter: saturate(1.5) blur(20px);
+    -webkit-backdrop-filter: saturate(1.5) blur(20px);
+    border-top: 1px solid color-mix(in oklab, var(--color-line) 70%, transparent);
+    box-shadow: 0 30px 60px -30px rgb(15 23 42 / 0.35);
+    transform: perspective(1400px) rotateX(-7deg) translateY(-8px);
+    transform-origin: 50% 0;
+    transition: opacity 0.28s ease, transform 0.45s cubic-bezier(0.2, 0.8, 0.2, 1), visibility 0.28s;
+}
+.group:hover > .mega-panel, .group:focus-within > .mega-panel { transform: none; }
+
+@media (prefers-reduced-motion: reduce) {
+    .header-line, .header-announce::after, .cart-badge.cart-bump { animation: none; }
+    .logo-tile, .header-brand:hover .logo-tile, .mega-panel, .group:hover > .mega-panel { transform: none; transition: opacity 0.2s; }
+    .logo-paper { display: none; }
+}
