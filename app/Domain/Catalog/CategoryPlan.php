@@ -62,6 +62,15 @@ final class CategoryPlan
         return $ids;
     }
 
+    /** İki grup da duruyorsa bir şey yapmaz; biri silinmişse (ör. tüm kategoriler silindi) düzeni yeniden kurar. */
+    public static function ensure(CategoryTree $tree): void
+    {
+        $groups = Category::whereNull('parent_id')->whereIn('normalized_name', [Text::key(self::READING), Text::key(self::EXAM)])->count();
+        if ($groups < 2) {
+            self::install($tree);
+        }
+    }
+
     /** Başlangıç düzenindeki bir grup veya kategori mi? */
     public static function isPlanned(Category $category): bool
     {

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Domain\Catalog\CategoryMapper;
+use App\Domain\Catalog\CategoryPlan;
 use App\Domain\Catalog\CategoryTree;
 use App\Domain\Import\ImportBatchCreator;
 use App\Domain\Import\ImportItemProcessor;
@@ -48,6 +49,8 @@ class ImportController extends Controller
 
     public function create(): View
     {
+        CategoryPlan::ensure(app(CategoryTree::class)); // varsayılan kategori listesi hiçbir zaman boş kalmaz
+
         return view('admin.imports.create', [
             'maxMb' => config('catalog.import_max_mb'),
             'ocrReady' => app(OcrEngine::class)->available(),

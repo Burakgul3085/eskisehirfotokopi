@@ -87,6 +87,13 @@ class FlatCategoryTest extends TestCase
         $this->assertSame(['Avrupa Tarihi'], $r['topics']);
     }
 
+    public function test_upload_page_default_list_is_never_empty(): void
+    {
+        $this->actingAs(Admin::factory()->create(), 'admin');
+        $this->withoutStarterCategories();
+        $this->get(route('admin.imports.create'))->assertOk()->assertSee('Varsayılan kategori')->assertSee('Popüler Bilim')->assertSee('TYT');
+    }
+
     public function test_unknown_type_is_automatic_and_a_later_review_choice_is_remembered(): void
     {
         $this->actingAs(Admin::factory()->create(), 'admin');

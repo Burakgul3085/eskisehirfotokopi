@@ -133,12 +133,8 @@ class CategoryMapper
         if ($this->restrict !== null) {
             return;
         }
-        $groups = Category::whereNull('parent_id')
-            ->whereIn('normalized_name', [Text::key(CategoryPlan::READING), Text::key(CategoryPlan::EXAM)])->count();
-        if ($groups < 2) {
-            CategoryPlan::install($this->tree);
-            $this->flush();
-        }
+        CategoryPlan::ensure($this->tree);
+        $this->flush();
     }
 
     /** Yeni kategori adı olabilecek ilk parça: harfli, en fazla 4 kelime, 40 karakter. @param list<string> $path */
