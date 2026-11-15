@@ -3,6 +3,32 @@
 
     <p class="mb-4 text-sm text-muted">Toplu yüklemede bilgi tablosundaki “Türü” yolu (ör. Tarih / Avrupa Tarihi) eksik kategorileri kendiliğinden oluşturur. Buradan ad, sıra ve konumlarını düzenleyebilirsiniz.</p>
 
+    {{-- Ürünler sayfasında toplu taşırken "benzer kitaplar da buraya gitsin" ile kaydedilen aramalar --}}
+    <div class="card mb-5 overflow-x-auto">
+        <div class="border-b border-line bg-surface px-4 py-2.5">
+            <p class="font-semibold">Yerleştirme kuralları</p>
+            <p class="text-xs text-muted">Toplu yüklemede bu aramalara uyan kitaplar, otomatik yerleştirmeden (sınav adı dahil) önce kuralın kategorisine gider. Kural silinince daha önce yerleştirilen kitaplar yerinde kalır. Yeni kural için Ürünler sayfasında arayıp “Kategoriye taşı” ile taşırken kutuyu işaretleyin.</p>
+        </div>
+        <table class="table-panel">
+            <thead><tr><th>Koşul</th><th>Kategori</th><th class="text-right" title="Kuralla yerleştirilen kitap sayısı">Uygulandı</th><th>Eklendi</th><th class="w-0"></th></tr></thead>
+            <tbody>
+                @forelse ($rules as $r)
+                    <tr>
+                        <td>{{ $r->label }}</td>
+                        <td class="font-semibold">{{ $r->category?->fullName() }}</td>
+                        <td class="text-right">{{ $r->applied_count }}</td>
+                        <td class="whitespace-nowrap text-muted">{{ $r->created_at->format('d.m.Y') }}</td>
+                        <td class="text-right">
+                            <form method="post" action="{{ route('admin.categories.rules.destroy', $r) }}" data-confirm="Kural silinsin mi? ({{ $r->label }} → {{ $r->category?->fullName() }})">@csrf @method('delete')<button class="btn-ghost btn-sm text-danger" aria-label="Kuralı sil"><x-icon name="trash" class="size-3.5" /></button></form>
+                        </td>
+                    </tr>
+                @empty
+                    <tr><td colspan="5" class="py-4 text-center text-sm text-muted">Henüz kural yok.</td></tr>
+                @endforelse
+            </tbody>
+        </table>
+    </div>
+
 
     {{-- Satırlardaki tekli formlar iç içe olamayacağı için kutular toplu forma form="category-bulk" ile bağlanır. --}}
     <div class="card overflow-x-auto" x-data="bulkSelect">

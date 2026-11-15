@@ -9,6 +9,7 @@ use App\Domain\Import\Ocr\OcrEngine;
 use App\Models\Author;
 use App\Models\Category;
 use App\Models\ImportItem;
+use App\Models\PlacementRule;
 use App\Models\Product;
 use App\Models\Publisher;
 use App\Models\PublisherAlias;
@@ -313,7 +314,7 @@ class ImportItemProcessor
                     'book_type' => $data['book_type'] ?? null, 'subject' => $data['subject'] ?? null]
                 : $this->mapper->map($data['category'] ?? [], $data['title'], $data['default_category_id'] ?? null, [
                     'folder_title' => $data['folder_title'] ?? null, 'subtitle' => $data['subtitle'] ?? null,
-                    'publisher_id' => $publisher?->id, 'author_id' => $author?->id,
+                    'publisher_id' => $publisher?->id, 'author_id' => $author?->id, 'isbn' => $data['isbn'] ?? null, 'code' => $data['code'] ?? null,
                     'extras' => array_column($data['extras'] ?? [], 'label'),
                 ]);
 
@@ -321,6 +322,9 @@ class ImportItemProcessor
         });
         $category = $mapped['category'];
         $this->createdCategories = $mapped['created'];
+        if (! empty($mapped['rule'])) {
+            PlacementRule::whereKey($mapped['rule'])->increment('applied_count');
+        }
         $this->placement = $category ? [
             'category' => $category->id, 'confidence' => $mapped['confidence'], 'reasons' => $mapped['reasons'], 'alternative' => $mapped['alternative'],
         ] : null;

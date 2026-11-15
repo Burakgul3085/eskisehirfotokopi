@@ -3,8 +3,11 @@
 namespace App\Domain\Catalog;
 
 use App\Domain\Import\TitleCategory;
+use App\Models\Author;
 use App\Models\Category;
 use App\Models\CategoryAlias;
+use App\Models\PlacementRule;
+use App\Models\Publisher;
 use App\Support\EmptyValue;
 use App\Support\Text;
 use Illuminate\Support\Collection;
@@ -36,12 +39,16 @@ class CategoryMapper
     /** @var ?list<int> */
     private ?array $restrict = null;
 
+    /** @var ?Collection<int, PlacementRule> */
+    private ?Collection $rules = null;
+
     public function __construct(private CategoryTree $tree, private CategoryLearner $learner) {}
 
     /** Kategoriler değişince (birleştirme, yeni kategori) önbelleği sıfırlar. */
     public function flush(): void
     {
         $this->pool = null;
+        $this->rules = null;
     }
 
     /**
@@ -60,8 +67,15 @@ class CategoryMapper
         $examBook = $parsed['exam'] !== null || $parsed['grade'] !== null;
         $pick = null; // [kategori, güven, gerekçeler, kullanılan yol indeksi, ikinci seçenek]
 
+        // 0. Yöneticinin kaydettiği yerleştirme kuralı (toplu taşımada "benzer kitaplar da buraya gitsin"): her şeyden önce
+        $book = $this->ruleBook($path, $title, $parsed, $ctx);
+        if ($rule = $this->ruleFor($book, false)) {
+            $pick = [$rule[1], 'high', ['Yerleştirme kuralı: '.$rule[0]->label], null, null];
+            $examBook = $examBook || $this->inGroup($rule[1], CategoryPlan::examGroup());
+        }
+
         // 1. Kesin: adda/klasör adında sınav adı ya da sınıf düzeyi
-        if ($examBook) {
+        if ($examBook && ! $pick) {
             $pick = [$this->examCategory($parsed['exam'] ?? $parsed['grade']), 'high',
                 [$parsed['exam'] ? "Adda “{$parsed['exam']}” geçiyor" : "Adda sınıf düzeyi var ({$parsed['grade']})"], null, null];
         }
@@ -105,6 +119,13 @@ class CategoryMapper
                 $pick = [$group, 'low', ['Yeterli ipucu yok; '.$group->name.' ana kategorisine konuldu', ...$why], null, null];
             }
         }
+        // 0b. Kategori koşullu kurallar (ve aramada kategori adı geçenler) otomatik yerleştirmenin sonucuna bakar
+        if (! $rule && ($pick[0] ?? null) && ($rule = $this->ruleFor(['text' => $book['text'].' '.(Category::find($pick[0]->id)?->fullName(' ') ?? $pick[0]->name), 'category_id' => $pick[0]->id] + $book, true))) {
+            $auto = $pick[0];
+            $pick = [$rule[1], 'high', ['Yerleştirme kuralı: '.$rule[0]->label, 'Otomatik yerleştirme '.$auto->name.' diyordu'], null, null];
+            $examBook = $examBook || $this->inGroup($rule[1], CategoryPlan::examGroup());
+            $this->dropUnused($rule[1]);
+        }
         [$category, $confidence, $reasons, $usedIndex, $alternative] = $pick ?? [null, 'low', [], null, null];
 
         // Kitap türü ve ders yalnız sınav kitaplarında (okuma kitabında "Deneme" edebî türdür)
@@ -130,8 +151,60 @@ class CategoryMapper
         return [
             'category' => $category, 'topics' => $this->cleanTopics(array_values($topics), $category), 'matched' => $category !== null,
             'created' => $this->created, 'confidence' => $confidence, 'reasons' => array_values(array_unique($reasons)),
-            'alternative' => $alternative, 'book_type' => $bookType, 'subject' => $subject,
+            'alternative' => $alternative, 'book_type' => $bookType, 'subject' => $subject, 'rule' => $rule ? $rule[0]->id : null,
         ];
+    }
+
+    /**
+     * Kuralların bakacağı kitap bilgisi: ürün listesindeki arama metninin (search_text) yüklemedeki karşılığı.
+     *
+     * @return array{text: string, isbn: ?string, subject: ?string, book_type: ?string, publisher_id: ?int}
+     */
+    private function ruleBook(array $path, ?string $title, array $parsed, array $ctx): array
+    {
+        $subject = $parsed['subject'] ?? TitleCategory::subject((string) $title, true);
+        $type = $parsed['type'] ?? TitleCategory::rawType($title);
+        $publisherId = isset($ctx['publisher_id']) ? (int) $ctx['publisher_id'] : null;
+        $text = implode(' ', array_filter([$title, $ctx['subtitle'] ?? null, $ctx['folder_title'] ?? null, ...$path, $subject, $type,
+            $publisherId ? Publisher::whereKey($publisherId)->value('name') : null,
+            isset($ctx['author_id']) ? Author::whereKey($ctx['author_id'])->value('name') : null,
+            $ctx['code'] ?? null, $ctx['isbn'] ?? null]));
+
+        return ['text' => $text, 'isbn' => $ctx['isbn'] ?? null, 'subject' => $subject, 'book_type' => $type, 'publisher_id' => $publisherId];
+    }
+
+    /**
+     * Uyan en belirgin kural (eşitlikte en yenisi) ve hedef kategorisi. $afterAuto=false: kategori koşulsuz kurallar;
+     * true: hepsi (kitap bilgisinde otomatik yerleştirmenin kategorisi var).
+     *
+     * @return ?array{0: PlacementRule, 1: Category}
+     */
+    private function ruleFor(array $book, bool $afterAuto): ?array
+    {
+        $this->rules ??= PlacementRule::orderByDesc('id')->get();
+        foreach ($this->rules->sortByDesc(fn ($r) => [$r->specificity(), $r->id]) as $rule) {
+            if (! $afterAuto && $rule->needsCategory()) {
+                continue;
+            }
+            if ($rule->matches($book) && ($hit = $this->pool()->firstWhere('id', $rule->category_id))) {
+                return [$rule, $hit];
+            }
+        }
+
+        return null;
+    }
+
+    /** Kural otomatik yerleştirmeyi geçersiz kıldıysa onun bu kitap için açtığı (boş) alt kategoriler silinir. */
+    private function dropUnused(Category $keep): void
+    {
+        foreach (array_reverse($this->created) as $id) {
+            $cat = Category::find($id);
+            if ($cat && $cat->id !== $keep->id && $cat->depth > 0 && ! $cat->children()->exists() && ! $cat->products()->exists()) {
+                $this->tree->delete($cat);
+                $this->created = array_values(array_diff($this->created, [$id]));
+            }
+        }
+        $this->flush();
     }
 
     /**

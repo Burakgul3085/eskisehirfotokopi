@@ -452,3 +452,102 @@ export function favoriteButton() {
         },
     };
 }
+
+/**
+ * Ürün listesi toplu işlemleri: satır seçimi, "aramaya uyan tümünü seç" (scope=all), kategoriye taşırken yeni kategori
+ * alanları ve onay penceresinde sayı + hedefle açık ileti ("42 ürün “Sınav Hazırlık › Biyoloji” kategorisine taşınacak").
+ * İleti form.dataset.confirm'a yazılır; app.js gönderimde onu sorar.
+ */
+export function productBulk() {
+    return {
+        count: 0,
+        total: 0,
+        allMatching: false,
+        showSelectAll: false,
+        selectedCount: 0,
+        scope: 'selected',
+        isMove: false,
+        isNew: false,
+        init() {
+            this.total = Number(this.$root.dataset.total || 0);
+            this.refresh();
+        },
+        boxes() {
+            return [...this.$root.querySelectorAll('input[name="ids[]"]')];
+        },
+        toggleAll(event) {
+            this.boxes().forEach((b) => {
+                b.checked = event.target.checked;
+            });
+            this.allMatching = false;
+            this.recount();
+        },
+        recount() {
+            const boxes = this.boxes();
+            this.count = boxes.filter((b) => b.checked).length;
+            if (this.count < boxes.length) {
+                this.allMatching = false;
+            }
+            this.refresh();
+        },
+        selectAllMatching() {
+            this.boxes().forEach((b) => {
+                b.checked = true;
+            });
+            this.count = this.boxes().length;
+            this.allMatching = true;
+            this.refresh();
+        },
+        clearAllMatching() {
+            this.boxes().forEach((b) => {
+                b.checked = false;
+            });
+            this.allMatching = false;
+            this.recount();
+        },
+        optionText(select) {
+            const option = select?.selectedOptions?.[0];
+            return option ? (option.dataset.full || option.textContent.trim()) : '';
+        },
+        refresh() {
+            const form = this.$root;
+            const boxes = this.boxes();
+            this.scope = this.allMatching ? 'all' : 'selected';
+            this.selectedCount = this.allMatching ? this.total : this.count;
+            this.showSelectAll = !this.allMatching && boxes.length > 0 && this.count === boxes.length && this.total > boxes.length;
+
+            const action = form.elements.action?.value || '';
+            const category = form.elements.category_id;
+            this.isMove = action === 'category';
+            this.isNew = this.isMove && category?.value === 'new';
+
+            const n = this.selectedCount;
+            let message = '';
+            if (n > 0 && action !== '') {
+                if (this.isMove) {
+                    let target = this.optionText(category);
+                    if (this.isNew) {
+                        const name = (form.elements.new_category_name?.value || '').trim();
+                        target = `${this.optionText(form.elements.new_category_parent)} › ${name || '?'} (yeni kategori)`;
+                    }
+                    message = category?.value ? `${n} ürün “${target}” kategorisine taşınacak.` : '';
+                    if (message && form.elements.save_rule?.checked) {
+                        message += ' Bundan sonra yüklenen ve bu aramaya uyan kitaplar da buraya gidecek.';
+                    }
+                } else if (action === 'delete') {
+                    message = `${n} ürün kalıcı olarak silinecek. Bu işlem geri alınamaz. Emin misiniz?`;
+                } else {
+                    message = `${n} ürüne “${this.optionText(form.elements.action)}” uygulanacak.`;
+                }
+                if (message && this.allMatching) {
+                    message += ' (Yalnız bu sayfadakiler değil, aramaya uyan tüm ürünler.)';
+                }
+            }
+            if (message) {
+                form.dataset.confirm = message;
+            } else {
+                delete form.dataset.confirm;
+            }
+        },
+    };
+}

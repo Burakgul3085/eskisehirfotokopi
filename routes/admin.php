@@ -61,8 +61,10 @@ Route::prefix('yonetim')->name('admin.')->group(function () {
         Route::post('/urunler/fiyat-yukle', [ProductController::class, 'priceImport'])->name('products.price-import');
         Route::post('/urunler/toplu', [ProductController::class, 'bulk'])->name('products.bulk');
         Route::post('/urunler/sayfa-sayilari', [ProductController::class, 'pages'])->name('products.pages');
+        Route::post('/urunler/tasima/{move}/geri-al', [ProductController::class, 'undoMove'])->name('products.undo-move');
         Route::resource('urunler', ProductController::class)->parameters(['urunler' => 'product'])->except('show')->names('products');
         Route::post('/kategoriler/toplu-sil', [CategoryController::class, 'bulkDestroy'])->name('categories.bulk-destroy');
+        Route::delete('/kategoriler/kurallar/{rule}', [CategoryController::class, 'destroyRule'])->name('categories.rules.destroy');
         Route::post('/kategoriler/{category}/sira', [CategoryController::class, 'move'])->name('categories.move');
         Route::resource('kategoriler', CategoryController::class)->parameters(['kategoriler' => 'category'])->except('show')->names('categories');
         Route::post('/yayinevleri/toplu-sil', [PublisherController::class, 'bulkDestroy'])->name('publishers.bulk-destroy');

@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Domain\Catalog\CategoryTree;
 use App\Http\Controllers\Controller;
 use App\Models\Category;
+use App\Models\PlacementRule;
 use App\Models\Product;
 use App\Support\Activity;
 use App\Support\Text;
@@ -27,7 +28,19 @@ class CategoryController extends Controller
     {
         $counts = Product::query()->select('category_id', DB::raw('count(*) as c'))->groupBy('category_id')->pluck('c', 'category_id');
 
-        return view('admin.categories.index', ['categories' => $this->tree->flat(), 'counts' => $counts]);
+        return view('admin.categories.index', [
+            'categories' => $this->tree->flat(), 'counts' => $counts,
+            'rules' => PlacementRule::with('category.parent')->latest('id')->get(),
+        ]);
+    }
+
+    /** Yerleştirme kuralını siler; daha önce yerleştirilmiş kitaplar yerinde kalır. */
+    public function destroyRule(PlacementRule $rule): RedirectResponse
+    {
+        Activity::log('placement_rule.deleted', null, ['label' => $rule->label, 'category' => $rule->category?->fullName()]);
+        $rule->delete();
+
+        return back()->with('status', 'Kural silindi. Daha önce yerleştirilen kitaplar yerinde kaldı.');
     }
 
     public function create(Request $request): View

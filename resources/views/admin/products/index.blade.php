@@ -41,8 +41,21 @@
         </div>
     </div>
 
-    <form method="get" class="mb-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-6">
-        <input name="q" value="{{ request('q') }}" placeholder="Ad, ISBN, kod, yazar" class="field-input lg:col-span-2">
+    @if ($lastMove)
+        <div class="card mb-4 flex flex-wrap items-center gap-3 bg-info-soft px-4 py-3 text-sm">
+            <span>Son toplu taşıma: <strong>{{ $lastMove->count }} ürün</strong> → <strong>{{ $lastMove->target_name }}</strong>
+                <span class="text-muted">({{ $lastMove->created_at->format('d.m.Y H:i') }}{{ $lastMove->created_category_id ? ', yeni kategori' : '' }}{{ $lastMove->rule_id ? ', kural kaydedildi' : '' }})</span></span>
+            <form method="post" action="{{ route('admin.products.undo-move', $lastMove) }}" class="ml-auto"
+                  data-confirm="{{ $lastMove->count }} ürün eski kategorisine döndürülsün mü?{{ $lastMove->rule_id ? ' Bu taşımayla kaydedilen kural da geri alınır.' : '' }}{{ $lastMove->created_category_id ? ' Bu taşıma için açılan kategori boş kalırsa silinir.' : '' }}">
+                @csrf
+                <button class="btn-ghost btn-sm">Geri al</button>
+            </form>
+        </div>
+    @endif
+
+    <form method="get" class="mb-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+        @if (request('gorsel'))<input type="hidden" name="gorsel" value="{{ request('gorsel') }}">@endif
+        <input name="q" value="{{ request('q') }}" placeholder="Ad, ISBN, kod, yazar, ders" class="field-input lg:col-span-2">
         <select name="yayinevi" class="field-input" data-autosubmit>
             <option value="">Tüm yayınevleri</option>
             @foreach ($publishers as $p)<option value="{{ $p->id }}" @selected((int) request('yayinevi') === $p->id)>{{ $p->name }}</option>@endforeach
@@ -51,6 +64,14 @@
             <option value="">Tüm kategoriler</option>
             <option value="0" @selected(request('kategori') === '0')>— Kategorisiz —</option>
             @foreach ($categories as $c)<option value="{{ $c['id'] }}" @selected((string) request('kategori') === (string) $c['id'])>{{ str_repeat('— ', $c['depth']) }}{{ $c['name'] }}</option>@endforeach
+        </select>
+        <select name="ders" class="field-input" data-autosubmit aria-label="Ders">
+            <option value="">Tüm dersler</option>
+            @foreach ($subjects as $v)<option value="{{ $v }}" @selected(request('ders') === $v)>{{ $v }}</option>@endforeach
+        </select>
+        <select name="tur" class="field-input" data-autosubmit aria-label="Kitap türü">
+            <option value="">Tüm kitap türleri</option>
+            @foreach ($bookTypes as $v)<option value="{{ $v }}" @selected(request('tur') === $v)>{{ $v }}</option>@endforeach
         </select>
         <select name="durum" class="field-input" data-autosubmit>
             <option value="">Tüm durumlar</option>
@@ -66,11 +87,15 @@
         </div>
     </form>
 
-    <form method="post" action="{{ route('admin.products.bulk') }}" id="bulk-form" x-data="bulkSelect" data-confirm="Seçilen ürünlere işlem uygulansın mı?">
+    <form method="post" action="{{ route('admin.products.bulk') }}" id="bulk-form" x-data="productBulk" x-on:change="refresh" x-on:input="refresh" data-total="{{ $products->total() }}">
         @csrf
+        {{-- "Aramaya uyan tümü" seçilince sunucu aynı süzgeçleri uygular; expected onaylanan sayıdır --}}
+        <input type="hidden" name="scope" x-bind:value="scope" value="selected">
+        <input type="hidden" name="expected" value="{{ $products->total() }}">
+        @foreach ($filters as $k => $v)<input type="hidden" name="f[{{ $k }}]" value="{{ $v }}">@endforeach
         <div class="card overflow-x-auto">
             <div class="flex flex-wrap items-center gap-2 border-b border-line bg-surface px-4 py-2.5">
-                <span class="text-sm text-muted"><span x-text="count">0</span> seçili</span>
+                <span class="text-sm text-muted"><span x-text="selectedCount">0</span> seçili</span>
                 <select name="action" class="field-input w-auto py-1.5 text-sm" required>
                     <option value="">Toplu işlem…</option>
                     <option value="active">Yayına al</option>
@@ -84,10 +109,22 @@
                     <option value="spec_default">Bilgi gösterimini genel ayara bırak</option>
                     <option value="delete">Sil</option>
                 </select>
-                <select name="category_id" class="field-input w-auto max-w-xs py-1.5 text-sm">
+                @php($byId = $categories->keyBy('id'))
+                <select name="category_id" class="field-input w-auto max-w-xs py-1.5 text-sm" aria-label="Taşınacak kategori">
                     <option value="">(Taşınacak kategori)</option>
-                    @foreach ($categories as $c)<option value="{{ $c['id'] }}">{{ str_repeat('— ', $c['depth']) }}{{ $c['name'] }}</option>@endforeach
+                    <option value="new" @selected(old('category_id') === 'new')>+ Yeni kategori…</option>
+                    @foreach ($categories as $c)<option value="{{ $c['id'] }}" data-full="{{ ! empty($c['parent_id']) && isset($byId[$c['parent_id']]) ? $byId[$c['parent_id']]['name'].' › ' : '' }}{{ $c['name'] }}" @selected((string) old('category_id') === (string) $c['id'])>{{ str_repeat('— ', $c['depth']) }}{{ $c['name'] }}</option>@endforeach
                 </select>
+                <span class="flex flex-wrap items-center gap-2" x-show="isNew" x-cloak>
+                    <select name="new_category_parent" class="field-input w-auto py-1.5 text-sm" aria-label="Yeni kategorinin ana kategorisi">
+                        @foreach ($groups as $g)<option value="{{ $g->id }}" @selected((int) old('new_category_parent', $defaultGroup) === $g->id)>{{ $g->name }}</option>@endforeach
+                    </select>
+                    <span class="text-muted">›</span>
+                    <input name="new_category_name" value="{{ old('new_category_name') }}" maxlength="100" placeholder="Yeni kategori adı (ör. Biyoloji)" class="field-input w-56 py-1.5 text-sm" aria-label="Yeni kategori adı">
+                </span>
+                @error('category_id')<span class="field-error">{{ $message }}</span>@enderror
+                @error('new_category_name')<span class="field-error">{{ $message }}</span>@enderror
+                @error('new_category_parent')<span class="field-error">{{ $message }}</span>@enderror
                 <select name="spec" class="field-input w-auto max-w-xs py-1.5 text-sm" aria-label="Bilgi">
                     <option value="">(Gösterilecek/gizlenecek bilgi)</option>
                     @foreach ($specOptions as $k => $l)<option value="{{ $k }}">{{ $l }}</option>@endforeach
@@ -95,12 +132,31 @@
                 @error('spec')<span class="field-error">{{ $message }}</span>@enderror
                 <button class="btn-ghost btn-sm">Uygula</button>
                 @error('ids')<span class="field-error">{{ $message }}</span>@enderror
+                @error('save_rule')<span class="field-error w-full">{{ $message }}</span>@enderror
+                <div class="w-full text-sm" x-show="isMove" x-cloak>
+                    @if ($ruleConditions)
+                        <label class="flex items-start gap-2">
+                            <input type="checkbox" name="save_rule" value="1" class="mt-0.5 size-4 accent-primary" @checked(old('save_rule'))>
+                            <span>Bundan sonra yüklenen benzer kitaplar da buraya gitsin <span class="text-muted">— kural: {{ \App\Models\PlacementRule::describe($ruleConditions) }}. Otomatik yerleştirmeden (sınav adı dahil) önce uygulanır; Kategoriler sayfasından silinebilir.</span></span>
+                        </label>
+                    @else
+                        <p class="text-muted">Bundan sonra gelen benzer kitapların da buraya gitmesi için önce arama yapın ya da Ders, Kitap türü, Yayınevi, Kategori süzgeçlerinden birini seçin; kural o aramayı saklar.</p>
+                    @endif
+                </div>
                 {{-- Sayfa sayısı kutuları ayrı forma (products-pages) bağlıdır; formlar iç içe olamaz. --}}
                 <span class="ml-auto flex flex-wrap items-center gap-2">
                     <label class="flex items-center gap-1.5 text-sm"><input type="checkbox" name="publish" value="1" form="products-pages" checked class="size-4 accent-primary"> Taslakları yayına al</label>
                     <button form="products-pages" class="btn-primary btn-sm"><x-icon name="check" class="size-4" />Sayfa sayılarını kaydet</button>
                 </span>
                 @if ($errors->has('pages') || $errors->has('pages.*'))<span class="field-error w-full">{{ $errors->first('pages') ?: collect($errors->get('pages.*'))->flatten()->first() }}</span>@endif
+            </div>
+            <div class="border-b border-line bg-primary-soft px-4 py-2 text-sm" x-show="showSelectAll" x-cloak>
+                Bu sayfadaki <span x-text="count"></span> ürün seçili.
+                <button type="button" class="font-semibold text-primary-dark underline" x-on:click="selectAllMatching">Aramaya uyan tüm {{ number_format($products->total(), 0, ',', '.') }} ürünü seç</button>
+            </div>
+            <div class="border-b border-line bg-primary-soft px-4 py-2 text-sm" x-show="allMatching" x-cloak>
+                Aramaya uyan <strong>tüm {{ number_format($products->total(), 0, ',', '.') }} ürün</strong> seçili (yalnız bu sayfadakiler değil).
+                <button type="button" class="font-semibold text-primary-dark underline" x-on:click="clearAllMatching">Seçimi temizle</button>
             </div>
             <table class="table-panel">
                 <thead>
@@ -122,7 +178,7 @@
                                 <span class="text-xs text-muted">{{ $p->author?->name }}{{ $p->isbn ? ' · '.$p->isbn : '' }}{{ $p->code ? ' · '.$p->code : '' }}</span>
                             </td>
                             <td class="text-muted">{{ $p->publisher?->name ?? '—' }}</td>
-                            <td class="text-muted">{{ $p->category?->name ?? '—' }}</td>
+                            <td class="text-muted">{{ $p->category?->name ?? '—' }}@if ($p->subject || $p->book_type)<span class="block text-xs">{{ implode(' · ', array_filter([$p->subject, $p->book_type])) }}</span>@endif</td>
                             <td><input type="number" name="pages[{{ $p->id }}]" value="{{ $p->page_count }}" min="1" max="20000" form="products-pages" class="field-input w-24 py-1.5 text-sm" aria-label="{{ $p->title }} sayfa sayısı" placeholder="Sayfa"></td>
                             <td class="text-right whitespace-nowrap">{{ $p->price_bw !== null ? \App\Support\Money::format($p->price_bw) : '—' }}</td>
                             <td class="text-right whitespace-nowrap">{{ $p->price_color !== null ? \App\Support\Money::format($p->price_color) : '—' }}</td>
