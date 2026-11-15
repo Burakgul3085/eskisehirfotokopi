@@ -6,9 +6,8 @@
     $inlineRoots = array_slice($menu, 0, 6);
 @endphp
 {{-- Cam header: fareyi izleyen ışık, akan alt çizgi, 3D logo; kaydırınca süzülen gölge (resources/js/app.js → data-site-header). --}}
-<header data-site-header data-scene="header" class="site-header sticky top-0 z-30">
+<header data-site-header class="site-header sticky top-0 z-30">
     <div class="header-glow pointer-events-none absolute inset-0 -z-10 overflow-hidden" aria-hidden="true"></div>
-    <canvas data-scene-canvas class="scene-canvas header-canvas pointer-events-none absolute inset-0 -z-10 block size-full" aria-hidden="true"></canvas>
     <div class="header-line pointer-events-none absolute inset-x-0 bottom-0 h-px" aria-hidden="true"></div>
     @if ($settings['announcement'])
         <div class="header-announce relative overflow-hidden bg-primary-dark text-white">

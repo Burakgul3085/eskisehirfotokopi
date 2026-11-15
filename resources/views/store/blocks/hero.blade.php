@@ -9,11 +9,9 @@
     // Cam kartların fareye tepki derinlikleri (geniş ekranda sahnenin altında yüzen şerit)
     $cardDepth = [10, 16, 10];
 @endphp
-<section class="hero-3d relative isolate overflow-hidden text-white">
+<section class="hero-3d surface-deep relative isolate overflow-hidden text-white">
     {{-- Arka plan katmanları --}}
     <div class="pointer-events-none absolute inset-0 -z-10" aria-hidden="true">
-        <div class="hero-aurora absolute -top-40 right-[-10%] size-[42rem] rounded-full bg-accent/20 blur-[120px]"></div>
-        <div class="hero-aurora hero-aurora-2 absolute -bottom-48 left-[-12%] size-[38rem] rounded-full bg-white/10 blur-[110px]"></div>
         <div class="hero-grid absolute inset-0"></div>
         <div class="hero-spot absolute inset-0"></div>
         <div class="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-white/25 to-transparent"></div>

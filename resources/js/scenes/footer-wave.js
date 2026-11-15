@@ -37,7 +37,7 @@ void main() {
 }`;
 
 export function mount(root) {
-    const stage = createStage(root, { fov: 45, z: 9, maxDpr: 1.5, pointerHost: root.closest('footer') || root });
+    const stage = createStage(root, { fov: 45, z: 9, maxDpr: 1.25, fps: 40, pointerHost: root.closest('footer') || root });
     if (!stage) {
         return;
     }
@@ -64,7 +64,7 @@ export function mount(root) {
         uMouse: { value: new THREE.Vector2(99, 99) },
         uSize: { value: small ? 7 : 9 },
         uLow: { value: cssColor('--color-primary', '#0f766e').lerp(new THREE.Color('#ffffff'), 0.15) },
-        uHigh: { value: cssColor('--color-accent', '#f59e0b') },
+        uHigh: { value: cssColor('--color-primary', '#0f766e').lerp(new THREE.Color('#ffffff'), 0.6) },
     };
     const mat = keep(new THREE.ShaderMaterial({ vertexShader: VERTEX, fragmentShader: FRAGMENT, uniforms, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }));
     const points = new THREE.Points(geo, mat);

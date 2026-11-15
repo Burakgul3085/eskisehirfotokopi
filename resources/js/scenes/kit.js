@@ -87,7 +87,7 @@ export function createStage(root, opts = {}) {
     } catch {
         return null;
     }
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, small ? 1.25 : (opts.maxDpr ?? 1.6)));
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, small ? 1.25 : (opts.maxDpr ?? 1.5)));
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
 
