@@ -18,6 +18,12 @@ class Author extends Model
         return $this->hasMany(Product::class);
     }
 
+    /** Hiç ürünü kalmadıysa yazar kaydını siler. */
+    public static function pruneIfOrphan(int $id): bool
+    {
+        return (bool) static::whereKey($id)->whereDoesntHave('products')->delete();
+    }
+
     /** Ada göre bulur, yoksa oluşturur. Boş ad için null. */
     public static function resolve(?string $name): ?self
     {

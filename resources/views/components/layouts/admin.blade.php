@@ -21,7 +21,6 @@
             ['Ürünler', 'book', 'admin.products.index', 'admin.products.*'],
             ['Kategoriler', 'layers', 'admin.categories.index', 'admin.categories.*'],
             ['Yayınevleri', 'list', 'admin.publishers.index', 'admin.publishers.*'],
-            ['Yazarlar', 'user', 'admin.authors.index', 'admin.authors.*'],
             ['Toplu yükleme', 'upload', 'admin.imports.index', 'admin.imports.*'],
         ],
         'Vitrin' => [

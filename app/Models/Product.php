@@ -61,6 +61,13 @@ class Product extends Model
                 $p->search_text = $p->buildSearchText();
             }
         });
+        // Yazarlar yalnız ürünlerle yaşar (yönetimde ayrı sayfası yok): ürünü kalmayan yazar kaydı silinir.
+        static::updated(function (Product $p) {
+            if ($p->wasChanged('author_id') && ($old = $p->getOriginal('author_id'))) {
+                Author::pruneIfOrphan($old);
+            }
+        });
+        static::deleted(fn (Product $p) => $p->author_id && Author::pruneIfOrphan($p->author_id));
     }
 
     public function publisher(): BelongsTo

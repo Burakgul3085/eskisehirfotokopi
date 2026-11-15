@@ -6,6 +6,7 @@ use App\Domain\Catalog\CategoryTree;
 use App\Domain\Catalog\PriceSheet;
 use App\Domain\Print\PrintSettings;
 use App\Models\Admin;
+use App\Models\Author;
 use App\Models\Category;
 use App\Models\Product;
 use App\Models\Publisher;
@@ -25,6 +26,22 @@ class CatalogAdminTest extends TestCase
     {
         parent::setUp();
         $this->actingAs(Admin::factory()->create(), 'admin');
+    }
+
+    public function test_authors_have_no_admin_page_and_orphans_are_pruned(): void
+    {
+        $this->get('/yonetim/yazarlar')->assertNotFound();
+        $a = Author::resolve('Ali Veli');
+        $b = Author::resolve('Ayşe Kaya');
+        $p1 = Product::create(['title' => 'Kitap 1', 'slug' => 'kitap-1', 'author_id' => $a->id]);
+        $p2 = Product::create(['title' => 'Kitap 2', 'slug' => 'kitap-2', 'author_id' => $a->id]);
+
+        $p1->delete();
+        $this->assertTrue($a->fresh() !== null); // hâlâ ürünü var
+        $p2->update(['author_id' => $b->id]);
+        $this->assertNull($a->fresh()); // son ürünü başka yazara geçti
+        $p2->delete();
+        $this->assertNull($b->fresh());
     }
 
     public function test_category_tree_paths_and_move(): void

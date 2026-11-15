@@ -3,7 +3,6 @@
 use App\Http\Controllers\Admin\ActivityLogController;
 use App\Http\Controllers\Admin\AdminUserController;
 use App\Http\Controllers\Admin\AuthController;
-use App\Http\Controllers\Admin\AuthorController;
 use App\Http\Controllers\Admin\CategoryController;
 use App\Http\Controllers\Admin\CustomerController;
 use App\Http\Controllers\Admin\DashboardController;
@@ -69,7 +68,6 @@ Route::prefix('yonetim')->name('admin.')->group(function () {
         Route::post('/yayinevleri/toplu-sil', [PublisherController::class, 'bulkDestroy'])->name('publishers.bulk-destroy');
         Route::post('/yayinevleri/{publisher}/birlestir', [PublisherController::class, 'merge'])->name('publishers.merge');
         Route::resource('yayinevleri', PublisherController::class)->parameters(['yayinevleri' => 'publisher'])->except('show')->names('publishers');
-        Route::get('/yazarlar', [AuthorController::class, 'index'])->name('authors.index');
 
         // Toplu klasör yükleme ve OCR
         Route::prefix('toplu-yukleme')->name('imports.')->controller(ImportController::class)->group(function () {
@@ -88,7 +86,6 @@ Route::prefix('yonetim')->name('admin.')->group(function () {
             Route::post('/kalem/{item}/tekrarla', 'retry')->name('retry');
             Route::get('/kalem/{item}/gorsel', 'image')->name('image');
         });
-        Route::put('/yazarlar/{author}', [AuthorController::class, 'update'])->name('authors.update');
 
         // Vitrin
         Route::resource('sayfalar', PageController::class)->parameters(['sayfalar' => 'page'])->except('show')->names('pages');
