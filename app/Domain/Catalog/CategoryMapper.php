@@ -48,12 +48,29 @@ class CategoryMapper
         if ($exam = $parsed['exam'] ?? $parsed['grade']) {
             [$category, $created] = $this->examCategory($exam);
         }
+        // Adında sınav yok ama türü sınav kitabı ("Paragraf Soru Bankası"): yalnız Sınav Hazırlık altında aranır;
+        // okuma kategorilerine (Edebiyat, Tarih…) düşmez. Bulunamazsa varsayılan kategori, o da yoksa Sınav Hazırlık › Genel.
+        $examBook = ! $category && $parsed['type'] !== null && ($group = CategoryPlan::examGroup());
+        if ($examBook) {
+            foreach ($path as $i => $name) {
+                if ($category = $this->find($name, $group->id)) {
+                    $usedIndex = $i;
+                    break;
+                }
+            }
+            if (! $category && ! ($defaultId && Category::whereKey($defaultId)->exists())) {
+                $this->tree->created = [];
+                $category = $this->tree->ensurePath([$group->name, CategoryPlan::EXAM_GENERAL]);
+                $created = $this->tree->created;
+                $this->flush();
+            }
+        }
         // Yöneticinin bu yolun tamamı için daha önce seçtiği kategori
-        if (! $category && count($path) > 1 && ($alias = CategoryAlias::where('match_key', self::pathKey($path))->first())) {
+        if (! $category && ! $examBook && count($path) > 1 && ($alias = CategoryAlias::where('match_key', self::pathKey($path))->first())) {
             $category = $this->pool()->firstWhere('id', $alias->category_id);
             $usedIndex = $category ? -1 : null;
         }
-        if (! $category) {
+        if (! $category && ! $examBook) {
             foreach ($path as $i => $name) {
                 if ($category = $this->find($name)) {
                     $usedIndex = $i;
@@ -79,7 +96,9 @@ class CategoryMapper
         }
 
         // Konu etiketleri: seçilen kategorinin adı ve grup adları dışındaki ayrıntılar
-        $skip = array_filter([$category?->normalized_name, Text::key(CategoryPlan::READING), Text::key(CategoryPlan::EXAM)]);
+        // (kitap türü ve ders ayrı alanda tutulur, konu olarak tekrarlanmaz)
+        $skip = array_filter([$category?->normalized_name, Text::key(CategoryPlan::READING), Text::key(CategoryPlan::EXAM),
+            $parsed['type'] ? Text::key($parsed['type']) : null, $parsed['subject'] ? Text::key($parsed['subject']) : null]);
         $topics = [];
         foreach ($path as $i => $name) {
             $key = Text::key($name);
@@ -187,14 +206,14 @@ class CategoryMapper
         }
     }
 
-    /** Okunan ada uyan kategori (yalnız ilk iki kat). */
-    public function find(string $name): ?Category
+    /** Okunan ada uyan kategori (yalnız ilk iki kat; $parentId verilirse yalnız o grubun altındakiler). */
+    public function find(string $name, ?int $parentId = null): ?Category
     {
         $key = Text::key($name);
         if ($key === '') {
             return null;
         }
-        $pool = $this->pool();
+        $pool = $parentId ? $this->pool()->where('parent_id', $parentId) : $this->pool();
         if (($alias = CategoryAlias::where('match_key', $key)->first()) && ($hit = $pool->firstWhere('id', $alias->category_id))) {
             return $hit;
         }

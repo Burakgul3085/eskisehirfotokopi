@@ -26,6 +26,8 @@ class TitleCategory
         'fasikül' => 'Fasikül',
     ];
 
+    private const WEAK_TYPES = ['Deneme', 'Defter'];
+
     private const EXAMS = ['TYT', 'AYT', 'YKS', 'YDT', 'KPSS', 'EKPSS', 'ALES', 'DGS', 'LGS', 'YDS', 'YÖKDİL', 'MSÜ', 'ÖABT', 'TUS', 'DUS', 'PMYO', 'POMEM'];
 
     /** Ders adından atılan nitelik kelimeleri */
@@ -96,7 +98,9 @@ class TitleCategory
             }
             $examEnd = max($examEnd, mb_strlen(substr($lower, 0, $m[0][1] + strlen($m[0][0]))) + 1);
         }
-        if ($type === 'Deneme' && $exam === null && $grade === null) {
+        // "Deneme" ve "Defter" okuma kitabı adlarında da geçer ("Deneme Yazıları", "Leonardo'nun Defterleri"):
+        // yalnız sınav/düzey varsa tür sayılır.
+        if (in_array($type, self::WEAK_TYPES, true) && $exam === null && $grade === null) {
             $type = null;
         }
         if ($type === null && $exam === null && $grade === null) {

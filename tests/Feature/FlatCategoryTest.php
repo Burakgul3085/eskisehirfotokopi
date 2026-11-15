@@ -79,6 +79,24 @@ class FlatCategoryTest extends TestCase
         $this->assertSame($r['category']->id, $mapper->map(['Kuantum Gastronomisi'], 'Başka')['category']->id); // ikinci kez açılmaz
     }
 
+    public function test_exam_book_without_exam_name_goes_to_exam_group(): void
+    {
+        $mapper = app(CategoryMapper::class);
+        // Türü bir okuma kategorisine benzese de ("Edebiyat") soru bankası Sınav Hazırlık'ta kalır
+        $r = $mapper->map(['Edebiyat', 'Paragraf'], 'Paragraf Soru Bankası');
+        $this->assertSame('Sınav Hazırlık › Genel', $r['category']->fullName());
+        $this->assertSame(['Edebiyat'], $r['topics']); // tür ve ders konu olarak tekrarlanmaz
+        // Türü sınav grubundaki bir kategoriye uyuyorsa o seçilir
+        $this->assertSame('Sınav Hazırlık › KPSS', $mapper->map(['KPSS', 'Tarih'], 'Tarih Konu Anlatımı')['category']->fullName());
+        // Varsayılan kategori seçildiyse oraya gider
+        $default = Category::where('name', 'TYT')->value('id');
+        $this->assertSame($default, $mapper->map([], 'Problemler Yaprak Test', $default)['category']->id);
+        // "Defter" ve "Deneme" sınavsız adda okuma kitabıdır
+        $this->assertSame('Okuma Kitapları › Sanat ve Tiyatro', $mapper->map(['Sanat'], "Leonardo'nun Defterleri")['category']->fullName());
+        $this->assertNull(TitleCategory::parse("Leonardo'nun Defterleri")['type']);
+        $this->assertSame('Defter', TitleCategory::parse('TYT Kimya Defter')['type']);
+    }
+
     public function test_starter_list_is_rebuilt_when_all_categories_were_deleted(): void
     {
         $this->withoutStarterCategories();

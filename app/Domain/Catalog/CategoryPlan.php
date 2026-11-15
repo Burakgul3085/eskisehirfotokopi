@@ -17,6 +17,9 @@ final class CategoryPlan
 
     public const EXAM = 'Sınav Hazırlık';
 
+    /** Sınav adı okunamayan sınav kitapları (Paragraf Soru Bankası…) */
+    public const EXAM_GENERAL = 'Genel';
+
     /** grup => [kategori => eşlenecek okunan adlar] */
     public const TREE = [
         self::READING => [
