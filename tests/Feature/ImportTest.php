@@ -83,6 +83,29 @@ class ImportTest extends TestCase
         $this->assertNull($p->subtitle);
     }
 
+    public function test_turkish_letters_multi_authors_and_garbled_empty_markers(): void
+    {
+        // Görsel "ğ"yi "g" okumuş: klasördeki doğru yazım alınır. Bozuk okunan "Henüz doğrulanmadı" boş sayılır.
+        // Klasörde kısaltılmış iki yazar: görseldeki liste klasördeki harflerle düzeltilip birleştirilir.
+        $this->useOcr(FakeOcrEngine::sample([
+            'author' => ['Yazar', 'Yoshi Olda, Lorna Marshall'],
+            'isbn' => ['ISBN / Barkod', 'Henüz dogrulanm vt'],
+            'pages' => ['Sayfa Sayısı', 'Henüz dağrulanmadı'],
+        ], 'Tarihin Huzursuzlugu'));
+        $item = $this->importBook('BOĞAZİÇİ ÜNİVERSİTESİ YAYINLARI - TARİHİN HUZURSUZLUĞU - YOSHİ OİDA LORNA');
+
+        $p = Product::with('author')->findOrFail($item->product_id);
+        $this->assertSame('Tarihin Huzursuzluğu', $p->title);
+        $this->assertSame('Yoshi Oida, Lorna Marshall', $p->author->name);
+        $this->assertSame('imported', $item->status, json_encode($item->issues));
+
+        // Klasördeki ad yazarın uzun biçimi: "V S Ramachandran, Sandra Blakeslee"
+        $this->useOcr(FakeOcrEngine::sample(['code' => ['Ürün Kodu', 'BHY-1'], 'author' => ['Yazar', '“Samachandran, Sandra Blakeslee']], 'Beyindeki Hayaletler'));
+        $item = $this->importBook('BOĞAZİÇİ ÜNİVERSİTESİ YAYINLARI - BEYİNDEKİ HAYALETLER - V S RAMACHANDRAN');
+        $this->assertSame('V S Ramachandran, Sandra Blakeslee', Product::findOrFail($item->product_id)->author->name);
+        $this->assertSame('imported', $item->status, json_encode($item->issues));
+    }
+
     public function test_category_merge_moves_products_and_merges_same_named_children(): void
     {
         $tree = app(CategoryTree::class);

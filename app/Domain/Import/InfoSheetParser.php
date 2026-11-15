@@ -243,10 +243,26 @@ class InfoSheetParser
     private function clean(?string $value): ?string
     {
         $value = trim(preg_replace('/\s+/u', ' ', (string) $value), " \t:|;");
-        if ($value === '' || in_array(Text::key($value), self::EMPTY_VALUES, true)) {
+        if ($value === '' || self::isEmptyMarker($value)) {
             return null;
         }
 
         return $value;
+    }
+
+    /** "Henüz doğrulanmadı" ve OCR'nin bozduğu biçimleri ("Henüz dogrulanm vt", "Henüz dağrulanmadı") boş sayılır. */
+    public static function isEmptyMarker(string $value): bool
+    {
+        $key = Text::key($value);
+        if (in_array($key, self::EMPTY_VALUES, true) || str_starts_with($key, 'henuz ')) {
+            return true;
+        }
+        foreach (self::EMPTY_VALUES as $empty) {
+            if (strlen($empty) >= 8 && 1 - levenshtein($key, $empty) / max(strlen($key), strlen($empty)) >= 0.7) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

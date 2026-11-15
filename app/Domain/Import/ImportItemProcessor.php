@@ -10,6 +10,7 @@ use App\Models\ImportItem;
 use App\Models\Product;
 use App\Models\Publisher;
 use App\Models\PublisherAlias;
+use App\Support\Text;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -131,7 +132,7 @@ class ImportItemProcessor
             [$ocrTitle, $ocrRest] = [$ocr['title'], null]; // adın kendisinde tire varmış
         }
         $title = $this->pick('Kitap adı', $ocrTitle, $folder['title'], $issues, 0.85);
-        $author = $this->pick('Yazar', $f['author'] ?? null, $folder['author'], $issues, 0.8);
+        [$author, $authorConfirmed] = $this->pickAuthor($f['author'] ?? null, $folder['author'], $issues);
         $subtitle = null;
         if ($ocrRest !== null && ! FolderName::similar($ocrRest, $author, 0.75) && ! FolderName::similar($ocrRest, $folder['author'], 0.75)) {
             $subtitle = $ocrRest;
@@ -208,8 +209,14 @@ class ImportItemProcessor
             $issues[] = 'Türü okunamadı; ürün kategorisiz kaldı.';
         }
 
+        // Düşük güvenli okuma uyarısı, değer klasörle doğrulandıysa ya da kategori adları tanındıysa gereksizdir.
+        $confirmed = [
+            'author' => $authorConfirmed,
+            'publisher' => $folder['publisher'] && $publisherOcr && Publisher::sameName($folder['publisher'], $publisherOcr),
+            'category' => $categoryPath && collect($categoryPath)->every(fn ($n) => $this->tree->closestName($n) !== null),
+        ];
         foreach (['author' => 'Yazar', 'publisher' => 'Yayınevi', 'category' => 'Türü', 'code' => 'Ürün kodu'] as $k => $label) {
-            if (isset($ocr['conf'][$k], $f[$k]) && $f[$k] !== null && $ocr['conf'][$k] < 45) {
+            if (! ($confirmed[$k] ?? false) && isset($ocr['conf'][$k], $f[$k]) && $f[$k] !== null && $ocr['conf'][$k] < 45) {
                 $issues[] = "{$label} düşük güvenle okundu: “{$f[$k]}”.";
             }
         }
@@ -355,7 +362,7 @@ class ImportItemProcessor
         if ($ocr && $folder) {
             // Harfler birebir aynıysa görseldeki düzgün yazım (büyük/küçük harf, kesme işareti) kullanılır;
             // yalnız benziyorsa OCR bir harfi yanlış okumuştur ("\Mimanya"), doğru harfler klasördedir.
-            if (FolderName::similar($ocr, $folder, 1.0)) {
+            if (self::sameLetters($ocr, $folder)) {
                 return $ocr;
             }
             if (FolderName::similar($ocr, $folder, $threshold)) {
@@ -370,6 +377,74 @@ class ImportItemProcessor
         }
 
         return $ocr;
+    }
+
+    /**
+     * Yazar: görseldeki liste ("Yoshi Olda, Lorna Marshall") klasördeki adla (çoğu zaman kısaltılmış: "YOSHİ OİDA LORNA")
+     * birleştirilir. Görseldeki kelimeler klasördeki doğru yazımla düzeltilir; klasördeki ad bir yazarın daha uzun
+     * biçimiyse ("V S RAMACHANDRAN") o kullanılır. Klasördeki tüm kelimeler sonuçta varsa yazar doğrulanmış sayılır.
+     *
+     * @return array{0: ?string, 1: bool} [yazar, klasörle doğrulandı mı]
+     */
+    private function pickAuthor(?string $ocr, ?string $folder, array &$issues): array
+    {
+        $ocr = $ocr !== null ? self::clean($ocr) : null;
+        if (! $ocr || ! $folder) {
+            return [$this->pick('Yazar', $ocr, $folder, $issues, 0.8), false];
+        }
+        if (self::sameLetters($ocr, $folder)) {
+            return [$ocr, true];
+        }
+        $folderWords = array_values(array_filter(explode(' ', CategoryTree::displayName(trim($folder)))));
+        $folderKeys = array_map(fn ($w) => Text::key($w), $folderWords);
+        $lists = [];
+        foreach (preg_split('/\s*[,;&]\s*|\s+ve\s+/u', $ocr) as $name) {
+            $words = array_values(array_filter(explode(' ', self::clean($name))));
+            foreach ($words as $i => $w) {
+                // Harf hatası: klasördeki benzer kelimeyle değiştirilir ("Olda" → "Oida", "Samachandran" → "Ramachandran")
+                foreach ($folderWords as $j => $fw) {
+                    $a = Text::key($w);
+                    $len = max(strlen($a), strlen($folderKeys[$j]));
+                    if ($a !== $folderKeys[$j] && $len >= 4 && levenshtein($a, $folderKeys[$j]) <= ($len >= 8 ? 2 : 1)) {
+                        $words[$i] = $fw;
+                    }
+                }
+            }
+            if ($words) {
+                $lists[] = $words;
+            }
+        }
+        $authors = [];
+        foreach ($lists as $n => $words) {
+            $keys = array_map(fn ($w) => Text::key($w), $words);
+            $others = [];
+            foreach ($lists as $m => $ws) {
+                if ($m !== $n) {
+                    array_push($others, ...array_map(fn ($w) => Text::key($w), $ws));
+                }
+            }
+            // Klasör bu yazarın daha uzun biçimi ("V S Ramachandran" ⊃ "Ramachandran"); fazla kelimeler başka yazara
+            // aitse ("YOSHİ OİDA LORNA" → Lorna ikinci yazar) değiştirilmez.
+            $extra = array_diff($folderKeys, $keys);
+            if (count($folderKeys) > count($keys) && ! array_diff($keys, $folderKeys) && ! array_intersect($extra, $others)) {
+                $words = $folderWords;
+            }
+            $authors[] = implode(' ', $words);
+        }
+        $all = array_map(fn ($w) => Text::key($w), explode(' ', implode(' ', $authors)));
+        if ($authors && ! array_diff($folderKeys, $all)) {
+            return [implode(', ', array_unique($authors)), true];
+        }
+
+        return [$this->pick('Yazar', $ocr, $folder, $issues, 0.8), false];
+    }
+
+    /** Harfler aynı mı (büyük/küçük harf, boşluk, kesme işareti ve ı/i farkı yok sayılır; ğ/g, ü/u gibi farklar sayılır). */
+    public static function sameLetters(string $a, string $b): bool
+    {
+        $norm = fn ($s) => str_replace('ı', 'i', preg_replace('/[^\p{L}\p{N}]+/u', '', Text::lower($s)));
+
+        return $norm($a) !== '' && $norm($a) === $norm($b);
     }
 
     /** "Ad — Alt başlık" → ['Ad', 'Alt başlık']; ayraç yoksa [ad, null]. */
