@@ -190,11 +190,12 @@ class ImportTest extends TestCase
         $this->assertSame("Almanya'nın Kısa Tarihi", $p->title);   // klasör adı esas alınır (başlık biçimine çevrilir)
         $this->assertSame('9786054238606', $p->isbn);
 
-        $this->get(route('admin.imports.review', $item))->assertOk()->assertSee('Sayfa sayısı iki okumada farklı');
+        $this->get(route('admin.imports.review', $item))->assertOk()->assertSee('Sayfa sayısı iki okumada farklı')->assertSee('Alt başlık');
 
         $this->put(route('admin.imports.update', $item), [
             'title' => "Almanya'nın Kısa Tarihi", 'author' => 'Mary Fulbrook', 'publisher' => 'Boğaziçi Üniversitesi Yayınevi',
             'category' => 'Tarih / Avrupa Tarihi', 'isbn' => '978-605-4238-60-6', 'pages' => 318, 'code' => 'akt-583',
+            'subtitle' => 'Acemi Bir Boksörün Defterleri',
         ])->assertRedirect(route('admin.imports.show', $item->batch_id));
 
         $item->refresh();
@@ -202,6 +203,7 @@ class ImportTest extends TestCase
         $this->assertNotNull($item->reviewed_at);
         $p->refresh();
         $this->assertSame(318, $p->page_count);
+        $this->assertSame('Acemi Bir Boksörün Defterleri', $p->subtitle);
         $this->assertSame('AKT-583', $p->code);
         $this->assertSame('Tarih › Avrupa Tarihi', $p->category->fullName());
     }

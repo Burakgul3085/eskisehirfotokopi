@@ -288,6 +288,9 @@ class ImportItemProcessor
                 'page_count' => $data['pages'] ?? null,
                 'print_year' => $data['year'] ?? null,
             ], fn ($v) => $v !== null);
+            if (($values['subtitle'] ?? null) === '') {
+                $values['subtitle'] = null; // kontrol ekranında boş bırakılan alt başlık silinir
+            }
 
             // Açıklama (kapaktaki özellikler) yalnız boşsa yazılır; elle girilen açıklama korunur.
             if (! empty($data['description']) && (! $product || blank($product->description))) {

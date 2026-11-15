@@ -29,6 +29,7 @@
         <form method="post" action="{{ route('admin.imports.update', $item) }}" class="card space-y-4 p-5">
             @csrf @method('put')
             <x-field name="title" label="Kitap adı" :value="$values['title']" required />
+            <x-field name="subtitle" label="Alt başlık" :value="$values['subtitle']" help="İsteğe bağlı; ürün sayfasında adın altında görünür." />
             <div class="grid gap-4 sm:grid-cols-2">
                 <x-field name="author" label="Yazar" :value="$values['author']" />
                 <x-field name="publisher" label="Yayınevi" :value="$values['publisher']" help="Yoksa oluşturulur." />

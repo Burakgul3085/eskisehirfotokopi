@@ -123,6 +123,7 @@ class ImportController extends Controller
             'next' => $next,
             'values' => [
                 'title' => $p?->title ?? $item->parsed['title'] ?? '',
+                'subtitle' => $p?->subtitle ?? $item->parsed['subtitle'] ?? '',
                 'author' => $p?->author?->name ?? $item->parsed['author'] ?? '',
                 'publisher' => $p?->publisher?->name ?? $item->parsed['publisher'] ?? '',
                 'category' => $p?->category ? $p->category->fullName(' / ') : implode(' / ', $item->parsed['category'] ?? []),
@@ -137,6 +138,7 @@ class ImportController extends Controller
     {
         $data = $request->validate([
             'title' => ['required', 'string', 'max:255'],
+            'subtitle' => ['nullable', 'string', 'max:255'],
             'author' => ['nullable', 'string', 'max:255'],
             'publisher' => ['nullable', 'string', 'max:255'],
             'category' => ['nullable', 'string', 'max:500'],
@@ -155,6 +157,7 @@ class ImportController extends Controller
         try {
             [$product, , $issues] = $processor->apply([
                 'title' => trim($data['title']),
+                'subtitle' => trim((string) ($data['subtitle'] ?? '')), // boş bırakılırsa alt başlık silinir
                 'author' => $data['author'] ?? null,
                 'publisher' => $data['publisher'] ?? null,
                 'publisher_folder' => null,
