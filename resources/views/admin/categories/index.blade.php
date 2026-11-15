@@ -38,7 +38,7 @@
                         <td class="whitespace-nowrap text-right">
                             <form method="post" action="{{ route('admin.categories.move', $c['id']) }}" class="inline">@csrf<input type="hidden" name="dir" value="up"><button class="btn-ghost btn-sm" aria-label="Yukarı">↑</button></form>
                             <form method="post" action="{{ route('admin.categories.move', $c['id']) }}" class="inline">@csrf<input type="hidden" name="dir" value="down"><button class="btn-ghost btn-sm" aria-label="Aşağı">↓</button></form>
-                            <a href="{{ route('admin.categories.create', ['parent' => $c['id']]) }}" class="btn-ghost btn-sm"><x-icon name="plus" class="size-3.5" />Alt</a>
+                            @if ((int) $c['depth'] === 0)<a href="{{ route('admin.categories.create', ['parent' => $c['id']]) }}" class="btn-ghost btn-sm"><x-icon name="plus" class="size-3.5" />Alt</a>@endif
                             <a href="{{ route('admin.categories.edit', $c['id']) }}" class="btn-ghost btn-sm"><x-icon name="edit" class="size-3.5" /></a>
                             <form method="post" action="{{ route('admin.categories.destroy', $c['id']) }}" class="inline" data-confirm="“{{ $c['name'] }}” silinsin mi?">@csrf @method('delete')<button class="btn-ghost btn-sm text-danger" aria-label="Sil"><x-icon name="trash" class="size-3.5" /></button></form>
                         </td>

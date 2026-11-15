@@ -11,6 +11,7 @@ use App\Models\Category;
 use App\Models\Product;
 use App\Models\Publisher;
 use App\Support\Activity;
+use App\Support\ClassificationInput;
 use App\Support\Money;
 use App\Support\SpecInput;
 use App\Support\Text;
@@ -243,7 +244,7 @@ class ProductController extends Controller
             'isbn' => ['nullable', 'string', 'between:10,13', Rule::unique('products', 'isbn')->ignore($product)],
             'author' => ['nullable', 'string', 'max:150'],
             'publisher_id' => ['nullable', 'integer', 'exists:publishers,id'],
-            'category_id' => ['nullable', 'integer', 'exists:categories,id'],
+            ...ClassificationInput::rules(),
             'page_count' => ['nullable', 'integer', 'min:1', 'max:20000'],
             'print_year' => ['nullable', 'integer', 'min:1900', 'max:'.(now()->year + 1)],
             'description' => ['nullable', 'string', 'max:20000'],
@@ -254,6 +255,7 @@ class ProductController extends Controller
             ...SpecInput::rules(),
         ]);
         unset($data['spec_visibility'], $data['extra_specs']);
+        $data = ClassificationInput::from($request) + $data;
         $data += SpecInput::from($request);
         $prices = [];
         // Satış fiyatları sayfa sayısından hesaplanır (Product::booted); burada yalnız üstü çizili eski fiyatlar alınır.

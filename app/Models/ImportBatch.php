@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class ImportBatch extends Model
 {
-    protected $fillable = ['admin_id', 'name', 'source', 'status', 'total_items', 'checked_categories'];
+    protected $fillable = ['admin_id', 'name', 'source', 'status', 'total_items', 'checked_categories', 'default_category_id'];
 
     protected $casts = ['checked_categories' => 'array'];
 

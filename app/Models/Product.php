@@ -40,7 +40,7 @@ class Product extends Model
 
     protected $fillable = ['code', 'isbn', 'title', 'subtitle', 'slug', 'publisher_id', 'author_id', 'category_id', 'page_count', 'print_year',
         'description', 'price_bw', 'price_color', 'price_bw_2up', 'price_color_2up', 'compare_bw', 'compare_color', 'status', 'is_featured', 'image_key', 'image_width',
-        'image_height', 'sales_count', 'view_count', 'meta_title', 'meta_description', 'published_at', 'spec_visibility', 'extra_specs'];
+        'image_height', 'sales_count', 'view_count', 'meta_title', 'meta_description', 'published_at', 'spec_visibility', 'extra_specs', 'book_type', 'subject', 'topics'];
 
     /**
      * Müşteriye gösterilebilen ürün bilgileri (anahtar => ad). Her biri genel ayardan (Ayarlar › Ürün bilgileri)
@@ -48,7 +48,7 @@ class Product extends Model
      * varsayılanıdır; tek bir ek bilgi "ek:<etiket anahtarı>" ile ayrıca açılıp kapatılabilir.
      */
     public const SPECS = [
-        'author' => 'Yazar', 'publisher' => 'Yayınevi', 'category' => 'Kategori', 'pages' => 'Sayfa sayısı', 'year' => 'Baskı yılı',
+        'author' => 'Yazar', 'publisher' => 'Yayınevi', 'category' => 'Kategori', 'type' => 'Kitap türü', 'subject' => 'Ders', 'topics' => 'Konular', 'pages' => 'Sayfa sayısı', 'year' => 'Baskı yılı',
         'isbn' => 'ISBN', 'code' => 'Ürün kodu', 'print' => 'Baskı', 'extras' => 'Ek bilgiler',
     ];
 
@@ -56,7 +56,7 @@ class Product extends Model
     {
         return [
             'price_bw' => 'decimal:2', 'price_color' => 'decimal:2', 'price_bw_2up' => 'decimal:2', 'price_color_2up' => 'decimal:2', 'compare_bw' => 'decimal:2', 'compare_color' => 'decimal:2',
-            'is_featured' => 'boolean', 'published_at' => 'datetime', 'spec_visibility' => 'array', 'extra_specs' => 'array',
+            'is_featured' => 'boolean', 'published_at' => 'datetime', 'spec_visibility' => 'array', 'extra_specs' => 'array', 'topics' => 'array',
         ];
     }
 
@@ -70,7 +70,7 @@ class Product extends Model
             if ($p->isDirty('page_count') || ($p->page_count && $p->price_bw === null)) {
                 $p->fill(app(BookPricing::class)->prices($p->page_count ? (int) $p->page_count : null));
             }
-            if ($p->isDirty(['title', 'subtitle', 'code', 'isbn', 'author_id', 'publisher_id', 'category_id', 'extra_specs']) || $p->search_text === null) {
+            if ($p->isDirty(['title', 'subtitle', 'code', 'isbn', 'author_id', 'publisher_id', 'category_id', 'extra_specs', 'book_type', 'subject', 'topics']) || $p->search_text === null) {
                 $p->search_text = $p->buildSearchText();
             }
         });
@@ -102,6 +102,7 @@ class Product extends Model
     {
         // ISBN ve ürün kodu müşteriye gizlense de aramada bulunur (numarayla arayan doğru kitaba ulaşır).
         $parts = [$this->title, $this->subtitle, $this->code, $this->isbn, ...array_column($this->extras(), 'value'),
+            $this->book_type, $this->subject, ...($this->topics ?? []),
             $this->author_id ? Author::find($this->author_id)?->name : null,
             $this->publisher_id ? Publisher::find($this->publisher_id)?->name : null,
             $this->category_id ? Category::find($this->category_id)?->fullName(' ') : null];
@@ -187,6 +188,9 @@ class Product extends Model
             'author' => $this->author?->name,
             'publisher' => $this->publisher?->name,
             'category' => $trail->isNotEmpty() ? $trail->pluck('name')->implode(' › ') : null,
+            'type' => $this->book_type,
+            'subject' => $this->subject,
+            'topics' => $this->topics ? implode(', ', $this->topics) : null,
             'pages' => $this->page_count,
             'year' => $this->print_year,
             'isbn' => $this->isbn,

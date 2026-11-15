@@ -46,6 +46,7 @@ class CatalogAdminTest extends TestCase
 
     public function test_category_tree_paths_and_move(): void
     {
+        $this->withoutStarterCategories();
         $tree = app(CategoryTree::class);
         $leaf = $tree->ensurePath(['TARİH', 'Avrupa Tarihi', 'Almanya Tarihi']);
         $this->assertSame(2, $leaf->depth);
@@ -171,6 +172,7 @@ class CatalogAdminTest extends TestCase
 
     public function test_bulk_delete_categories_deepest_first(): void
     {
+        $this->withoutStarterCategories();
         $tree = app(CategoryTree::class);
         $leaf = $tree->ensurePath(['Ana', 'Alt', 'En Alt']);
         $alt = $leaf->parent;

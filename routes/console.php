@@ -1,5 +1,6 @@
 <?php
 
+use App\Domain\Catalog\CategoryFlattener;
 use App\Domain\Import\BookFiles;
 use App\Domain\Import\ImportBatchCreator;
 use App\Domain\Import\ImportItemProcessor;
@@ -127,3 +128,18 @@ Artisan::command('fotokopi:temizle', function (PrintFiles $files) {
 })->purpose('Süresi dolan fotokopi belgelerini siler');
 
 Schedule::command('fotokopi:temizle')->dailyAt('04:20');
+
+Artisan::command('kategori:sadelestir {--deneme : Değişiklik yapmadan ne olacağını göster}', function (CategoryFlattener $flattener) {
+    $deneme = (bool) $this->option('deneme');
+    $r = $flattener->run($deneme);
+    foreach ($r['moved'] as $m) {
+        $this->line("• {$m['product']}: ".($m['from'] ?? '—')." → {$m['to']}".($m['topics'] ? ' [konular: '.implode(', ', $m['topics']).']' : ''));
+    }
+    foreach ($r['unmatched'] as $u) {
+        $this->warn("Eşlenemedi (kategorisi yerinde kaldı): {$u['product']} ({$u['from']})");
+    }
+    foreach ($r['deleted'] as $d) {
+        $this->line("Silinen boş kategori: {$d}");
+    }
+    $this->info(($deneme ? '[Deneme] ' : '').count($r['moved']).' ürün güncellendi, '.count($r['unmatched']).' eşlenemedi, '.count($r['deleted']).' kategori silindi.');
+})->purpose('Derin kategori ağacını kısa düzene (en fazla iki kat) taşır; ayrıntılar konu etiketi olur');

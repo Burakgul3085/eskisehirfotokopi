@@ -49,9 +49,14 @@
                 <div><x-field name="author" label="Yazar" :value="$values['author']" />{!! $crop('author') !!}</div>
                 <div><x-field name="publisher" label="Yayınevi" :value="$values['publisher']" help="Yoksa oluşturulur." />{!! $crop('publisher') !!}</div>
             </div>
-            <div>
-                <x-field name="category" label="Kategori yolu" :value="$values['category']" help="Üst / Alt / Alt-alt (ör. Tarih / Avrupa Tarihi). Var olan kategoriler yeniden açılmaz, eksikler oluşturulur." />
+            <div class="space-y-4 rounded-xl border border-line p-4">
+                @if ($readPath !== '')
+                    <p class="text-sm"><span class="text-muted">Görselde “Türü”:</span> {{ $readPath }}</p>
+                @endif
                 {!! $crop('category') !!}
+                @include('admin.products._classification', ['values' => $values, 'help' => $readPath !== ''
+                    ? 'Seçtiğiniz kategori hatırlanır; aynı “Türü” sonraki yüklemelerde kendiliğinden bu kategoriye gider.'
+                    : null])
             </div>
             <div class="grid gap-4 sm:grid-cols-3">
                 <div><x-field name="isbn" label="ISBN" :value="$values['isbn']" />{!! $crop('isbn') !!}</div>

@@ -26,6 +26,7 @@ class StorefrontTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        $this->withoutStarterCategories();
         $tree = app(CategoryTree::class);
         $this->palme = Publisher::create(['name' => 'Palme Yayınları', 'slug' => 'palme', 'match_key' => 'palme', 'is_active' => true]);
         $this->hiz = Publisher::create(['name' => 'Hız Yayınları', 'slug' => 'hiz', 'match_key' => 'hiz', 'is_active' => true]);

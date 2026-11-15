@@ -31,13 +31,38 @@ class TitleCategory
     /** Ders adından atılan nitelik kelimeleri */
     private const MODIFIERS = ['konu', 'özetli', 'video', 'destekli', 'çözümlü', 'yeni', 'nesil', 've'];
 
-    /** @return list<string> */
+    /** Sınıf düzeyi → kategori adı (Sınav Hazırlık altında) */
+    public const GRADES = ['Ara Sınıflar' => '9|10|11|12', 'Ortaokul' => '5|6|7|8', 'İlkokul' => '1|2|3|4'];
+
+    /** Tanınan kitap türleri (yönetim formundaki öneri listesi). @return list<string> */
+    public static function types(): array
+    {
+        return array_values(self::TYPES);
+    }
+
+    /** Eski biçim (Tür › Sınav › Ders); yeni düzende parse() kullanılır. @return list<string> */
     public static function guess(?string $title): array
     {
+        $p = self::parse($title);
+
+        return array_values(array_filter([$p['type'], $p['exam'], $p['subject']]));
+    }
+
+    /**
+     * Kitap adından tür, sınav, sınıf düzeyi ve ders:
+     *   "345 TYT Matematik Soru Bankası 2024" → tür Soru Bankası, sınav TYT, ders Matematik
+     *   "10. Sınıf Fizik Konu Anlatımı"       → tür Konu Anlatımı, düzey Ara Sınıflar, ders Fizik
+     * "Deneme" yalnız sınav/düzey varsa tür sayılır (okuma kitaplarında "deneme" edebî türdür).
+     *
+     * @return array{type: ?string, exam: ?string, grade: ?string, subject: ?string}
+     */
+    public static function parse(?string $title): array
+    {
+        $none = ['type' => null, 'exam' => null, 'grade' => null, 'subject' => null];
         $title = trim(preg_replace('/\s+/u', ' ', (string) $title));
-        $title = trim(preg_replace('/\b(19|20)\d{2}$/u', '', $title));
+        $title = trim(preg_replace('/\b(19|20)\d{2}(\s*-\s*(19|20)?\d{2})?$/u', '', $title));
         if ($title === '') {
-            return [];
+            return $none;
         }
         $lower = Text::lower($title);
 
@@ -50,19 +75,40 @@ class TitleCategory
             }
         }
 
+        // Sınav adı ilk üç kelimeden birinde olabilir ("345 TYT Matematik", "Palme Yayınları AYT Fizik")
         $words = explode(' ', $title);
-        $exam = in_array(Text::upper($words[0]), self::EXAMS, true) ? Text::upper($words[0]) : null;
-        if ($type === null && $exam === null) {
-            return [];
+        $exam = null;
+        $examEnd = 0;
+        foreach (array_slice($words, 0, 4) as $i => $w) {
+            $up = Text::upper(trim($w, ',.:;-'));
+            if (in_array($up, self::EXAMS, true)) {
+                $exam = $up;
+                $examEnd = mb_strlen(implode(' ', array_slice($words, 0, $i + 1))) + 1;
+                break;
+            }
+        }
+        $grade = null;
+        if (preg_match('/\b('.implode('|', array_unique(explode('|', implode('|', self::GRADES)))).')\s*\.?\s*sınıf\b/u', $lower, $m, PREG_OFFSET_CAPTURE)) {
+            foreach (self::GRADES as $name => $list) {
+                if (in_array($m[1][0], explode('|', $list), true)) {
+                    $grade = $name;
+                }
+            }
+            $examEnd = max($examEnd, mb_strlen(substr($lower, 0, $m[0][1] + strlen($m[0][0]))) + 1);
+        }
+        if ($type === 'Deneme' && $exam === null && $grade === null) {
+            $type = null;
+        }
+        if ($type === null && $exam === null && $grade === null) {
+            return $none;
         }
 
-        // Ders: sınavdan sonra, türden önceki kelimeler (nitelikler ve sayılar atılır).
-        $start = $exam !== null ? mb_strlen($words[0]) + 1 : 0;
-        $middle = mb_substr($title, $start, $typeAt !== null ? max(0, $typeAt - $start) : null);
+        // Ders: sınavdan/düzeyden sonra, türden önceki kelimeler (nitelikler ve sayılar atılır).
+        $middle = mb_substr($title, $examEnd, $typeAt !== null ? max(0, $typeAt - $examEnd) : null);
         $subject = implode(' ', array_filter(explode(' ', trim($middle)),
-            fn ($w) => $w !== '' && ! preg_match('/^\d+$/', $w) && ! in_array(Text::lower($w), self::MODIFIERS, true)));
+            fn ($w) => $w !== '' && ! preg_match('/^\d+\.?$/', $w) && ! in_array(Text::lower($w), self::MODIFIERS, true)));
         $subject = $subject !== '' && mb_strlen($subject) <= 60 ? CategoryTree::displayName($subject) : null;
 
-        return array_values(array_filter([$type, $exam, $subject]));
+        return ['type' => $type, 'exam' => $exam, 'grade' => $grade, 'subject' => $subject];
     }
 }

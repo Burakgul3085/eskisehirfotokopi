@@ -2,10 +2,12 @@
 
 namespace App\Domain\Import;
 
+use App\Domain\Catalog\CategoryMapper;
 use App\Domain\Catalog\CategoryTree;
 use App\Domain\Catalog\ProductImages;
 use App\Domain\Import\Ocr\OcrEngine;
 use App\Models\Author;
+use App\Models\Category;
 use App\Models\ImportItem;
 use App\Models\Product;
 use App\Models\Publisher;
@@ -38,6 +40,7 @@ class ImportItemProcessor
         private InfoSheetParser $parser,
         private CategoryTree $tree,
         private ProductImages $images,
+        private CategoryMapper $mapper,
     ) {}
 
     public function process(ImportItem $item): void
@@ -48,6 +51,8 @@ class ImportItemProcessor
 
         try {
             [$data, $issues, $ocrText] = $this->read($item);
+            $data['default_category_id'] = $item->batch?->default_category_id;
+            $data['info_read'] = (bool) $item->info_path;
             [$product, $action, $applyIssues] = $this->apply($data, $item->product);
             $issues = [...$issues, ...$applyIssues];
 
@@ -220,23 +225,19 @@ class ImportItemProcessor
             }
         }
 
+        // "Türü" yolu ağaca eklenmez: apply() kısa listeden kategori seçer, kalan ayrıntılar konu etiketi olur.
+        // Kitap türü (Soru Bankası…) ve ders (Matematik…) kitap adından okunur; bunlar kategori değil, süzgeçtir.
         $categoryPath = self::splitCategory($f['category'] ?? null);
-        if (! $categoryPath && $categoryPath = TitleCategory::guess($title)) {
-            // "Türü" yok: kitap adından tahmin (Soru Bankası › TYT › Biyoloji); kontrol ekranında düzeltilebilir.
-            if ($infoPath) {
-                $issues[] = 'Türü okunamadı; kategori kitap adından tahmin edildi: '.implode(' › ', $categoryPath).'.';
-            }
-        } elseif ($infoPath && ! $categoryPath) {
-            $issues[] = 'Türü okunamadı; ürün kategorisiz kaldı.';
-        }
+        $fromTitle = TitleCategory::parse($title);
 
-        // Düşük güvenli okuma uyarısı, değer klasörle doğrulandıysa ya da kategori adları tanındıysa gereksizdir.
+        // Düşük güvenli okuma uyarısı, değer klasörle doğrulandıysa gereksizdir. "Türü" kategoriye eşlenirken ayrıca
+        // denetlenir (eşlenemezse uyarı apply()'dan gelir).
         $confirmed = [
             'author' => $authorConfirmed,
             'publisher' => $folder['publisher'] && $publisherOcr && Publisher::sameName($folder['publisher'], $publisherOcr),
-            'category' => $categoryPath && collect($categoryPath)->every(fn ($n) => $this->tree->closestName($n) !== null),
+            'category' => true,
         ];
-        foreach (['author' => 'Yazar', 'publisher' => 'Yayınevi', 'category' => 'Türü', 'code' => 'Ürün kodu'] as $k => $label) {
+        foreach (['author' => 'Yazar', 'publisher' => 'Yayınevi', 'code' => 'Ürün kodu'] as $k => $label) {
             if (! ($confirmed[$k] ?? false) && isset($ocr['conf'][$k], $f[$k]) && $f[$k] !== null && $ocr['conf'][$k] < 45) {
                 $issues[] = "{$label} düşük güvenle okundu: “{$f[$k]}”.";
             }
@@ -268,6 +269,8 @@ class ImportItemProcessor
             'publisher' => $publisherOcr && $publisher && Publisher::matchKey($publisherOcr) === Publisher::matchKey($publisher) ? $publisherOcr : $publisher,
             'publisher_folder' => $folder['publisher'],
             'category' => $categoryPath,
+            'book_type' => $fromTitle['type'],
+            'subject' => $fromTitle['subject'],
             'isbn' => $isbn,
             'pages' => $pages,
             'year' => $year,
@@ -295,17 +298,29 @@ class ImportItemProcessor
 
         // Yayınevi ve kategori oluşturma yarışını önlemek için kısa kilit (paralel işçiler aynı yayınevini iki kez açmasın).
         // Daha önce açılmış yayınevi, kategori ve yazar yeniden açılmaz: adın yazımı/OCR hatası farklı olsa da eşlenir.
-        $this->tree->created = [];
-        [$publisher, $category, $author] = Cache::lock('import-taxonomy', 30)->block(30, function () use ($data) {
+        // Kategori: kontrol ekranında seçildiyse o; değilse "Türü" yolu ve kitap adı kısa listeye eşlenir (yeni dal açılmaz).
+        [$publisher, $mapped, $author] = Cache::lock('import-taxonomy', 30)->block(30, function () use ($data) {
+            $this->mapper->flush();
+
             return [
                 $this->resolvePublisher($data['publisher'] ?? null, $data['publisher_folder'] ?? null),
-                ! empty($data['category']) ? $this->tree->ensurePath($data['category'], fuzzy: true) : null,
+                array_key_exists('category_id', $data)
+                    ? ['category' => $data['category_id'] ? Category::find($data['category_id']) : null, 'topics' => $data['topics'] ?? [], 'matched' => true, 'created' => []]
+                    : $this->mapper->map($data['category'] ?? [], $data['title'], $data['default_category_id'] ?? null),
                 Author::resolve($data['author'] ?? null),
             ];
         });
-        $this->createdCategories = $this->tree->created;
+        $category = $mapped['category'];
+        $this->createdCategories = $mapped['created'];
+        if (! $mapped['matched'] && ! empty($data['category'])) {
+            $issues[] = 'Türü (“'.implode(' / ', $data['category']).'”) kategorilerden birine eşlenemedi'
+                .($category ? "; yüklemenin varsayılan kategorisi ({$category->name}) verildi" : '; ürün kategorisiz kaldı')
+                .'. Kontrol ekranında kategori seçin; seçiminiz sonraki yüklemelerde hatırlanır.';
+        } elseif (! $category && ! array_key_exists('category_id', $data) && ! empty($data['info_read'])) {
+            $issues[] = 'Türü okunamadı; ürün kategorisiz kaldı. Kontrol ekranında kategori seçin.';
+        }
 
-        return DB::transaction(function () use ($data, $product, $publisher, $category, $author, $issues) {
+        return DB::transaction(function () use ($data, $product, $publisher, $category, $mapped, $author, $issues) {
             $matched = $product === null;
             $product ??= $this->match($data, $publisher?->id);
             $action = $product ? 'updated' : 'created';
@@ -327,6 +342,8 @@ class ImportItemProcessor
                 'publisher_id' => $publisher?->id,
                 'author_id' => $author?->id,
                 'category_id' => $category?->id,
+                'book_type' => $data['book_type'] ?? null,
+                'subject' => $data['subject'] ?? null,
                 'isbn' => $isbn,
                 'code' => $code,
                 'page_count' => $data['pages'] ?? null,
@@ -335,6 +352,11 @@ class ImportItemProcessor
             // Eşleşen mevcut üründe ad yalnız yazımca farklıysa ("Almanyanın" / "Almanya'nın") mevcut yazım korunur.
             if ($matched && $product && self::titleKey($product->title) === self::titleKey($data['title'])) {
                 unset($values['title']);
+            }
+            if (array_key_exists('category_id', $data)) { // kontrol ekranı: boş bırakılan alan silinir
+                foreach (['category_id', 'book_type', 'subject'] as $k) {
+                    $values[$k] = $data[$k] ?? null;
+                }
             }
             if (($values['subtitle'] ?? null) === '') {
                 $values['subtitle'] = null; // kontrol ekranında boş bırakılan alt başlık silinir
@@ -361,6 +383,14 @@ class ImportItemProcessor
                     }
                 }
                 $values['extra_specs'] = $rows ?: null;
+            }
+
+            // Konu etiketleri: kontrol ekranından gelen liste olduğu gibi; OCR'den gelenler mevcutlara eklenir.
+            if (array_key_exists('topics', $data) && array_key_exists('category_id', $data)) {
+                $values['topics'] = array_values(array_filter($data['topics'] ?? [])) ?: null;
+            } elseif ($mapped['topics']) {
+                $topics = collect([...($product?->topics ?? []), ...$mapped['topics']])->unique(fn ($t) => Text::key($t))->values()->all();
+                $values['topics'] = $topics;
             }
 
             // Açıklama (kapaktaki özellikler) yalnız boşsa yazılır; elle girilen açıklama korunur.

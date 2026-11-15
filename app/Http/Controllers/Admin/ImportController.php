@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Domain\Catalog\CategoryMapper;
 use App\Domain\Catalog\CategoryTree;
 use App\Domain\Import\ImportBatchCreator;
 use App\Domain\Import\ImportItemProcessor;
@@ -14,6 +15,7 @@ use App\Models\ImportBatch;
 use App\Models\ImportItem;
 use App\Models\Product;
 use App\Support\Activity;
+use App\Support\ClassificationInput;
 use App\Support\SpecInput;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -49,6 +51,7 @@ class ImportController extends Controller
         return view('admin.imports.create', [
             'maxMb' => config('catalog.import_max_mb'),
             'ocrReady' => app(OcrEngine::class)->available(),
+            'categories' => app(CategoryTree::class)->flat()->where('depth', '<=', 1),
         ]);
     }
 
@@ -56,6 +59,7 @@ class ImportController extends Controller
     {
         $data = $request->validate([
             'name' => ['required', 'string', 'max:255'],
+            'category_id' => ['nullable', 'integer', 'exists:categories,id'],
             'books' => ['required', 'array', 'min:1', 'max:30000'],
             'books.*.publisher_folder' => ['nullable', 'string', 'max:255'],
             'books.*.folder' => ['required', 'string', 'max:255'],
@@ -65,7 +69,7 @@ class ImportController extends Controller
             'books.*.imprint' => ['nullable', 'string', 'max:255'],
         ]);
 
-        $result = $creator->create($data['name'], array_values($data['books']), $request->user('admin')->id);
+        $result = $creator->create($data['name'], array_values($data['books']), $request->user('admin')->id, defaultCategoryId: $data['category_id'] ?? null);
         Activity::log('import.started', $result['batch'], ['books' => count($data['books']), 'new' => $result['batch']->total_items]);
 
         return response()->json([
@@ -208,6 +212,8 @@ class ImportController extends Controller
         return view('admin.imports.review', [
             'item' => $item,
             'next' => $next,
+            'categories' => app(CategoryTree::class)->flat(),
+            'readPath' => implode(' / ', $item->parsed['category'] ?? []),
             'crops' => collect(array_keys(ImportItemProcessor::FIELD_LABELS))->filter(fn ($f) => isset($boxes[$f]))
                 ->mapWithKeys(fn ($f) => [$f => route('admin.imports.crop', [$item, $f])])->all(),
             'values' => [
@@ -215,7 +221,10 @@ class ImportController extends Controller
                 'subtitle' => $p?->subtitle ?? $item->parsed['subtitle'] ?? '',
                 'author' => $p?->author?->name ?? $item->parsed['author'] ?? '',
                 'publisher' => $p?->publisher?->name ?? $item->parsed['publisher'] ?? '',
-                'category' => $p?->category ? $p->category->fullName(' / ') : implode(' / ', $item->parsed['category'] ?? []),
+                'category_id' => $p?->category_id,
+                'book_type' => $p?->book_type ?? $item->parsed['book_type'] ?? null,
+                'subject' => $p?->subject ?? $item->parsed['subject'] ?? null,
+                'topics' => $p?->topics ?? [],
                 'isbn' => $p?->isbn ?? $item->parsed['isbn'] ?? '',
                 'pages' => $p?->page_count ?? $item->parsed['pages'] ?? '',
                 'code' => $p?->code ?? $item->parsed['code'] ?? '',
@@ -223,14 +232,14 @@ class ImportController extends Controller
         ]);
     }
 
-    public function update(Request $request, ImportItem $item, ImportItemProcessor $processor): RedirectResponse
+    public function update(Request $request, ImportItem $item, ImportItemProcessor $processor, CategoryMapper $mapper): RedirectResponse
     {
         $data = $request->validate([
             'title' => ['required', 'string', 'max:255'],
             'subtitle' => ['nullable', 'string', 'max:255'],
             'author' => ['nullable', 'string', 'max:255'],
             'publisher' => ['nullable', 'string', 'max:255'],
-            'category' => ['nullable', 'string', 'max:500'],
+            ...ClassificationInput::rules(),
             'isbn' => ['nullable', 'string', 'max:20'],
             'pages' => ['nullable', 'integer', 'min:1', 'max:5000'],
             'code' => ['nullable', 'string', 'max:40'],
@@ -251,7 +260,7 @@ class ImportController extends Controller
                 'author' => $data['author'] ?? null,
                 'publisher' => $data['publisher'] ?? null,
                 'publisher_folder' => null,
-                'category' => ImportItemProcessor::splitCategory($data['category'] ?? null),
+                ...ClassificationInput::from($request),
                 'isbn' => $isbn,
                 'pages' => $data['pages'] ?? null,
                 'code' => ! empty($data['code']) ? strtoupper(trim($data['code'])) : null,
@@ -264,6 +273,10 @@ class ImportController extends Controller
             return back()->withErrors(['isbn' => implode(' ', $issues)])->withInput();
         }
 
+        // Seçilen kategori hatırlanır: aynı "Türü" yolu sonraki yüklemelerde kendiliğinden bu kategoriye gider.
+        if ($product->category && ! empty($item->parsed['category'])) {
+            $mapper->remember($item->parsed['category'], $product->category);
+        }
         $item->update(['status' => 'imported', 'product_id' => $product->id, 'reviewed_at' => now(), 'error' => null]);
         $item->batch?->refreshStatus();
         Activity::log('import.reviewed', $product);

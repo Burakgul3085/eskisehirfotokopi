@@ -59,8 +59,9 @@ class ImportTest extends TestCase
 
     public function test_ocr_noise_is_cleaned_subtitle_kept_and_categories_corrected(): void
     {
-        // Mevcut doğru kategori; OCR "Popüler Bilim"i "Port ir Bilim", "Oyunculuk"u "Üyunculuk" okumuş.
-        app(CategoryTree::class)->ensurePath(['Popüler Bilim', 'Fizik']);
+        // OCR "Popüler Bilim"i "Port ir Bilim", "Oyunculuk"u "Üyunculuk" okumuş: kısa listedeki Popüler Bilim seçilir,
+        // ayrıntılar (düzeltilmiş) konu etiketi olur; yeni kategori açılmaz.
+        $before = Category::count();
         $this->useOcr(FakeOcrEngine::sample([
             'publisher' => ['Yayınevi', 'Boğaziçi Yayınları'],
             'category' => ['Türü', '* Port ir Bilim / Fizik / Üyunculuk'],
@@ -70,8 +71,9 @@ class ImportTest extends TestCase
         $p = Product::with('category')->findOrFail($item->product_id);
         $this->assertSame("Almanya'nın Kısa Tarihi", $p->title);
         $this->assertSame('Bir Ulusun Doğuşu', $p->subtitle);
-        $this->assertSame('Popüler Bilim › Fizik › Oyunculuk', $p->category->fullName());
-        $this->assertSame(1, Category::whereNull('parent_id')->count());
+        $this->assertSame('Okuma Kitapları › Popüler Bilim', $p->category->fullName());
+        $this->assertSame(['Fizik', 'Oyunculuk'], $p->topics);
+        $this->assertSame($before, Category::count());
         // Alt başlık ve kısa yayınevi adı "kontrol gerekli" sebebi değil
         $this->assertSame('imported', $item->status, json_encode($item->issues));
 
@@ -113,13 +115,13 @@ class ImportTest extends TestCase
     public function test_category_merge_moves_products_and_merges_same_named_children(): void
     {
         $tree = app(CategoryTree::class);
-        $good = $tree->ensurePath(['Tarih', 'Dünya Tarihi']);
+        $good = $tree->ensurePath(['Eski Tarih', 'Dünya Tarihi']);
         $bad = $tree->ensurePath(['Ah', 'Dünya Tarihi', 'Rusya Tarihi']);
         $p = Product::create(['title' => 'Rusya', 'slug' => 'rusya', 'category_id' => $bad->id]);
 
-        $tree->merge(Category::where('name', 'Ah')->first(), Category::where('name', 'Tarih')->first());
+        $tree->merge(Category::where('name', 'Ah')->first(), Category::where('name', 'Eski Tarih')->first());
 
-        $this->assertSame('Tarih › Dünya Tarihi › Rusya Tarihi', $p->fresh()->category->fullName());
+        $this->assertSame('Eski Tarih › Dünya Tarihi › Rusya Tarihi', $p->fresh()->category->fullName());
         $this->assertSame(1, Category::where('name', 'Dünya Tarihi')->count());
         $this->assertNull(Category::where('name', 'Ah')->first());
         $this->assertTrue($good->fresh()->children()->exists());
@@ -136,7 +138,8 @@ class ImportTest extends TestCase
         $this->assertSame('AKT-583', $p->code);
         $this->assertSame('Mary Fulbrook', $p->author->name);
         $this->assertSame('Boğaziçi Üniversitesi Yayınevi', $p->publisher->name);
-        $this->assertSame('Tarih › Avrupa Tarihi › Almanya Tarihi', $p->category->fullName());
+        $this->assertSame('Okuma Kitapları › Tarih', $p->category->fullName()); // derin dal açılmaz
+        $this->assertSame(['Avrupa Tarihi', 'Almanya Tarihi'], $p->topics);
         $this->assertSame('draft', $p->status);                 // fiyat Excel ile gelecek
         $this->assertNotNull($p->image_key);
         Storage::disk('public')->assertExists("products/{$p->image_key}/md.webp");
@@ -198,7 +201,7 @@ class ImportTest extends TestCase
 
         $this->put(route('admin.imports.update', $item), [
             'title' => "Almanya'nın Kısa Tarihi", 'author' => 'Mary Fulbrook', 'publisher' => 'Boğaziçi Üniversitesi Yayınevi',
-            'category' => 'Tarih / Avrupa Tarihi', 'isbn' => '978-605-4238-60-6', 'pages' => 318, 'code' => 'akt-583',
+            'category_id' => Category::where('name', 'Tarih')->value('id'), 'topics' => 'Avrupa Tarihi, Almanya Tarihi', 'isbn' => '978-605-4238-60-6', 'pages' => 318, 'code' => 'akt-583',
             'subtitle' => 'Acemi Bir Boksörün Defterleri',
         ])->assertRedirect(route('admin.imports.show', $item->batch_id));
 
@@ -209,7 +212,8 @@ class ImportTest extends TestCase
         $this->assertSame(318, $p->page_count);
         $this->assertSame('Acemi Bir Boksörün Defterleri', $p->subtitle);
         $this->assertSame('AKT-583', $p->code);
-        $this->assertSame('Tarih › Avrupa Tarihi', $p->category->fullName());
+        $this->assertSame('Okuma Kitapları › Tarih', $p->category->fullName());
+        $this->assertSame(['Avrupa Tarihi', 'Almanya Tarihi'], $p->topics);
     }
 
     public function test_without_ocr_engine_folder_name_is_used_and_marked_for_review(): void
@@ -221,7 +225,7 @@ class ImportTest extends TestCase
         $p = $item->product;
         $this->assertSame("Almanya'nın Kısa Tarihi", $p->title);
         $this->assertSame('Mary Fulbrook', $p->author->name);
-        $this->assertSame(0, Category::count());
+        $this->assertNull($p->category_id);
     }
 
     public function test_soru_bankasi_folder_without_separators_and_bulk_approve(): void
@@ -272,7 +276,10 @@ class ImportTest extends TestCase
         $this->assertSame('Aycan Söylemez', $p->author->name);
         $this->assertSame(2022, $p->print_year);
         $this->assertSame("• Kavramlarla Konu Özeti\n• Kazanım Odaklı Konu Testi", $p->description);
-        $this->assertSame('Soru Bankası › TYT › Tarih', $p->category->fullName());
+        // Sınav kitabı: kategori kısa (Sınav Hazırlık › TYT); tür ve ders süzgeç olarak ayrı alanda
+        $this->assertSame('Sınav Hazırlık › TYT', $p->category->fullName());
+        $this->assertSame('Soru Bankası', $p->book_type);
+        $this->assertSame('Tarih', $p->subject);
         $this->assertContains('Yazar kapaktan okundu: “Aycan Söylemez”; doğruluğunu kontrol edin.', $item->issues);
         $this->assertNull($item->cover_path); // okunduktan sonra silinir
         $this->assertStringContainsString('--- Kapak ---', $item->ocr_text);

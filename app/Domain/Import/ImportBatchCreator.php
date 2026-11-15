@@ -17,7 +17,7 @@ class ImportBatchCreator
      * @param  list<array{publisher_folder: ?string, folder: string, info: ?string, mockup: ?string, cover?: ?string, imprint?: ?string}>  $books
      * @return array{batch: ImportBatch, items: array<int, int|null>} items: kitap sırası => kalem id (atlandıysa null)
      */
-    public function create(string $name, array $books, ?int $adminId, string $source = 'upload'): array
+    public function create(string $name, array $books, ?int $adminId, string $source = 'upload', ?int $defaultCategoryId = null): array
     {
         $fingerprints = [];
         foreach ($books as $i => $b) {
@@ -32,7 +32,7 @@ class ImportBatchCreator
                 });
         }
 
-        $batch = ImportBatch::create(['admin_id' => $adminId, 'name' => mb_substr($name, 0, 255), 'source' => $source, 'status' => 'uploading']);
+        $batch = ImportBatch::create(['admin_id' => $adminId, 'name' => mb_substr($name, 0, 255), 'source' => $source, 'status' => 'uploading', 'default_category_id' => $defaultCategoryId]);
         $ids = [];
         $seen = [];
         $now = now();

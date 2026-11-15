@@ -35,8 +35,16 @@
         @php($chipList = $children->isNotEmpty() ? $children : ($chips ?? collect()))
         @if ($chipList->isNotEmpty())
             <div class="-mx-4 mt-5 flex gap-2 overflow-x-auto px-4 pb-1 [scrollbar-width:none] sm:mx-0 sm:flex-wrap sm:px-0">
+                @isset($publisher)
+                    {{-- Yayınevi sayfasında çipler yayınevinin içinde süzer (TYT, AYT, Ara Sınıflar…) --}}
+                    @php($activeChip = (int) request('kategori'))
+                    <a href="{{ route('publisher.show', [$publisher, ...request()->except(['kategori', 'page'])]) }}"
+                       class="shrink-0 rounded-full border px-4 py-2 text-sm font-medium {{ $activeChip ? 'border-line bg-white hover:border-primary' : 'border-primary bg-primary-soft text-primary-dark' }}">{{ $allLabel ?? 'Tümü' }}</a>
+                @endisset
                 @foreach ($chipList as $chip)
-                    <a href="{{ route('category.show', $chip) }}" class="shrink-0 rounded-full border border-line bg-white px-4 py-2 text-sm font-medium hover:border-primary hover:bg-primary-soft hover:text-primary-dark">
+                    @php($chipActive = isset($publisher) && (int) request('kategori') === $chip->id)
+                    <a href="{{ isset($publisher) ? route('publisher.show', [$publisher, ...request()->except(['kategori', 'page']), 'kategori' => $chip->id]) : route('category.show', $chip) }}"
+                       class="shrink-0 rounded-full border px-4 py-2 text-sm font-medium hover:border-primary hover:bg-primary-soft hover:text-primary-dark {{ $chipActive ? 'border-primary bg-primary-soft text-primary-dark' : 'border-line bg-white' }}">
                         {{ $chip->name }}@isset($chip->products_count)<span class="ml-1 text-xs text-muted">{{ $chip->products_count }}</span>@endisset
                     </a>
                 @endforeach
@@ -53,6 +61,26 @@
                     <form method="get" x-bind:class="slideInClass" class="mt-3 hidden space-y-5 rounded-2xl border border-line/70 bg-white p-4 lg:mt-0 lg:block [&.translate-x-0]:block">
                         @if (isset($search) && $search !== '')<input type="hidden" name="q" value="{{ $search }}">@endif
                         <input type="hidden" name="sirala" value="{{ $sort }}">
+                        @if (request('kategori'))<input type="hidden" name="kategori" value="{{ (int) request('kategori') }}">@endif
+
+                        @foreach (['tur' => ['types', 'Kitap türü'], 'ders' => ['subjects', 'Ders']] as $param => [$facetKey, $legend])
+                            @if (($facets[$facetKey] ?? collect())->count() > 1 || request($param))
+                                <fieldset>
+                                    <legend class="mb-2 text-sm font-bold">{{ $legend }}</legend>
+                                    <div class="max-h-60 space-y-1 overflow-y-auto pr-1">
+                                        <label class="flex cursor-pointer items-center gap-2 rounded-lg px-1.5 py-1 text-sm hover:bg-surface">
+                                            <input type="radio" name="{{ $param }}" value="" @checked(! request($param)) class="accent-primary" data-autosubmit> <span class="flex-1">Tümü</span>
+                                        </label>
+                                        @foreach ($facets[$facetKey] as $value => $count)
+                                            <label class="flex cursor-pointer items-center gap-2 rounded-lg px-1.5 py-1 text-sm hover:bg-surface">
+                                                <input type="radio" name="{{ $param }}" value="{{ $value }}" @checked(request($param) === (string) $value) class="accent-primary" data-autosubmit>
+                                                <span class="flex-1 truncate">{{ $value }}</span><span class="text-xs text-muted">{{ $count }}</span>
+                                            </label>
+                                        @endforeach
+                                    </div>
+                                </fieldset>
+                            @endif
+                        @endforeach
 
                         @if (! isset($publisher) && $facets['publishers']->count() > 1)
                             <fieldset x-data="filterList">

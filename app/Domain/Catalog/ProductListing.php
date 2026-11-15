@@ -15,6 +15,7 @@ use Illuminate\Support\Facades\DB;
 /**
  * Vitrin ürün listeleri (kategori, yayınevi, arama) için ortak filtre ve sıralama. Filtreler URL'de tutulur
  * (paylaşılabilir, SEO uyumlu): ?yayinevi[]=3&tip=renkli&min=50&max=200&yil=2025&sirala=fiyat-artan
+ * Yayınevi sayfasında kategori, kitap türü ve ders de süzülür: ?kategori=12&tur=Soru+Bankası&ders=Matematik
  */
 class ProductListing
 {
@@ -85,6 +86,15 @@ class ProductListing
         if ($year = (int) $request->query('yil')) {
             $query->where('print_year', $year);
         }
+        if (($catId = (int) $request->query('kategori')) && ($cat = Category::query()->active()->find($catId))) {
+            $query->whereIn('category_id', Category::query()->active()->where('path', 'like', $cat->path.'%')->pluck('id')->all());
+        }
+        if (is_string($type = $request->query('tur')) && $type !== '') {
+            $query->where('book_type', mb_substr($type, 0, 40));
+        }
+        if (is_string($subject = $request->query('ders')) && $subject !== '') {
+            $query->where('subject', mb_substr($subject, 0, 60));
+        }
 
         return $query;
     }
@@ -123,7 +133,7 @@ class ProductListing
     /**
      * Filtre paneli için yayınevleri (sonuçtaki ürün sayısıyla), yıllar ve fiyat aralığı.
      *
-     * @return array{publishers: Collection, years: Collection, price: array{min: ?float, max: ?float}}
+     * @return array{publishers: Collection, years: Collection, types: Collection, subjects: Collection, price: array{min: ?float, max: ?float}}
      */
     public function facets(Builder $base): array
     {
@@ -134,9 +144,15 @@ class ProductListing
         $years = (clone $base)->whereNotNull('print_year')->distinct()->orderByDesc('print_year')->limit(15)->pluck('print_year');
         $price = Product::query()->whereIn('id', $ids)->selectRaw('MIN('.self::PRICE.') as mn, MAX('.self::PRICE.') as mx')->first();
 
+        // Kitap türü ve ders (sonuçtaki ürün sayısıyla): soru bankası yayınevinde "Soru Bankası 40, Deneme 12"
+        $counted = fn (string $col) => (clone $base)->whereNotNull($col)->where($col, '!=', '')
+            ->select($col, DB::raw('count(*) as c'))->groupBy($col)->orderByDesc('c')->orderBy($col)->limit(40)->pluck('c', $col);
+
         return [
             'publishers' => $publishers,
             'years' => $years,
+            'types' => $counted('book_type'),
+            'subjects' => $counted('subject'),
             'price' => ['min' => $price?->mn !== null ? floor((float) $price->mn) : null, 'max' => $price?->mx !== null ? ceil((float) $price->mx) : null],
         ];
     }
@@ -147,6 +163,7 @@ class ProductListing
         return count(array_filter([
             (array) $request->query('yayinevi', []),
             $request->query('yazar'), $request->query('tip'), $request->query('min'), $request->query('max'), $request->query('yil'),
+            $request->query('kategori'), $request->query('tur'), $request->query('ders'),
         ], fn ($v) => $v !== null && $v !== '' && $v !== []));
     }
 }

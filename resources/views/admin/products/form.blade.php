@@ -24,13 +24,7 @@
                         </select>
                     </div>
                 </div>
-                <div>
-                    <label class="field-label" for="f_category_id">Kategori</label>
-                    <select id="f_category_id" name="category_id" class="field-input">
-                        <option value="">—</option>
-                        @foreach ($categories as $c)<option value="{{ $c['id'] }}" @selected((int) old('category_id', $product->category_id) === $c['id'])>{{ str_repeat('— ', $c['depth']) }}{{ $c['name'] }}</option>@endforeach
-                    </select>
-                </div>
+                @include('admin.products._classification', ['values' => ['category_id' => $product->category_id, 'book_type' => $product->book_type, 'subject' => $product->subject, 'topics' => $product->topics]])
                 <div class="grid gap-5 sm:grid-cols-4">
                     <x-field name="isbn" label="ISBN" :value="$product->isbn" class="sm:col-span-2" />
                     <x-field name="code" label="Ürün kodu" :value="$product->code" />

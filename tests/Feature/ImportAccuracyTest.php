@@ -149,14 +149,9 @@ class ImportAccuracyTest extends TestCase
 
     public function test_existing_publisher_category_author_and_product_are_not_opened_again(): void
     {
-        $tree = app(CategoryTree::class);
-        $tree->ensurePath(['Tarih', 'Dünya Tarihi']);
         $this->useOcr(FakeOcrEngine::sample(['code' => null, 'category' => ['Türü', 'Tarih / Avrupa Tarihi / Almanya Tarihi']]));
         $first = $this->importBook();
-        $this->assertEqualsCanonicalizing(
-            Category::whereIn('name', ['Avrupa Tarihi', 'Almanya Tarihi'])->pluck('id')->all(),
-            $first->parsed['new_categories'],
-        );
+        $this->assertSame([], $first->parsed['new_categories']); // kısa listedeki Tarih seçildi, dal açılmadı
         $counts = fn () => [Product::count(), Publisher::count(), Author::count(), Category::count()];
         $before = $counts();
 
@@ -172,9 +167,6 @@ class ImportAccuracyTest extends TestCase
         $this->assertSame($first->product_id, $second->product_id);
         $this->assertSame([], $second->parsed['new_categories']);
 
-        // Yolun ilk adı en üstte yok ama ağaçta tek yerde var: yeniden açılmaz
-        $this->assertSame('Tarih › Dünya Tarihi › Rusya Tarihi', $tree->ensurePath(['Dünya Tarihi', 'Rusya Tarihi'], fuzzy: true)->fullName());
-        $this->assertSame(1, Category::where('name', 'Dünya Tarihi')->count());
         $this->assertSame(Author::where('match_key', 'mary fulbrook')->value('id'), Author::resolve('Fulbrook Mary')->id);
     }
 
@@ -249,17 +241,18 @@ class ImportAccuracyTest extends TestCase
 
     public function test_new_categories_can_be_confirmed_or_merged(): void
     {
+        // Kısa listede olmayan sınav adı ("MSÜ") kitap adından okunursa Sınav Hazırlık altına açılır ve panelde görünür
         $tree = app(CategoryTree::class);
-        $tree->ensurePath(['Tarih', 'Avrupa Tarihi']);
-        $this->useOcr(FakeOcrEngine::sample(['category' => ['Türü', 'Tarih / Avrupa Tarihi / Almanya Tarihi']]));
-        $item = $this->importBook();
-        $new = Category::where('name', 'Almanya Tarihi')->firstOrFail();
+        $this->useOcr(FakeOcrEngine::sample([], 'MSÜ Tarih Soru Bankası'));
+        $item = $this->importBook('BOĞAZİÇİ ÜNİVERSİTESİ YAYINLARI - MSÜ TARİH SORU BANKASI - MARY FULBROOK');
+        $new = Category::where('name', 'MSÜ')->firstOrFail();
+        $this->assertSame('Sınav Hazırlık › MSÜ', $item->product->category->fullName());
         $batch = ImportBatch::findOrFail($item->batch_id);
 
-        $this->get(route('admin.imports.show', $batch))->assertOk()->assertSee('Bu yüklemede açılan yeni kategoriler (1)')->assertSee('Tarih › Avrupa Tarihi › Almanya Tarihi');
-        $this->post(route('admin.imports.category.merge', [$batch, $new]), ['into' => Category::where('name', 'Avrupa Tarihi')->value('id')])->assertRedirect();
+        $this->get(route('admin.imports.show', $batch))->assertOk()->assertSee('Bu yüklemede açılan yeni kategoriler (1)')->assertSee('Sınav Hazırlık › MSÜ');
+        $this->post(route('admin.imports.category.merge', [$batch, $new]), ['into' => Category::where('name', 'TYT')->value('id')])->assertRedirect();
         $this->assertNull(Category::find($new->id));
-        $this->assertSame('Tarih › Avrupa Tarihi', $item->product->fresh()->category->fullName());
+        $this->assertSame('Sınav Hazırlık › TYT', $item->product->fresh()->category->fullName());
         $this->get(route('admin.imports.show', $batch))->assertDontSee('Bu yüklemede açılan yeni kategoriler');
 
         $other = $tree->ensurePath(['Felsefe']);

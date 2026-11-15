@@ -303,6 +303,8 @@ export function folderImport() {
             try {
                 res = await this.request(urls.store, JSON.stringify({
                     name: rootName,
+                    // Türü eşlenemeyen kitapların gideceği kategori (isteğe bağlı)
+                    category_id: this.$refs.defaultCategory ? this.$refs.defaultCategory.value || null : null,
                     books: books.map((b) => ({
                         publisher_folder: b.publisher_folder,
                         folder: b.folder,

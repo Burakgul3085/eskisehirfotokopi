@@ -53,6 +53,15 @@
                     </tbody>
                 </table>
             </div>
+            <div class="max-w-md">
+                <label class="field-label" for="f_default_category">Varsayılan kategori (isteğe bağlı)</label>
+                <select id="f_default_category" x-ref="defaultCategory" class="field-input">
+                    <option value="">— Seçilmedi —</option>
+                    @foreach ($categories as $c)<option value="{{ $c['id'] }}">{{ $c['depth'] ? '— ' : '' }}{{ $c['name'] }}</option>@endforeach
+                </select>
+                <p class="field-help">Kitaplar “Türü” bilgisine göre kısa kategori listesine yerleştirilir; eşlenemeyen kitaplar buraya gider
+                    (ör. bir soru bankası yayınevi için “Sınav Hazırlık”). Yayınevi ayrıca kendi sayfasında toplanır.</p>
+            </div>
             <div class="flex flex-wrap gap-2">
                 <button type="button" class="btn-primary" x-on:click="start"><x-icon name="upload" class="size-4" />Yüklemeyi başlat</button>
                 <button type="button" class="btn-ghost" x-on:click="reset">Vazgeç</button>

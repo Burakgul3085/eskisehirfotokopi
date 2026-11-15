@@ -18,6 +18,9 @@ use Illuminate\View\View;
 /** Kategori ağacı yönetimi: sınırsız derinlik, taşıma, sıralama, ürün sayıları. */
 class CategoryController extends Controller
 {
+    /** Kategoriler en fazla iki kat: ana kategori › alt kategori (yayınevi, kitap türü ve ders ayrı süzgeçtir). */
+    private const DEPTH_ERROR = 'Kategoriler en fazla iki kat olabilir: yalnız ana kategori seçin (alt kategorisi olan kategori başka bir kategorinin altına taşınamaz).';
+
     public function __construct(private CategoryTree $tree) {}
 
     public function index(): View
@@ -31,7 +34,7 @@ class CategoryController extends Controller
     {
         return view('admin.categories.form', [
             'category' => new Category(['is_active' => true, 'show_in_menu' => true, 'parent_id' => $request->integer('parent') ?: null]),
-            'parents' => $this->tree->flat(),
+            'parents' => $this->tree->flat()->where('depth', 0), // en fazla iki kat: yalnız ana kategoriler üst olabilir
         ]);
     }
 
@@ -39,6 +42,9 @@ class CategoryController extends Controller
     {
         $data = $this->validated($request);
         $parent = $request->filled('parent_id') ? Category::findOrFail($request->integer('parent_id')) : null;
+        if ($parent && $parent->depth > 0) {
+            return back()->withInput()->withErrors(['parent_id' => self::DEPTH_ERROR]);
+        }
         if (Category::where('parent_id', $parent?->id)->where('normalized_name', Text::key($data['name']))->exists()) {
             return back()->withInput()->withErrors(['name' => 'Bu üst kategoride aynı adlı bir kategori var.']);
         }
@@ -53,7 +59,7 @@ class CategoryController extends Controller
     {
         return view('admin.categories.form', [
             'category' => $category,
-            'parents' => $this->tree->flat()->reject(fn ($c) => str_starts_with($c['path'], $category->path)),
+            'parents' => $this->tree->flat()->where('depth', 0)->reject(fn ($c) => str_starts_with($c['path'], $category->path)),
         ]);
     }
 
@@ -61,6 +67,9 @@ class CategoryController extends Controller
     {
         $data = $this->validated($request);
         $parent = $request->filled('parent_id') ? Category::findOrFail($request->integer('parent_id')) : null;
+        if ($parent && ($parent->depth > 0 || ($parent->id !== $category->parent_id && $category->children()->exists()))) {
+            return back()->withInput()->withErrors(['parent_id' => self::DEPTH_ERROR]);
+        }
         $dup = Category::where('parent_id', $parent?->id)->where('normalized_name', Text::key($data['name']))->whereKeyNot($category->id)->exists();
         if ($dup) {
             return back()->withInput()->withErrors(['name' => 'Bu üst kategoride aynı adlı bir kategori var.']);
