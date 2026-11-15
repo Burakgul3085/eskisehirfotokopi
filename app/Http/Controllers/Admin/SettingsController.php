@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Mail\SiteMail;
+use App\Models\Product;
 use App\Support\Activity;
 use App\Support\Money;
 use App\Support\Settings;
@@ -23,6 +24,7 @@ class SettingsController extends Controller
         'teslimat' => 'Teslimat ve sipariş',
         'iletisim' => 'İletişim ve sosyal medya',
         'gorunum' => 'Görünüm',
+        'urun-bilgileri' => 'Ürün bilgileri',
         'seo' => 'SEO',
         'eposta' => 'E-posta',
     ];
@@ -73,6 +75,10 @@ class SettingsController extends Controller
             ]),
             'teslimat' => $this->delivery($request),
             'gorunum' => $this->appearance($request),
+            'urun-bilgileri' => ['hidden_specs' => implode(',', array_values(array_intersect(
+                array_keys(Product::SPECS),
+                array_keys(array_filter((array) $request->validate(['show' => ['nullable', 'array']])['show'] ?? [], fn ($v) => $v !== '1'))
+            )))],
             'seo' => $request->validate([
                 'meta_title' => ['nullable', 'string', 'max:70'],
                 'meta_description' => ['nullable', 'string', 'max:170'],

@@ -20,6 +20,7 @@ class Settings
         // Genel
         'site_name' => 'Eskişehir Fotokopi',
         'site_tagline' => 'Kitap, soru bankası ve belge baskısı kapınıza gelsin',
+        'hidden_specs' => '',            // müşteriye varsayılan olarak gösterilmeyen ürün bilgileri (Product::SPECS anahtarları, virgülle)
         'announcement' => null,          // üst duyuru şeridi (boşsa gösterilmez)
         'announcement_link' => null,
         'store_open' => '1',             // kapalıyken vitrinde bakım sayfası gösterilir (yöneticiler görür)
@@ -126,6 +127,12 @@ printer|Belge baskısı|Belgeni yükle, biz basalım', // simge|Başlık|Açıkl
         $saved = Cache::memo()->rememberForever(self::CACHE_KEY, fn () => Setting::query()->pluck('value', 'key')->all());
 
         return array_merge(self::DEFAULTS, array_intersect_key($saved, self::DEFAULTS));
+    }
+
+    /** @return list<string> */
+    public static function hiddenSpecs(): array
+    {
+        return array_values(array_filter(array_map('trim', explode(',', (string) self::get('hidden_specs')))));
     }
 
     public static function get(string $key, ?string $default = null): ?string

@@ -2,18 +2,24 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Domain\Catalog\CategoryTree;
 use App\Domain\Import\ImportBatchCreator;
 use App\Domain\Import\ImportItemProcessor;
 use App\Domain\Import\Isbn;
 use App\Domain\Import\Ocr\OcrEngine;
 use App\Http\Controllers\Controller;
 use App\Jobs\ProcessImportItem;
+use App\Models\Category;
 use App\Models\ImportBatch;
 use App\Models\ImportItem;
+use App\Models\Product;
 use App\Support\Activity;
+use App\Support\SpecInput;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
@@ -109,7 +115,86 @@ class ImportController extends Controller
             ->orderByRaw("FIELD(status, 'review', 'failed', 'processing', 'queued', 'waiting_files', 'imported', 'skipped')")
             ->orderBy('id')->paginate(50)->withQueryString();
 
-        return view('admin.imports.show', ['batch' => $batch, 'items' => $items, 'counts' => $batch->counts(), 'status' => $status]);
+        return view('admin.imports.show', [
+            'batch' => $batch, 'items' => $items, 'counts' => $batch->counts(), 'status' => $status,
+            'newCategories' => $this->newCategories($batch),
+            'categories' => app(CategoryTree::class)->flat(),
+            'specOptions' => Product::specOptions(),
+        ]);
+    }
+
+    /**
+     * Bu yüklemede açılan ve henüz "doğru" denmemiş kategoriler (silinmiş/birleştirilmiş olanlar düşer).
+     *
+     * @return Collection<int, Category>
+     */
+    private function newCategories(ImportBatch $batch): Collection
+    {
+        $ids = $batch->items()->pluck('parsed')->flatMap(fn ($p) => (is_array($p) ? $p : (json_decode((string) $p, true) ?: []))['new_categories'] ?? [])
+            ->unique()->diff($batch->checked_categories ?? []);
+
+        return Category::whereIn('id', $ids)->withCount('products')->orderBy('path')->get();
+    }
+
+    /** Yüklemedeki tüm ürünlerde bir bilginin müşteriye gösterimini değiştirir (ör. ISBN'i gizle). */
+    public function specs(Request $request, ImportBatch $batch): RedirectResponse
+    {
+        $data = $request->validate([
+            'spec' => ['required', 'string', 'max:80', 'regex:/^('.implode('|', array_keys(Product::SPECS)).'|ek:[a-z0-9 ]+)$/'],
+            'state' => ['required', Rule::in(['show', 'hide', 'default'])],
+        ]);
+        $ids = $batch->items()->whereNotNull('product_id')->pluck('product_id');
+        $n = Product::setSpecVisibility($ids, $data['spec'], ['show' => true, 'hide' => false, 'default' => null][$data['state']]);
+        Activity::log('import.specs', null, ['batch' => $batch->id] + $data + ['count' => $n]);
+
+        return back()->with('status', "{$n} üründe bilgi gösterimi güncellendi.");
+    }
+
+    public function checkCategory(ImportBatch $batch, Category $category): RedirectResponse
+    {
+        $batch->update(['checked_categories' => array_values(array_unique([...($batch->checked_categories ?? []), $category->id]))]);
+
+        return back()->with('status', "“{$category->name}” doğru olarak işaretlendi.");
+    }
+
+    /** Yanlış açılmış kategoriyi doğru olana katar: ürünleri ve alt kategorileri taşınır, kendisi silinir. */
+    public function mergeCategory(Request $request, ImportBatch $batch, Category $category, CategoryTree $tree): RedirectResponse
+    {
+        $data = $request->validate(['into' => ['required', 'integer', 'exists:categories,id', Rule::notIn([$category->id])]], [
+            'into.required' => 'Birleştirilecek kategoriyi seçin.',
+        ]);
+        $into = Category::findOrFail($data['into']);
+        if (str_starts_with($into->path, $category->path)) {
+            return back()->withErrors(['into' => 'Kategori kendi alt kategorisine katılamaz.']);
+        }
+        $name = $category->fullName();
+        $tree->merge($category, $into);
+        Activity::log('categories.merged', $into, ['from' => $name]);
+
+        return back()->with('status', "“{$name}”, “{$into->fullName()}” kategorisine katıldı.");
+    }
+
+    /** Kontrol ekranı: bilgi görselinden bir alanın okunduğu bölge (görselde ne yazdığını yan yana görmek için). */
+    public function crop(ImportItem $item, string $field): Response
+    {
+        $box = $item->parsed['boxes'][$field] ?? null;
+        abort_unless($box && $item->info_path && Storage::disk('local')->exists($item->info_path), 404);
+        $img = @imagecreatefromstring(Storage::disk('local')->get($item->info_path));
+        abort_unless($img !== false, 404);
+        $scale = (float) ($item->parsed['box_scale'] ?? 1) ?: 1.0;
+        [$x, $y, $w, $h] = array_map(fn ($v) => (int) round($v / $scale), $box);
+        $padX = 14;
+        $padY = 6;
+        $crop = imagecrop($img, [
+            'x' => max(0, $x - $padX), 'y' => max(0, $y - $padY),
+            'width' => min(imagesx($img) - max(0, $x - $padX), $w + 2 * $padX),
+            'height' => min(imagesy($img) - max(0, $y - $padY), $h + 2 * $padY),
+        ]);
+        abort_unless($crop !== false, 404);
+        ob_start();
+        imagepng($crop);
+
+        return response(ob_get_clean(), 200, ['Content-Type' => 'image/png', 'Cache-Control' => 'private, max-age=3600']);
     }
 
     public function review(ImportItem $item): View
@@ -118,9 +203,13 @@ class ImportController extends Controller
         $next = ImportItem::where('batch_id', $item->batch_id)->where('status', 'review')->whereKeyNot($item->id)->orderBy('id')->value('id');
         $p = $item->product;
 
+        $boxes = $item->info_path ? ($item->parsed['boxes'] ?? []) : [];
+
         return view('admin.imports.review', [
             'item' => $item,
             'next' => $next,
+            'crops' => collect(array_keys(ImportItemProcessor::FIELD_LABELS))->filter(fn ($f) => isset($boxes[$f]))
+                ->mapWithKeys(fn ($f) => [$f => route('admin.imports.crop', [$item, $f])])->all(),
             'values' => [
                 'title' => $p?->title ?? $item->parsed['title'] ?? '',
                 'subtitle' => $p?->subtitle ?? $item->parsed['subtitle'] ?? '',
@@ -145,6 +234,7 @@ class ImportController extends Controller
             'isbn' => ['nullable', 'string', 'max:20'],
             'pages' => ['nullable', 'integer', 'min:1', 'max:5000'],
             'code' => ['nullable', 'string', 'max:40'],
+            ...SpecInput::rules(),
         ]);
         $isbn = null;
         if (! empty($data['isbn'])) {
@@ -165,6 +255,7 @@ class ImportController extends Controller
                 'isbn' => $isbn,
                 'pages' => $data['pages'] ?? null,
                 'code' => ! empty($data['code']) ? strtoupper(trim($data['code'])) : null,
+                ...SpecInput::from($request),
             ], $item->product);
         } catch (Throwable $e) {
             return back()->withErrors(['title' => $e->getMessage()])->withInput();

@@ -78,9 +78,13 @@ class ImportTest extends TestCase
         // Görseldeki başlık "Ad — Yazar" biçimindeyse yazar alt başlık sayılmaz; OCR harf hatası klasörden düzelir.
         $this->useOcr(FakeOcrEngine::sample(['code' => ['Ürün Kodu', 'AKT-999']], "\Mimanya'nın Kısa Tarihi — Mary Fulbrook"));
         $item = $this->importBook('BOĞAZİÇİ ÜNİVERSİTESİ YAYINLARI - ALMANYANIN KISA TARİHİ - MARY FULBROOK');
+        $this->assertNull($item->parsed['subtitle']);
+        $this->assertSame('Almanyanın Kısa Tarihi', $item->parsed['title']);
+        // Aynı yayınevinde yazımca aynı kitap yeniden açılmaz; mevcut adı ve alt başlığı korunur
         $p = Product::findOrFail($item->product_id);
-        $this->assertSame('Almanyanın Kısa Tarihi', $p->title);
-        $this->assertNull($p->subtitle);
+        $this->assertSame(1, Product::count());
+        $this->assertSame("Almanya'nın Kısa Tarihi", $p->title);
+        $this->assertSame('Bir Ulusun Doğuşu', $p->subtitle);
     }
 
     public function test_turkish_letters_multi_authors_and_garbled_empty_markers(): void

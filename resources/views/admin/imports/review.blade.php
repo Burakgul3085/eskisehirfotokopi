@@ -4,6 +4,12 @@
         @if ($next)<a href="{{ route('admin.imports.review', $next) }}" class="btn-ghost btn-sm">Atla<x-icon name="chevron-right" class="size-4" /></a>@endif
     </x-slot:actions>
 
+    @php
+        // Alanın görseldeki kesiti: yazılanla görselde okunanı yan yana görmek için
+        $crop = fn (string $field) => isset($crops[$field])
+            ? '<span class="mt-1.5 flex items-center gap-2 text-xs text-muted">Görselde: <img src="'.e($crops[$field]).'" alt="" loading="lazy" class="max-h-9 max-w-full rounded border border-line bg-white"></span>'
+            : '';
+    @endphp
 
     <div class="grid gap-5 xl:grid-cols-2">
         <div class="space-y-4">
@@ -12,6 +18,9 @@
                 <p class="font-semibold">{{ $item->folder }}</p>
                 @if ($item->issues)
                     <ul class="mt-3 space-y-1 rounded-lg bg-warning-soft p-3 text-sm text-warning">@foreach ($item->issues as $i)<li>• {{ $i }}</li>@endforeach</ul>
+                @endif
+                @if (! empty($item->parsed['language']))
+                    <p class="mt-2 text-xs text-muted">Görselde tanınan ikinci dil: {{ ['deu' => 'Almanca', 'ita' => 'İtalyanca', 'fra' => 'Fransızca', 'spa' => 'İspanyolca', 'eng' => 'İngilizce'][$item->parsed['language']] ?? $item->parsed['language'] }}</p>
                 @endif
             </div>
             @if ($item->info_path)
@@ -28,18 +37,33 @@
 
         <form method="post" action="{{ route('admin.imports.update', $item) }}" class="card space-y-4 p-5">
             @csrf @method('put')
-            <x-field name="title" label="Kitap adı" :value="$values['title']" required />
-            <x-field name="subtitle" label="Alt başlık" :value="$values['subtitle']" help="İsteğe bağlı; ürün sayfasında adın altında görünür." />
+            <div>
+                <x-field name="title" label="Kitap adı" :value="$values['title']" required />
+                {!! $crop('title') !!}
+            </div>
+            <div>
+                <x-field name="subtitle" label="Alt başlık" :value="$values['subtitle']" help="İsteğe bağlı; ürün sayfasında adın altında görünür." />
+                {!! $crop('subtitle') !!}
+            </div>
             <div class="grid gap-4 sm:grid-cols-2">
-                <x-field name="author" label="Yazar" :value="$values['author']" />
-                <x-field name="publisher" label="Yayınevi" :value="$values['publisher']" help="Yoksa oluşturulur." />
+                <div><x-field name="author" label="Yazar" :value="$values['author']" />{!! $crop('author') !!}</div>
+                <div><x-field name="publisher" label="Yayınevi" :value="$values['publisher']" help="Yoksa oluşturulur." />{!! $crop('publisher') !!}</div>
             </div>
-            <x-field name="category" label="Kategori yolu" :value="$values['category']" help="Üst / Alt / Alt-alt (ör. Tarih / Avrupa Tarihi). Eksikler oluşturulur." />
+            <div>
+                <x-field name="category" label="Kategori yolu" :value="$values['category']" help="Üst / Alt / Alt-alt (ör. Tarih / Avrupa Tarihi). Var olan kategoriler yeniden açılmaz, eksikler oluşturulur." />
+                {!! $crop('category') !!}
+            </div>
             <div class="grid gap-4 sm:grid-cols-3">
-                <x-field name="isbn" label="ISBN" :value="$values['isbn']" />
-                <x-field name="pages" label="Sayfa sayısı" type="number" :value="$values['pages']" />
-                <x-field name="code" label="Ürün kodu" :value="$values['code']" />
+                <div><x-field name="isbn" label="ISBN" :value="$values['isbn']" />{!! $crop('isbn') !!}</div>
+                <div><x-field name="pages" label="Sayfa sayısı" type="number" :value="$values['pages']" />{!! $crop('pages') !!}</div>
+                <div><x-field name="code" label="Ürün kodu" :value="$values['code']" />{!! $crop('code') !!}</div>
             </div>
+
+            <details class="rounded-xl border border-line p-4" @if ($item->product?->extra_specs || $item->product?->spec_visibility) open @endif>
+                <summary class="cursor-pointer text-sm font-semibold">Müşteriye gösterilen bilgiler ve ek bilgiler</summary>
+                <div class="mt-4">@include('admin.products._specs', ['product' => $item->product])</div>
+            </details>
+
             @if ($item->ocr_text)
                 <details class="text-xs text-muted"><summary class="cursor-pointer">OCR ham metni</summary><pre class="mt-2 whitespace-pre-wrap rounded-lg bg-surface p-3 font-mono">{{ $item->ocr_text }}</pre></details>
             @endif

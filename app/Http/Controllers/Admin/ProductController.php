@@ -12,6 +12,7 @@ use App\Models\Product;
 use App\Models\Publisher;
 use App\Support\Activity;
 use App\Support\Money;
+use App\Support\SpecInput;
 use App\Support\Text;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
@@ -35,6 +36,7 @@ class ProductController extends Controller
         return view('admin.products.index', [
             'products' => $products,
             'categories' => $this->tree->flat(),
+            'specOptions' => Product::specOptions(),
             'publishers' => Publisher::orderBy('name')->get(['id', 'name']),
             'stats' => [
                 'total' => Product::count(),
@@ -129,9 +131,10 @@ class ProductController extends Controller
         $data = $request->validate([
             'ids' => ['required', 'array', 'min:1', 'max:1000'],
             'ids.*' => ['integer'],
-            'action' => ['required', Rule::in(['active', 'passive', 'draft', 'feature', 'unfeature', 'category', 'delete'])],
+            'action' => ['required', Rule::in(['active', 'passive', 'draft', 'feature', 'unfeature', 'category', 'delete', 'spec_show', 'spec_hide', 'spec_default'])],
             'category_id' => ['nullable', 'required_if:action,category', 'integer', 'exists:categories,id'],
-        ], ['ids.required' => 'Önce ürün seçin.']);
+            'spec' => ['nullable', 'required_if:action,spec_show,spec_hide,spec_default', 'string', 'max:80', 'regex:/^('.implode('|', array_keys(Product::SPECS)).'|ek:[a-z0-9 ]+)$/'],
+        ], ['ids.required' => 'Önce ürün seçin.', 'spec.required_if' => 'Gösterilecek/gizlenecek bilgiyi seçin.']);
         $query = Product::whereIn('id', $data['ids']);
         $n = 0;
         switch ($data['action']) {
@@ -151,6 +154,11 @@ class ProductController extends Controller
             case 'category':
                 $query->get()->each(fn ($p) => $p->update(['category_id' => $data['category_id']]));
                 $n = count($data['ids']);
+                break;
+            case 'spec_show':
+            case 'spec_hide':
+            case 'spec_default':
+                $n = Product::setSpecVisibility($data['ids'], $data['spec'], ['spec_show' => true, 'spec_hide' => false, 'spec_default' => null][$data['action']]);
                 break;
             case 'delete':
                 $query->get()->each(function ($p) {
@@ -243,7 +251,10 @@ class ProductController extends Controller
             'meta_title' => ['nullable', 'string', 'max:70'],
             'meta_description' => ['nullable', 'string', 'max:170'],
             'image' => ['nullable', 'image', 'max:15360'],
+            ...SpecInput::rules(),
         ]);
+        unset($data['spec_visibility'], $data['extra_specs']);
+        $data += SpecInput::from($request);
         $prices = [];
         // Satış fiyatları sayfa sayısından hesaplanır (Product::booted); burada yalnız üstü çizili eski fiyatlar alınır.
         foreach (['compare_bw', 'compare_color'] as $field) {

@@ -15,6 +15,55 @@
 
     <x-flash class="mb-5" />
 
+    @if ($newCategories->isNotEmpty())
+        <section class="card mb-5 p-5">
+            <h2 class="font-bold">Bu yüklemede açılan yeni kategoriler ({{ $newCategories->count() }})</h2>
+            <p class="mt-1 text-sm text-muted">Var olan kategoriler yeniden açılmadı; aşağıdakiler ilk kez oluşturuldu. Doğruysa “Doğru” deyin; okuma hatasıyla açıldıysa doğru kategoriye katın (ürünleri ve alt kategorileri taşınır).</p>
+            @error('into')<p class="field-error mt-2">{{ $message }}</p>@enderror
+            <ul class="mt-4 divide-y divide-line">
+                @foreach ($newCategories as $cat)
+                    <li class="flex flex-wrap items-center gap-3 py-2.5">
+                        <span class="min-w-0 flex-1">
+                            <span class="font-medium">{{ $cat->fullName() }}</span>
+                            <span class="text-xs text-muted">· {{ $cat->products_count }} ürün</span>
+                        </span>
+                        <form method="post" action="{{ route('admin.imports.category.check', [$batch, $cat]) }}">@csrf<button class="btn-ghost btn-sm"><x-icon name="check" class="size-4" />Doğru</button></form>
+                        <form method="post" action="{{ route('admin.imports.category.merge', [$batch, $cat]) }}" class="flex items-center gap-2" data-confirm="“{{ $cat->name }}” seçilen kategoriye katılsın mı? Ürünleri ve alt kategorileri taşınır, kendisi silinir.">
+                            @csrf
+                            <select name="into" class="field-input w-auto max-w-xs py-1.5 text-sm" required>
+                                <option value="">Şuna kat…</option>
+                                @foreach ($categories as $c)
+                                    @if ($c['id'] !== $cat->id)<option value="{{ $c['id'] }}">{{ str_repeat('— ', $c['depth']) }}{{ $c['name'] }}</option>@endif
+                                @endforeach
+                            </select>
+                            <button class="btn-ghost btn-sm">Birleştir</button>
+                        </form>
+                        <a href="{{ route('admin.categories.edit', $cat) }}" class="text-sm text-primary hover:underline">Adını düzelt</a>
+                    </li>
+                @endforeach
+            </ul>
+        </section>
+    @endif
+
+    @if ($items->total() && $counts['imported'] + $counts['review'] > 0)
+        <form method="post" action="{{ route('admin.imports.specs', $batch) }}" class="card mb-5 flex flex-wrap items-center gap-2 p-4 text-sm">
+            @csrf
+            <span class="font-semibold">Bu yüklemedeki tüm ürünlerde:</span>
+            <select name="spec" class="field-input w-auto py-1.5 text-sm" required>
+                <option value="">Bilgi seçin…</option>
+                @foreach ($specOptions as $k => $l)<option value="{{ $k }}">{{ $l }}</option>@endforeach
+            </select>
+            <select name="state" class="field-input w-auto py-1.5 text-sm">
+                <option value="hide">müşteriden gizle</option>
+                <option value="show">müşteriye göster</option>
+                <option value="default">genel ayara bırak</option>
+            </select>
+            <button class="btn-ghost btn-sm">Uygula</button>
+            @error('spec')<span class="field-error">{{ $message }}</span>@enderror
+            <span class="text-xs text-muted">Tek ürün için ürün sayfasını, tüm site için Ayarlar › Ürün bilgileri'ni kullanın.</span>
+        </form>
+    @endif
+
     <div class="mb-5 flex flex-wrap gap-2 text-sm">
         <a href="{{ route('admin.imports.show', $batch) }}" class="badge {{ $status ? 'bg-white text-muted ring-1 ring-line' : 'bg-primary text-white' }} px-3 py-1.5">Tümü ({{ array_sum($counts) }})</a>
         @foreach (\App\Models\ImportItem::STATUSES as $k => $label)

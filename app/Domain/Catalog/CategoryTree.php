@@ -21,6 +21,9 @@ class CategoryTree
     /** Büyük harfle kalacak kısaltmalar (ünlü içerdiği için kuralla yakalanamayanlar). */
     private const ACRONYMS = ['ALES', 'AYT', 'ÖABT', 'TUS', 'DUS', 'MSÜ', 'YÖKDİL', 'İELTS', 'IELTS', 'TOEFL', 'AÖF', 'AB', 'ABD', 'TC', 'TBMM', 'İSG', 'EKPSS', 'PMYO', 'POMEM', 'GRE', 'GMAT', 'İHL', 'TEOG', 'AUZEF', 'İÜ', 'ODTÜ', 'İTÜ', 'TDK', 'UK', 'USA', 'AİHM', 'AYM', 'HMGS', 'İYÖS', 'YÖS', 'ÖSYM', 'MEB', 'YDS', 'YDT', 'LGS', 'DGS', 'KPSS', 'TYT'];
 
+    /** @var list<int> bu nesnenin açtığı kategoriler (toplu yükleme, yeni açılanları yöneticiye göstermek için okur) */
+    public array $created = [];
+
     public function create(array $data, ?Category $parent = null): Category
     {
         return DB::transaction(function () use ($data, $parent) {
@@ -36,6 +39,7 @@ class CategoryTree
             ]);
             $category->update(['path' => ($parent?->path ?? '').$category->id.'/']);
             $this->flush();
+            $this->created[] = $category->id;
 
             return $category;
         });
@@ -111,6 +115,12 @@ class CategoryTree
                 $name = $fixed;
                 $existing = Category::where('parent_id', $parent?->id)->where('normalized_name', Text::key($name))->first();
             }
+            // Yolun ilk adı en üstte yoksa ama ağaçta tek bir yerde varsa ("Dünya Tarihi" → Tarih › Dünya Tarihi) aynısı
+            // yeniden açılmaz, o kategoriden devam edilir.
+            if (! $existing && $parent === null) {
+                $same = Category::where('normalized_name', Text::key($name))->limit(2)->get();
+                $existing = $same->count() === 1 ? $same->first() : null;
+            }
             $parent = $existing ?? $this->create(['name' => self::displayName($name)], $parent);
         }
 
@@ -150,6 +160,17 @@ class CategoryTree
         $kb = str_replace(' ', '', Text::key($b));
         if ($ka === '' || $kb === '' || $ka === $kb) {
             return $ka !== '' && $ka === $kb ? 1.0 : 0.0;
+        }
+        // Ortak kelimeleri olan, kelime sayısı aynı adlarda ayırt edici kısım ayrıca benzemeli: "Rusya Tarihi" ile
+        // "Dünya Tarihi" harfçe yakın ama farklı kategorilerdir. (Kelime sayısı farklıysa OCR kelimeyi bölmüştür:
+        // "Port ir Bilim" → "Popüler Bilim"; o durum aşağıdaki kurallarla değerlendirilir.)
+        $wa = explode(' ', Text::key($a));
+        $wb = explode(' ', Text::key($b));
+        $restA = implode('', array_diff($wa, $wb));
+        $restB = implode('', array_diff($wb, $wa));
+        if (count($wa) === count($wb) && count($wa) > 1 && $restA !== '' && $restB !== '' && count(array_intersect($wa, $wb)) > 0
+            && 1 - levenshtein($restA, $restB) / max(strlen($restA), strlen($restB)) < 0.75) {
+            return 0.0;
         }
         $max = max(strlen($ka), strlen($kb));
         $lev = levenshtein($ka, $kb);

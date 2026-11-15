@@ -3,8 +3,11 @@
 namespace App\Models;
 
 use App\Domain\Catalog\BookPricing;
+use App\Domain\Print\PrintOptions;
 use App\Domain\Print\PrintSettings;
 use App\Models\Concerns\HasUniqueSlug;
+use App\Support\EmptyValue;
+use App\Support\Settings;
 use App\Support\Text;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
@@ -37,13 +40,23 @@ class Product extends Model
 
     protected $fillable = ['code', 'isbn', 'title', 'subtitle', 'slug', 'publisher_id', 'author_id', 'category_id', 'page_count', 'print_year',
         'description', 'price_bw', 'price_color', 'price_bw_2up', 'price_color_2up', 'compare_bw', 'compare_color', 'status', 'is_featured', 'image_key', 'image_width',
-        'image_height', 'sales_count', 'view_count', 'meta_title', 'meta_description', 'published_at'];
+        'image_height', 'sales_count', 'view_count', 'meta_title', 'meta_description', 'published_at', 'spec_visibility', 'extra_specs'];
+
+    /**
+     * Müşteriye gösterilebilen ürün bilgileri (anahtar => ad). Her biri genel ayardan (Ayarlar › Ürün bilgileri)
+     * açılıp kapatılır; ürün kendi seçimini (spec_visibility) taşıyorsa o geçerlidir. "extras" tüm ek bilgilerin
+     * varsayılanıdır; tek bir ek bilgi "ek:<etiket anahtarı>" ile ayrıca açılıp kapatılabilir.
+     */
+    public const SPECS = [
+        'author' => 'Yazar', 'publisher' => 'Yayınevi', 'category' => 'Kategori', 'pages' => 'Sayfa sayısı', 'year' => 'Baskı yılı',
+        'isbn' => 'ISBN', 'code' => 'Ürün kodu', 'print' => 'Baskı', 'extras' => 'Ek bilgiler',
+    ];
 
     protected function casts(): array
     {
         return [
             'price_bw' => 'decimal:2', 'price_color' => 'decimal:2', 'price_bw_2up' => 'decimal:2', 'price_color_2up' => 'decimal:2', 'compare_bw' => 'decimal:2', 'compare_color' => 'decimal:2',
-            'is_featured' => 'boolean', 'published_at' => 'datetime',
+            'is_featured' => 'boolean', 'published_at' => 'datetime', 'spec_visibility' => 'array', 'extra_specs' => 'array',
         ];
     }
 
@@ -57,7 +70,7 @@ class Product extends Model
             if ($p->isDirty('page_count') || ($p->page_count && $p->price_bw === null)) {
                 $p->fill(app(BookPricing::class)->prices($p->page_count ? (int) $p->page_count : null));
             }
-            if ($p->isDirty(['title', 'subtitle', 'code', 'isbn', 'author_id', 'publisher_id', 'category_id']) || $p->search_text === null) {
+            if ($p->isDirty(['title', 'subtitle', 'code', 'isbn', 'author_id', 'publisher_id', 'category_id', 'extra_specs']) || $p->search_text === null) {
                 $p->search_text = $p->buildSearchText();
             }
         });
@@ -87,12 +100,139 @@ class Product extends Model
 
     public function buildSearchText(): string
     {
-        $parts = [$this->title, $this->subtitle, $this->code, $this->isbn,
+        // ISBN ve ürün kodu müşteriye gizlense de aramada bulunur (numarayla arayan doğru kitaba ulaşır).
+        $parts = [$this->title, $this->subtitle, $this->code, $this->isbn, ...array_column($this->extras(), 'value'),
             $this->author_id ? Author::find($this->author_id)?->name : null,
             $this->publisher_id ? Publisher::find($this->publisher_id)?->name : null,
             $this->category_id ? Category::find($this->category_id)?->fullName(' ') : null];
 
         return ' '.Text::key(implode(' ', array_filter($parts))).' ';
+    }
+
+    // ---- Ürün bilgileri (göster/gizle, ek bilgiler) ----
+
+    public static function extraKey(string $label): string
+    {
+        return 'ek:'.Text::key($label);
+    }
+
+    /**
+     * Ek bilgiler: boş olmayan ve "bilgi yok" anlamı taşımayan satırlar.
+     *
+     * @return list<array{label: string, value: string}>
+     */
+    public function extras(): array
+    {
+        $out = [];
+        foreach ($this->extra_specs ?? [] as $row) {
+            $label = trim((string) ($row['label'] ?? ''));
+            $value = trim((string) ($row['value'] ?? ''));
+            if ($label !== '' && ! EmptyValue::is($value)) {
+                $out[] = ['label' => $label, 'value' => $value];
+            }
+        }
+
+        return $out;
+    }
+
+    /**
+     * Toplu göster/gizle seçenekleri: standart bilgiler + ürünlerde geçen ek bilgi adları (anahtar => ad).
+     *
+     * @return array<string, string>
+     */
+    public static function specOptions(): array
+    {
+        $options = self::SPECS;
+        foreach (static::whereNotNull('extra_specs')->pluck('extra_specs') as $rows) {
+            foreach ($rows ?? [] as $row) {
+                if (($label = trim((string) ($row['label'] ?? ''))) !== '') {
+                    $options[self::extraKey($label)] ??= 'Ek bilgi: '.$label;
+                }
+            }
+        }
+
+        return $options;
+    }
+
+    /** Ürünün kendi seçimi: true/false; seçim yoksa null (genel ayar geçerli). */
+    public function specChoice(string $key): ?bool
+    {
+        $choices = $this->spec_visibility ?? [];
+
+        return array_key_exists($key, $choices) ? (bool) $choices[$key] : null;
+    }
+
+    public function specVisible(string $key): bool
+    {
+        if (($own = $this->specChoice($key)) !== null) {
+            return $own;
+        }
+        if (str_starts_with($key, 'ek:')) {
+            return $this->specVisible('extras');
+        }
+
+        return ! in_array($key, Settings::hiddenSpecs(), true);
+    }
+
+    /**
+     * Ürün sayfasındaki bilgi tablosu: ad => değer. Gizlenen ve "bilgi yok" anlamındaki değerler çıkarılır.
+     *
+     * @param  iterable<Category>  $trail  kategori yolu
+     * @param  list<string>  $types  satılan baskı tipleri
+     */
+    public function storefrontSpecs(iterable $trail = [], array $types = []): array
+    {
+        $trail = collect($trail);
+        $values = [
+            'author' => $this->author?->name,
+            'publisher' => $this->publisher?->name,
+            'category' => $trail->isNotEmpty() ? $trail->pluck('name')->implode(' › ') : null,
+            'pages' => $this->page_count,
+            'year' => $this->print_year,
+            'isbn' => $this->isbn,
+            'code' => $this->code,
+            'print' => $types ? implode(' / ', array_unique(array_map(fn ($t) => PrintOptions::COLORS[self::colorOf($t)], $types))).' · önlü arkalı' : null,
+        ];
+        $specs = [];
+        foreach ($values as $key => $value) {
+            if ($value !== null && $value !== '' && ! EmptyValue::is((string) $value) && $this->specVisible($key)) {
+                $specs[self::SPECS[$key]] = $value;
+            }
+            if ($key === 'code') {
+                foreach ($this->extras() as $row) {
+                    if ($this->specVisible(self::extraKey($row['label'])) && ! isset($specs[$row['label']])) {
+                        $specs[$row['label']] = $row['value'];
+                    }
+                }
+            }
+        }
+
+        return $specs;
+    }
+
+    /**
+     * Bilgi gösterimini toplu değiştirir: true (göster), false (gizle), null (ürün seçimini kaldır, genel ayar geçerli).
+     *
+     * @param  iterable<int>  $ids
+     */
+    public static function setSpecVisibility(iterable $ids, string $key, ?bool $visible): int
+    {
+        $n = 0;
+        static::whereIn('id', collect($ids)->all())->select('id', 'spec_visibility')->chunkById(200, function ($products) use ($key, $visible, &$n) {
+            foreach ($products as $p) {
+                $choices = $p->spec_visibility ?? [];
+                if ($visible === null) {
+                    unset($choices[$key]);
+                } else {
+                    $choices[$key] = $visible;
+                }
+                // saving olaylarını (fiyat, arama metni) tetiklemeden yalnız bu sütun yazılır
+                static::whereKey($p->id)->update(['spec_visibility' => $choices ? json_encode($choices) : null]);
+                $n++;
+            }
+        });
+
+        return $n;
     }
 
     // ---- Fiyat ve satış ----

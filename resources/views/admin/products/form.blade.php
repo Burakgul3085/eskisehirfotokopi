@@ -41,6 +41,10 @@
             </section>
 
             <section class="card p-6 sm:p-8">
+                @include('admin.products._specs', ['product' => $product->exists ? $product : null])
+            </section>
+
+            <section class="card p-6 sm:p-8">
                 <h2 class="font-bold">Fiyatlar</h2>
                 <p class="mt-1 text-sm text-muted">Fiyat elle girilmez: <strong>Sayfa</strong> alanındaki PDF sayfa sayısından, fotokopi ayarlarındaki yaprak fiyat kademeleriyle otomatik hesaplanır (1'e 1: sayfa ÷ 2 yaprak, 2'ye 2: sayfa ÷ 4 yaprak). Fotokopi fiyatlarını değiştirince tüm ürünler güncellenir.</p>
                 @if ($product->page_count)

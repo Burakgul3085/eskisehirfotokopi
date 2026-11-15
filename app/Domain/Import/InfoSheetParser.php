@@ -3,6 +3,7 @@
 namespace App\Domain\Import;
 
 use App\Domain\Import\Ocr\OcrWord;
+use App\Support\EmptyValue;
 use App\Support\Text;
 
 /**
@@ -11,13 +12,16 @@ use App\Support\Text;
  *
  * Kelimeler satırlara gruplanır; değer sütununun başlangıcı başlık satırındaki "Açıklama" kelimesinden veya etiketli
  * satırlardan bulunur. Etiketler bulanık eşleşir; OCR bir harfi yanlış okusa da ("Yazr", "lSBN") satır tanınır.
- * İki satıra taşan değerler (uzun "Türü") birleştirilir.
+ * İki satıra taşan değerler (uzun "Türü") birleştirilir. Tanınmayan etiketli satırlar ("Çevirmen", "Dil", "Kapak Türü")
+ * "ek bilgi" olarak döner; her kitabın tablosu farklı olabilir.
  */
 class InfoSheetParser
 {
     /** alan => etiket anahtarları (Text::key biçiminde) */
     public const LABELS = [
         'header' => ['urun bilgisi', 'bilgi', 'ozellik'],
+        'title' => ['kitap adi', 'urun adi', 'eser adi', 'kitabin adi'],
+        'subtitle' => ['alt baslik', 'alt basligi'],
         'code' => ['urun kodu', 'urun kod', 'kod', 'stok kodu'],
         'author' => ['yazar', 'yazari', 'yazarlar', 'yazar adi'],
         'publisher' => ['yayinevi', 'yayin evi', 'yayinci', 'yayinci firma'],
@@ -26,8 +30,6 @@ class InfoSheetParser
         'pages' => ['sayfa sayisi', 'sayfa', 'sayfa adedi'],
         'year' => ['baski yili', 'basim yili', 'yayin yili', 'yil'],
     ];
-
-    private const EMPTY_VALUES = ['henuz dogrulanmadi', 'dogrulanmadi', 'bilinmiyor', 'yok', 'belirtilmemis', 'n a', 'na', 'aciklama'];
 
     /**
      * @param  list<OcrWord>  $words
@@ -45,6 +47,8 @@ class InfoSheetParser
         $firstLabelIndex = null;
         $lastField = null;
         $lastLabelIndex = null;
+        $extras = [];
+        $lastRowIndex = null;
 
         foreach ($lines as $i => $line) {
             [$labelWords, $valueWords] = $this->split($line, $valueX);
@@ -58,6 +62,7 @@ class InfoSheetParser
             }
             if ($field !== null && ! array_key_exists($field, $fields)) {
                 $firstLabelIndex ??= $i;
+                $lastRowIndex = $i;
                 $fields[$field] = $this->text($valueWords);
                 $boxes[$field] = $this->box($valueWords);
                 $conf[$field] = $this->confidence($valueWords);
@@ -68,10 +73,33 @@ class InfoSheetParser
             }
             // Etiketsiz ve yalnız değer sütununda olan satır, hemen önceki alanın devamıdır (taşan "Türü").
             if ($field === null && $lastField !== null && $labelWords === [] && $valueWords !== [] && $i === $lastLabelIndex + 1) {
-                $fields[$lastField] = trim($fields[$lastField].' '.$this->text($valueWords));
+                if (str_starts_with($lastField, 'extra:')) {
+                    $n = (int) substr($lastField, 6);
+                    $extras[$n]['value'] = trim($extras[$n]['value'].' '.$this->text($valueWords));
+                } else {
+                    $fields[$lastField] = trim($fields[$lastField].' '.$this->text($valueWords));
+                }
                 $lastLabelIndex = $i;
+                $lastRowIndex = $i;
 
                 continue;
+            }
+            // Tablonun içinde (önceki satıra en fazla bir satır uzak) tanınmayan etiketli satır: ek bilgi
+            $tableTop = $headerIndex ?? $firstLabelIndex;
+            if ($field === null && $tableTop !== null && $labelWords !== [] && $valueWords !== [] && $i - ($lastRowIndex ?? $tableTop) <= 2) {
+                $label = trim($this->text($labelWords), ' 	:|;-');
+                // Etiket kısa bir ad olmalı ("Çevirmen", "Kapak Türü"); tablonun altındaki sohbet/açıklama cümleleri alınmaz.
+                $isLabel = mb_strlen(preg_replace('/[^\p{L}]/u', '', $label)) >= 3 && count($labelWords) <= 3 && mb_strlen($label) <= 30
+                    && ! preg_match('/[,.!?]/u', $label) && count($valueWords) <= 15;
+                if ($isLabel) {
+                    $extras[] = ['label' => $label, 'value' => $this->text($valueWords), 'box' => $this->box($valueWords),
+                        'conf' => $this->confidence($valueWords)];
+                    $lastField = 'extra:'.(count($extras) - 1);
+                    $lastLabelIndex = $i;
+                    $lastRowIndex = $i;
+
+                    continue;
+                }
             }
             $lastField = null;
         }
@@ -91,12 +119,18 @@ class InfoSheetParser
         foreach ($fields as $k => $v) {
             $fields[$k] = $this->clean($v);
         }
+        $extras = array_values(array_filter(array_map(function ($e) {
+            $e['value'] = $this->clean($e['value']);
+
+            return $e['value'] === null ? null : $e;
+        }, $extras)));
 
         return [
             'title' => $title !== null ? $this->clean($title) : null,
             'fields' => $fields,
             'boxes' => $boxes,
             'conf' => $conf,
+            'extras' => $extras,
             'lines' => array_map(fn ($l) => $this->text($l), $lines),
         ];
     }
@@ -250,19 +284,9 @@ class InfoSheetParser
         return $value;
     }
 
-    /** "Henüz doğrulanmadı" ve OCR'nin bozduğu biçimleri ("Henüz dogrulanm vt", "Henüz dağrulanmadı") boş sayılır. */
+    /** "Henüz doğrulanmadı", "Bulunamadı", "-" ve OCR'nin bozduğu biçimleri boş sayılır (EmptyValue). */
     public static function isEmptyMarker(string $value): bool
     {
-        $key = Text::key($value);
-        if (in_array($key, self::EMPTY_VALUES, true) || str_starts_with($key, 'henuz ')) {
-            return true;
-        }
-        foreach (self::EMPTY_VALUES as $empty) {
-            if (strlen($empty) >= 8 && 1 - levenshtein($key, $empty) / max(strlen($key), strlen($empty)) >= 0.7) {
-                return true;
-            }
-        }
-
-        return false;
+        return EmptyValue::is($value);
     }
 }

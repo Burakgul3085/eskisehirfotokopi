@@ -5,21 +5,14 @@
     $layoutHints = \App\Domain\Print\PrintOptions::LAYOUT_HINTS;
     $spiralPrice = app(\App\Domain\Print\PrintSettings::class)->get('spiral_price');
     $crumbs = $trail->map(fn ($c) => [$c->name, route('category.show', $c)])->push([$product->title, null])->all();
-    $specs = array_filter([
-        'Yazar' => $product->author?->name,
-        'Yayınevi' => $product->publisher?->name,
-        'Kategori' => $trail->isNotEmpty() ? $trail->pluck('name')->implode(' › ') : null,
-        'Sayfa sayısı' => $product->page_count,
-        'Baskı yılı' => $product->print_year,
-        'ISBN' => $product->isbn,
-        'Ürün kodu' => $product->code,
-        'Baskı' => $types ? implode(' / ', array_unique(array_map(fn ($t) => $colorNames[\App\Models\Product::colorOf($t)], $types))).' · önlü arkalı' : null,
-    ]);
+    // Gizlenen bilgiler (Ayarlar › Ürün bilgileri veya ürünün kendi seçimi) ve "bilgi yok" anlamındaki değerler çıkmaz.
+    $specs = $product->storefrontSpecs($trail, $types);
     $canBuy = $product->isPurchasable() && \Illuminate\Support\Facades\Route::has('cart.add');
     $schema = array_filter([
         '@context' => 'https://schema.org', '@type' => 'Product', 'name' => $product->title,
-        'image' => $product->imageAbsoluteUrl('lg'), 'sku' => $product->code, 'gtin13' => $product->isbn,
-        'brand' => $product->publisher ? ['@type' => 'Brand', 'name' => $product->publisher->name] : null,
+        'image' => $product->imageAbsoluteUrl('lg'), 'sku' => $product->specVisible('code') ? $product->code : null,
+        'gtin13' => $product->specVisible('isbn') ? $product->isbn : null,
+        'brand' => $product->publisher && $product->specVisible('publisher') ? ['@type' => 'Brand', 'name' => $product->publisher->name] : null,
         'offers' => $types ? ['@type' => 'AggregateOffer', 'priceCurrency' => 'TRY', 'lowPrice' => min(array_map(fn ($t) => (float) $product->price($t), $types)),
             'highPrice' => max(array_map(fn ($t) => (float) $product->price($t), $types)), 'offerCount' => count($types), 'availability' => 'https://schema.org/InStock'] : null,
     ]);
@@ -61,7 +54,7 @@
                 @endif
                 <h1 class="mt-2 text-2xl leading-tight font-extrabold sm:text-3xl">{{ $product->title }}</h1>
                 @if ($product->subtitle)<p class="mt-1 text-lg font-medium text-slate-600">{{ $product->subtitle }}</p>@endif
-                @if ($product->author)<p class="mt-2 text-muted">{{ $product->author->name }}</p>@endif
+                @if ($product->author && $product->specVisible('author'))<p class="mt-2 text-muted">{{ $product->author->name }}</p>@endif
 
                 <div class="mt-6 rounded-2xl border border-line/70 bg-white p-5">
                     @if ($types)

@@ -78,6 +78,9 @@ Route::prefix('yonetim')->name('admin.')->group(function () {
             Route::get('/{batch}/durum', 'status')->name('status');
             Route::post('/{batch}/hatalari-tekrarla', 'retryFailed')->name('retry-failed');
             Route::post('/{batch}/hepsini-onayla', 'approveAll')->name('approve-all');
+            Route::post('/{batch}/bilgi-gosterimi', 'specs')->name('specs');
+            Route::post('/{batch}/kategori/{category}/dogru', 'checkCategory')->name('category.check');
+            Route::post('/{batch}/kategori/{category}/birlestir', 'mergeCategory')->name('category.merge');
             Route::delete('/{batch}', 'destroy')->name('destroy');
             Route::get('/{batch}', 'show')->name('show');
             Route::get('/kalem/{item}', 'review')->name('review');
@@ -85,6 +88,7 @@ Route::prefix('yonetim')->name('admin.')->group(function () {
             Route::post('/kalem/{item}/onayla', 'approve')->name('approve');
             Route::post('/kalem/{item}/tekrarla', 'retry')->name('retry');
             Route::get('/kalem/{item}/gorsel', 'image')->name('image');
+            Route::get('/kalem/{item}/alan/{field}', 'crop')->name('crop')->where('field', '[a-z]+|extra:[0-9]+');
         });
 
         // Vitrin

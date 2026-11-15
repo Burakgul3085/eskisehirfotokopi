@@ -33,6 +33,29 @@ class Author extends Model
         }
         $key = Text::key($name);
 
-        return static::firstOrCreate(['match_key' => $key], ['name' => $name, 'slug' => static::uniqueSlug($name)]);
+        return static::where('match_key', $key)->first() ?? static::findSimilar($key)
+            ?? static::create(['match_key' => $key, 'name' => $name, 'slug' => static::uniqueSlug($name)]);
+    }
+
+    /**
+     * Daha önce açılmış aynı yazar: kelime sırası farklı ("Fulbrook Mary") ya da OCR'nin tek harf hatası
+     * ("Mary Fulbrok"; uzun adlarda iki harf). Kısa adlarda harf farkı farklı kişi olabileceğinden yalnız sıra eşleşir.
+     */
+    public static function findSimilar(string $key): ?self
+    {
+        $sorted = fn ($k) => implode(' ', collect(explode(' ', $k))->sort()->all());
+        $len = strlen($key);
+        foreach (static::query()->select('id', 'match_key')->cursor() as $author) {
+            if ($sorted($author->match_key) === $sorted($key)) {
+                return static::find($author->id);
+            }
+            $max = $len >= 16 ? 2 : ($len >= 10 ? 1 : 0);
+            if ($max > 0 && abs(strlen($author->match_key) - $len) <= $max && levenshtein($author->match_key, $key) <= $max
+                && substr_count($author->match_key, ' ') === substr_count($key, ' ')) {
+                return static::find($author->id);
+            }
+        }
+
+        return null;
     }
 }

@@ -10,6 +10,7 @@ use App\Models\ImportItem;
 use App\Models\Product;
 use App\Models\Publisher;
 use App\Models\PublisherAlias;
+use App\Support\EmptyValue;
 use App\Support\Text;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -26,6 +27,12 @@ use Throwable;
  */
 class ImportItemProcessor
 {
+    /** @var list<int> son apply() çağrısında açılan kategoriler */
+    private array $createdCategories = [];
+
+    /** Kitap Türkçe dışında bir dildeyse ı/i düzeltmesi yapılmaz ("DIE" Almancada "Die"dir, "Dıe" değil). */
+    private bool $turkishText = true;
+
     public function __construct(
         private OcrEngine $ocr,
         private InfoSheetParser $parser,
@@ -44,19 +51,24 @@ class ImportItemProcessor
             [$product, $action, $applyIssues] = $this->apply($data, $item->product);
             $issues = [...$issues, ...$applyIssues];
 
+            // Ürün görseli: MOCKUP; yoksa ve üründe görsel de yoksa KAPAK görseli kullanılır.
+            if ($item->mockup_path && $disk->exists($item->mockup_path)) {
+                $this->images->store($product, $disk->path($item->mockup_path));
+                $disk->delete($item->mockup_path);
+            } elseif (! $product->image_key && $item->cover_path && $disk->exists($item->cover_path)) {
+                $this->images->store($product, $disk->path($item->cover_path));
+                $issues[] = 'MOCKUP görseli yoktu; ürün görseli olarak kapak kullanıldı.';
+            } elseif (! $product->image_key) {
+                $issues[] = 'Ürün görseli yok (klasörde MOCKUP veya KAPAK adlı görsel bulunamadı); ürün sayfasından ekleyin.';
+            }
+
             // Kapak ve künye yalnız okunmak içindir; işlendikten sonra silinir.
             foreach (['cover_path', 'imprint_path'] as $col) {
                 if ($item->{$col}) {
                     $disk->delete($item->{$col});
                 }
             }
-
-            if ($item->mockup_path && $disk->exists($item->mockup_path)) {
-                $this->images->store($product, $disk->path($item->mockup_path));
-                $disk->delete($item->mockup_path);
-            } elseif (! $product->image_key) {
-                $issues[] = 'Ürün görseli yok (klasörde MOCKUP veya KAPAK adlı görsel bulunamadı); ürün sayfasından ekleyin.';
-            }
+            $data['new_categories'] = $this->createdCategories;
 
             $item->update([
                 'status' => $issues ? 'review' : 'imported',
@@ -91,7 +103,7 @@ class ImportItemProcessor
     {
         $folder = FolderName::book($item->folder, $item->publisher_folder);
         $issues = [];
-        $ocr = ['title' => null, 'fields' => [], 'boxes' => [], 'conf' => []];
+        $ocr = ['title' => null, 'fields' => [], 'boxes' => [], 'conf' => [], 'extras' => [], 'disagree' => [], 'language' => null, 'languages' => null];
         $ocrText = null;
         $infoPath = $item->info_path ? Storage::disk('local')->path($item->info_path) : null;
 
@@ -102,10 +114,11 @@ class ImportItemProcessor
             $issues[] = 'OCR motoru kurulu değil; bilgiler klasör adından alındı.';
             $infoPath = null;
         } else {
-            $ocr = $this->parser->parse($this->ocr->words($infoPath));
+            $ocr = $this->readInfo($infoPath, $item->folder.' '.$item->publisher_folder);
             $ocrText = implode("\n", $ocr['lines']);
         }
         $f = $ocr['fields'];
+        $this->turkishText = $ocr['language'] === null;
 
         // Bilgi tablosu dışındaki sayfalar: kapak (yazar, özellikler) ve künye (baskı yılı, ISBN).
         $page = ['author' => null, 'features' => [], 'isbn' => null, 'year' => null];
@@ -116,7 +129,7 @@ class ImportItemProcessor
                     continue;
                 }
                 try {
-                    $text = $this->ocr->text($path);
+                    $text = $this->ocr->text($path, $ocr['languages']);
                 } catch (Throwable) {
                     continue; // kapak okunamazsa kitap yine işlenir
                 }
@@ -130,6 +143,13 @@ class ImportItemProcessor
         [$ocrTitle, $ocrRest] = self::splitTitle($ocr['title']);
         if ($ocrRest !== null && ! FolderName::similar($ocrTitle, $folder['title'], 0.85) && FolderName::similar($ocr['title'], $folder['title'], 0.85)) {
             [$ocrTitle, $ocrRest] = [$ocr['title'], null]; // adın kendisinde tire varmış
+        }
+        // Tabloda "Kitap Adı" / "Alt Başlık" satırları varsa üstteki başlıktan önce gelir.
+        if (! empty($f['title'])) {
+            $ocrTitle = self::clean($f['title']);
+        }
+        if (! empty($f['subtitle'])) {
+            $ocrRest = self::clean($f['subtitle']);
         }
         $title = $this->pick('Kitap adı', $ocrTitle, $folder['title'], $issues, 0.85);
         [$author, $authorConfirmed] = $this->pickAuthor($f['author'] ?? null, $folder['author'], $issues);
@@ -192,7 +212,8 @@ class ImportItemProcessor
 
         $code = null;
         if (! empty($f['code'])) {
-            $code = strtoupper(preg_replace('/\s+/', '', $f['code']));
+            // Koddan sonra gelen OCR artıkları ("BHY-638 “O”") atılır: ilk kod biçimli parça alınır
+            $code = preg_match('/[A-Z0-9][A-Z0-9\-_.\/]{2,39}/', strtoupper($f['code']), $m) ? $m[0] : strtoupper(preg_replace('/\s+/', '', $f['code']));
             if (! preg_match('/^[A-Z0-9][A-Z0-9\-_.\/]{0,39}$/', $code)) {
                 $issues[] = "Ürün kodu geçersiz: “{$f['code']}”.";
                 $code = null;
@@ -221,6 +242,21 @@ class ImportItemProcessor
             }
         }
 
+        // Okumalar (farklı ön işlemler) bir alanda anlaşamadıysa ve değer başka yoldan doğrulanmadıysa insan bakar.
+        $confirmed += [
+            'title' => (bool) $folder['title'],          // klasörle karşılaştırıldı (uyuşmazlık ayrıca yazılır)
+            'isbn' => $isbn !== null,                     // kontrol hanesi tuttu
+            'pages' => true,                              // rakam modunda ikinci okuma ayrıca yapılıyor
+            'year' => $year !== null,
+        ];
+        foreach ($ocr['disagree'] as $k => $values) {
+            if ($confirmed[$k] ?? false) {
+                continue;
+            }
+            $label = self::FIELD_LABELS[$k] ?? (str_starts_with($k, 'extra:') ? substr($k, 6) : $k);
+            $issues[] = "{$label} okumaları birbirini tutmuyor (".implode(' / ', array_map(fn ($v) => "“{$v}”", $values)).'); en sık okunan yazıldı, kontrol edin.';
+        }
+
         if ($title === null) {
             $issues[] = 'Kitap adı bulunamadı.';
         }
@@ -237,6 +273,10 @@ class ImportItemProcessor
             'year' => $year,
             'code' => $code,
             'description' => $page['features'] ? implode("\n", array_map(fn ($x) => '• '.$x, $page['features'])) : null,
+            'extras' => array_map(fn ($e) => ['label' => self::clean($e['label']), 'value' => $e['value']], $ocr['extras']),
+            'language' => $ocr['language'],
+            'boxes' => $ocr['boxes'] + collect($ocr['extras'])->mapWithKeys(fn ($e, $i) => ['extra:'.$i => $e['box'] ?? null])->filter()->all(),
+            'box_scale' => $infoPath ? $this->ocr->scale($infoPath) : null,
             'ocr' => ['title' => $ocr['title'], 'fields' => $f],
         ], $issues, $ocrText];
     }
@@ -254,15 +294,19 @@ class ImportItemProcessor
         }
 
         // Yayınevi ve kategori oluşturma yarışını önlemek için kısa kilit (paralel işçiler aynı yayınevini iki kez açmasın).
+        // Daha önce açılmış yayınevi, kategori ve yazar yeniden açılmaz: adın yazımı/OCR hatası farklı olsa da eşlenir.
+        $this->tree->created = [];
         [$publisher, $category, $author] = Cache::lock('import-taxonomy', 30)->block(30, function () use ($data) {
             return [
                 $this->resolvePublisher($data['publisher'] ?? null, $data['publisher_folder'] ?? null),
-                $data['category'] ? $this->tree->ensurePath($data['category'], fuzzy: true) : null,
+                ! empty($data['category']) ? $this->tree->ensurePath($data['category'], fuzzy: true) : null,
                 Author::resolve($data['author'] ?? null),
             ];
         });
+        $this->createdCategories = $this->tree->created;
 
         return DB::transaction(function () use ($data, $product, $publisher, $category, $author, $issues) {
+            $matched = $product === null;
             $product ??= $this->match($data, $publisher?->id);
             $action = $product ? 'updated' : 'created';
 
@@ -288,8 +332,35 @@ class ImportItemProcessor
                 'page_count' => $data['pages'] ?? null,
                 'print_year' => $data['year'] ?? null,
             ], fn ($v) => $v !== null);
+            // Eşleşen mevcut üründe ad yalnız yazımca farklıysa ("Almanyanın" / "Almanya'nın") mevcut yazım korunur.
+            if ($matched && $product && self::titleKey($product->title) === self::titleKey($data['title'])) {
+                unset($values['title']);
+            }
             if (($values['subtitle'] ?? null) === '') {
                 $values['subtitle'] = null; // kontrol ekranında boş bırakılan alt başlık silinir
+            }
+
+            // Ek bilgiler: kontrol ekranından gelen liste olduğu gibi yazılır; OCR'den gelenler yalnız eksik olanları
+            // tamamlar (elle düzeltilmiş değer ezilmez).
+            if (array_key_exists('spec_visibility', $data)) {
+                $values['spec_visibility'] = $data['spec_visibility'] ?: null;
+            }
+            if (array_key_exists('extra_specs', $data)) {
+                $values['extra_specs'] = $data['extra_specs'] ?: null;
+            } elseif (! empty($data['extras'])) {
+                $rows = $product?->extra_specs ?? [];
+                foreach ($data['extras'] as $e) {
+                    if (EmptyValue::is($e['value'] ?? null) || trim((string) ($e['label'] ?? '')) === '') {
+                        continue;
+                    }
+                    $at = collect($rows)->search(fn ($r) => Text::key($r['label'] ?? '') === Text::key($e['label']));
+                    if ($at === false) {
+                        $rows[] = ['label' => $e['label'], 'value' => $e['value']];
+                    } elseif (EmptyValue::is($rows[$at]['value'] ?? null)) {
+                        $rows[$at]['value'] = $e['value'];
+                    }
+                }
+                $values['extra_specs'] = $rows ?: null;
             }
 
             // Açıklama (kapaktaki özellikler) yalnız boşsa yazılır; elle girilen açıklama korunur.
@@ -305,6 +376,132 @@ class ImportItemProcessor
 
             return [$product, $action, $issues];
         });
+    }
+
+    public const FIELD_LABELS = [
+        'title' => 'Kitap adı', 'subtitle' => 'Alt başlık', 'author' => 'Yazar', 'publisher' => 'Yayınevi', 'category' => 'Türü',
+        'code' => 'Ürün kodu', 'isbn' => 'ISBN', 'pages' => 'Sayfa sayısı', 'year' => 'Baskı yılı',
+    ];
+
+    /**
+     * Bilgi görselini okur: önce varsayılan dillerle; metin başka bir dili gösteriyorsa (Almanca, İtalyanca…) o dil
+     * eklenerek yeniden. Ardından diğer ön işlem biçimleriyle de okunur ve sonuçlar alan alan oylanır (vote()).
+     */
+    private function readInfo(string $path, string $hint): array
+    {
+        $base = config('catalog.ocr_languages');
+        $first = $this->parser->parse($this->ocr->words($path, 0, $base));
+        $language = LanguageGuess::guess(implode("\n", $first['lines'])."\n".$hint);
+        $languages = $base;
+        $extra = array_filter(array_map('trim', explode(',', (string) config('catalog.ocr_extra_languages'))));
+        if ($language && in_array($language, $extra, true) && in_array($language, $this->ocr->languages(), true)) {
+            $languages = self::withLanguage($base, $language);
+            $first = $this->parser->parse($this->ocr->words($path, 0, $languages));
+        }
+        $reads = [$first];
+        for ($pass = 1; $pass < $this->ocr->passes(); $pass++) {
+            try {
+                $reads[] = $this->parser->parse($this->ocr->words($path, $pass, $languages));
+            } catch (Throwable) {
+                // ek okuma başarısızsa eldekilerle devam edilir
+            }
+        }
+
+        return ['language' => $language, 'languages' => $languages] + self::vote($reads);
+    }
+
+    /** "tur+eng" + deu → "tur+deu+eng" (Türkçe etiketler önce, kitabın dili ikinci). */
+    public static function withLanguage(string $languages, string $language): string
+    {
+        $list = array_values(array_diff(explode('+', $languages), [$language]));
+        array_splice($list, min(1, count($list)), 0, [$language]);
+
+        return implode('+', $list);
+    }
+
+    /**
+     * Birden çok okumanın oylanması: her alanda harfleri aynı olan değerler gruplanır, en çok okunan kazanır
+     * (eşitlikte güveni yüksek olan). Kazanan grup okumaların yarısından fazlası değilse alan "disagree"e yazılır.
+     * Ek bilgiler etiketlerine göre eşlenir; okumaların çoğunda görünmeyen ek satır gürültü sayılıp atılır.
+     *
+     * @param  list<array>  $reads  InfoSheetParser::parse sonuçları (ilki koordinat kaynağıdır)
+     */
+    public static function vote(array $reads): array
+    {
+        $out = $reads[0] + ['extras' => []];
+        $out['disagree'] = [];
+        if (count($reads) < 2) {
+            return $out;
+        }
+        $keys = array_unique(array_merge(...array_map(fn ($r) => array_keys($r['fields']), $reads)));
+        foreach ($keys as $k) {
+            $candidates = array_map(fn ($r) => [$r['fields'][$k] ?? null, $r['conf'][$k] ?? 0.0], $reads);
+            if ($k === 'category') {
+                // Yolun başındaki/sonundaki 3 harften kısa artıklar ("dh /", "Ah/") oylamadan önce atılır
+                $candidates = array_map(fn ($c) => [$c[0] === null ? null : (implode(' / ', array_filter(self::splitCategory($c[0]),
+                    fn ($seg) => mb_strlen(preg_replace('/[^\p{L}]/u', '', $seg)) >= 3)) ?: null), $c[1]], $candidates);
+            }
+            [$value, $conf, $ok, $all] = self::choose($candidates);
+            $out['fields'][$k] = $value;
+            $out['conf'][$k] = $conf;
+            if (! $ok) {
+                $out['disagree'][$k] = $all;
+            }
+        }
+        [$title, , $ok, $all] = self::choose(array_map(fn ($r) => [$r['title'], 90.0], $reads));
+        $out['title'] = $title;
+        if (! $ok) {
+            $out['disagree']['title'] = $all;
+        }
+
+        $groups = [];
+        foreach ($reads as $n => $r) {
+            foreach ($r['extras'] ?? [] as $e) {
+                $groups[Text::key($e['label'])][$n] ??= $e;
+            }
+        }
+        $extras = [];
+        foreach ($groups as $group) {
+            if (count($group) * 2 <= count($reads)) {
+                continue;
+            }
+            [$label] = self::choose(array_map(fn ($e) => [$e['label'], $e['conf'] ?? 0.0], $group));
+            [$value, $conf, $ok, $all] = self::choose(array_map(fn ($e) => [$e['value'], $e['conf'] ?? 0.0], $group));
+            $extras[] = ['label' => $label, 'value' => $value, 'box' => isset($group[0]) ? $group[0]['box'] : null, 'conf' => $conf];
+            if (! $ok) {
+                $out['disagree']['extra:'.$label] = $all;
+            }
+        }
+        $out['extras'] = $extras;
+
+        return $out;
+    }
+
+    /**
+     * @param  list<array{0: ?string, 1: float}>  $candidates  [değer, güven]
+     * @return array{0: ?string, 1: float, 2: bool, 3: list<string>} [seçilen, güveni, çoğunluk var mı, farklı değerler]
+     */
+    private static function choose(array $candidates): array
+    {
+        $norm = fn ($s) => str_replace('ı', 'i', preg_replace('/[^\p{L}\p{N}]+/u', '', Text::lower($s)));
+        $groups = [];
+        $total = 0;
+        foreach ($candidates as [$value, $conf]) {
+            if ($value === null || $value === '') {
+                continue;
+            }
+            $total++;
+            $groups[$norm($value)][] = [$value, (float) $conf];
+        }
+        if ($groups === []) {
+            return [null, 0.0, true, []];
+        }
+        uasort($groups, fn ($a, $b) => count($b) <=> count($a) ?: array_sum(array_column($b, 1)) <=> array_sum(array_column($a, 1)));
+        $best = reset($groups);
+        usort($best, fn ($a, $b) => $b[1] <=> $a[1]);
+        $all = array_values(array_unique(array_map(fn ($g) => $g[0][0], $groups)));
+
+        return [$best[0][0], $best[0][1], count($groups) === 1 || count(reset($groups)) * 2 > $total, $all];
     }
 
     /** "Tarih / Avrupa Tarihi > Almanya" → ['Tarih', 'Avrupa Tarihi', 'Almanya'] */
@@ -327,8 +524,19 @@ class ImportItemProcessor
             return $p;
         }
 
-        // Harmanlama (utf8mb4_turkish_ci) büyük/küçük harfi yok sayar.
-        return Product::where('title', $data['title'])->where('publisher_id', $publisherId)->first();
+        // Aynı yayınevinde aynı adlı kitap (büyük/küçük harf, kesme işareti, Türkçe harf farkı yok sayılır):
+        // "ALMANYANIN KISA TARİHİ" ile "Almanya'nın Kısa Tarihi" aynı üründür, yeniden açılmaz.
+        $key = self::titleKey($data['title']);
+        $id = Product::where('publisher_id', $publisherId)->select('id', 'title')->cursor()
+            ->first(fn ($p) => self::titleKey($p->title) === $key)?->id;
+
+        return $id ? Product::find($id) : null;
+    }
+
+    /** Aynı kitap adı karşılaştırması: harfler ve rakamlar (boşluk, kesme işareti, Türkçe harf farkı yok sayılır). */
+    public static function titleKey(string $title): string
+    {
+        return str_replace(' ', '', Text::key($title));
     }
 
     private function resolvePublisher(?string $name, ?string $folderName): ?Publisher
@@ -337,6 +545,13 @@ class ImportItemProcessor
             return null;
         }
         $publisher = Publisher::findByName($name) ?? ($folderName ? Publisher::findByName($folderName) : null);
+        // Yazımı biraz farklı ama aynı yayınevi ("Boğaziçi Yayınları" / "Boğaziçi Üniversitesi Yayınevi", OCR harf hatası)
+        $publisher ??= Publisher::query()->get()->first(fn ($p) => Publisher::sameName($p->name, $name)
+            || ($folderName && Publisher::sameName($p->name, $folderName)));
+        if ($publisher && ($key = Publisher::matchKey($name)) !== '' && $key !== $publisher->match_key
+            && ! PublisherAlias::where('match_key', $key)->exists() && ! Publisher::where('match_key', $key)->exists()) {
+            $publisher->aliases()->create(['match_key' => $key]);
+        }
         if (! $publisher) {
             $display = CategoryTree::displayName(trim($name));
             $publisher = Publisher::create([
@@ -366,7 +581,7 @@ class ImportItemProcessor
             // Harfler birebir aynıysa görseldeki düzgün yazım (büyük/küçük harf, kesme işareti) kullanılır;
             // yalnız benziyorsa OCR bir harfi yanlış okumuştur ("\Mimanya"), doğru harfler klasördedir.
             if (self::sameLetters($ocr, $folder)) {
-                return $ocr;
+                return $this->turkishText ? self::fixDotless($ocr, $folder) : $ocr;
             }
             if (FolderName::similar($ocr, $folder, $threshold)) {
                 return CategoryTree::displayName($folder);
@@ -396,7 +611,7 @@ class ImportItemProcessor
             return [$this->pick('Yazar', $ocr, $folder, $issues, 0.8), false];
         }
         if (self::sameLetters($ocr, $folder)) {
-            return [$ocr, true];
+            return [$this->turkishText ? self::fixDotless($ocr, $folder) : $ocr, true];
         }
         $folderWords = array_values(array_filter(explode(' ', CategoryTree::displayName(trim($folder)))));
         $folderKeys = array_map(fn ($w) => Text::key($w), $folderWords);
@@ -406,9 +621,7 @@ class ImportItemProcessor
             foreach ($words as $i => $w) {
                 // Harf hatası: klasördeki benzer kelimeyle değiştirilir ("Olda" → "Oida", "Samachandran" → "Ramachandran")
                 foreach ($folderWords as $j => $fw) {
-                    $a = Text::key($w);
-                    $len = max(strlen($a), strlen($folderKeys[$j]));
-                    if ($a !== $folderKeys[$j] && $len >= 4 && levenshtein($a, $folderKeys[$j]) <= ($len >= 8 ? 2 : 1)) {
+                    if (self::similarWord($w, $folderKeys[$j])) {
                         $words[$i] = $fw;
                     }
                 }
@@ -429,7 +642,8 @@ class ImportItemProcessor
             // Klasör bu yazarın daha uzun biçimi ("V S Ramachandran" ⊃ "Ramachandran"); fazla kelimeler başka yazara
             // aitse ("YOSHİ OİDA LORNA" → Lorna ikinci yazar) değiştirilmez.
             $extra = array_diff($folderKeys, $keys);
-            if (count($folderKeys) > count($keys) && ! array_diff($keys, $folderKeys) && ! array_intersect($extra, $others)) {
+            $extraBelongsToOther = collect($extra)->contains(fn ($e) => collect($others)->contains(fn ($o) => $o === $e || self::similarWord($o, $e)));
+            if (count($folderKeys) > count($keys) && ! array_diff($keys, $folderKeys) && ! $extraBelongsToOther) {
                 $words = $folderWords;
             }
             $authors[] = implode(' ', $words);
@@ -440,6 +654,49 @@ class ImportItemProcessor
         }
 
         return [$this->pick('Yazar', $ocr, $folder, $issues, 0.8), false];
+    }
+
+    /**
+     * OCR'nin harf karıştırması mı: en fazla 1 harf farkı (8+ harfte 2), ya da sık görülen "rn" ↔ "m" karışması
+     * ("Loma" = "Lorna", "Modemlik" = "Modernlik"). $b Text::key biçiminde.
+     */
+    public static function similarWord(string $word, string $b): bool
+    {
+        $a = Text::key($word);
+        if ($a === $b) {
+            return false;
+        }
+        $len = max(strlen($a), strlen($b));
+        if ($len >= 4 && levenshtein($a, $b) <= ($len >= 8 ? 2 : 1)) {
+            return true;
+        }
+
+        return $len >= 4 && str_replace('rn', 'm', $a) === str_replace('rn', 'm', $b);
+    }
+
+    /**
+     * OCR ı/i ayrımını sık kaçırır ("Almanya'nin"); klasör adı büyük harfle yazıldığından (I / İ) doğru harfi bilir.
+     * Harfler birebir eşleştiğinde OCR'deki ı/i klasördekine göre düzeltilir, büyük/küçük harf OCR'deki gibi kalır.
+     */
+    public static function fixDotless(string $ocr, string $folder): string
+    {
+        $o = mb_str_split($ocr);
+        $f = array_values(array_filter(mb_str_split($folder), fn ($ch) => preg_match('/[\p{L}\p{N}]/u', $ch)));
+        $k = 0;
+        foreach ($o as $i => $ch) {
+            if (! preg_match('/[\p{L}\p{N}]/u', $ch)) {
+                continue;
+            }
+            $want = isset($f[$k]) ? Text::lower($f[$k]) : null;
+            $k++;
+            $have = Text::lower($ch);
+            if (in_array($have, ['i', 'ı'], true) && in_array($want, ['i', 'ı'], true) && $have !== $want) {
+                $upper = $ch !== $have;
+                $o[$i] = $upper ? ($want === 'i' ? 'İ' : 'I') : $want;
+            }
+        }
+
+        return implode('', $o);
     }
 
     /** Harfler aynı mı (büyük/küçük harf, boşluk, kesme işareti ve ı/i farkı yok sayılır; ğ/g, ü/u gibi farklar sayılır). */
@@ -467,6 +724,7 @@ class ImportItemProcessor
     public static function clean(string $s): string
     {
         $s = trim(preg_replace('/\s+/u', ' ', $s));
+        $s = preg_replace("/[’'`´‘]{2,}|[’`´‘]/u", "'", $s); // "Almanya’'nın" → "Almanya'nın"
 
         return trim(preg_replace('/^[^\p{L}\p{N}]+|[^\p{L}\p{N}.)!?]+$/u', '', $s));
     }

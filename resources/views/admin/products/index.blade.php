@@ -79,12 +79,20 @@
                     <option value="feature">Öne çıkar</option>
                     <option value="unfeature">Öne çıkarmayı kaldır</option>
                     <option value="category">Kategoriye taşı</option>
+                    <option value="spec_show">Bilgiyi müşteriye göster</option>
+                    <option value="spec_hide">Bilgiyi müşteriden gizle</option>
+                    <option value="spec_default">Bilgi gösterimini genel ayara bırak</option>
                     <option value="delete">Sil</option>
                 </select>
                 <select name="category_id" class="field-input w-auto max-w-xs py-1.5 text-sm">
                     <option value="">(Taşınacak kategori)</option>
                     @foreach ($categories as $c)<option value="{{ $c['id'] }}">{{ str_repeat('— ', $c['depth']) }}{{ $c['name'] }}</option>@endforeach
                 </select>
+                <select name="spec" class="field-input w-auto max-w-xs py-1.5 text-sm" aria-label="Bilgi">
+                    <option value="">(Gösterilecek/gizlenecek bilgi)</option>
+                    @foreach ($specOptions as $k => $l)<option value="{{ $k }}">{{ $l }}</option>@endforeach
+                </select>
+                @error('spec')<span class="field-error">{{ $message }}</span>@enderror
                 <button class="btn-ghost btn-sm">Uygula</button>
                 @error('ids')<span class="field-error">{{ $message }}</span>@enderror
                 {{-- Sayfa sayısı kutuları ayrı forma (products-pages) bağlıdır; formlar iç içe olamaz. --}}
