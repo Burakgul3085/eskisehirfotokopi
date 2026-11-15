@@ -79,17 +79,23 @@ class CategoryMapper
             $group = $examBook ? CategoryPlan::examGroup() : CategoryPlan::readingGroup();
             $inGroupHit = $pathHit && $this->inGroup($pathHit, $group) ? [$pathHit, $pathIndex] : $this->pathHitIn($path, $group?->id);
 
+            // Sıra: görseldeki "Türü" → kitap türü (defter/deneme) → "Türü" için yeni kategori → benzer kitaplar ve
+            // yayınevi/yazar geçmişi → varsayılan → grup. Açıkça yazılmış "Türü" geçmişten tahminden önce gelir
+            // (bir yayınevinin Sözlük'ü, Atlas'ı, Gezi rehberi aynı kategoriye toplanmaz).
             if ($inGroupHit) {
                 $pick = [$inGroupHit[0], 'high', ['Görseldeki “Türü”: '.$path[$inGroupHit[1]], ...$why], $inGroupHit[1], null];
+            } elseif ($examBook && $group && ($typeCat = $this->typeCategory($group, $title, $path))) {
+                $pick = [$typeCat, 'medium', ['Kitap türü: '.(TitleCategory::rawType($title) ?? implode(' ', $path)), ...$why], null, null];
+            } elseif ($group && ($i = $this->newCategoryIndex($path, $examBook)) !== null) {
+                // Tanınmayan "Türü": yüklemede varsayılan kategori seçildiyse oraya, yoksa bu adla yeni kategori
+                $name = $this->tree->closestName($path[$i]) ?? CategoryTree::displayName($path[$i]);
+                $pick = $default
+                    ? [$default, 'low', ['“Türü” ('.$path[$i].') tanınmadı; yüklemede seçilen varsayılan kategori', ...$why], null, null]
+                    : [$this->ensure([$group->name, $name]), 'medium', ['Görseldeki “Türü” için yeni kategori: '.$name, ...$why], $i, null];
             } elseif ($group && ($best = $this->bestIn($group, $title, $ctx))) {
                 $pick = [$best[0], $best[2] ? 'medium' : 'low', [...$best[1], ...$why], null, $best[3]];
-            } elseif ($examBook && $group && ($typeCat = $this->typeCategory($group, $title))) {
-                $pick = [$typeCat, 'medium', ['Kitap türü: '.TitleCategory::rawType($title), ...$why], null, null];
             } elseif ($default) {
                 $pick = [$default, 'low', ['Yüklemede seçilen varsayılan kategori', ...$why], null, null];
-            } elseif (! $examBook && ($i = $this->newCategoryIndex($path)) !== null) {
-                $name = $this->tree->closestName($path[$i]) ?? CategoryTree::displayName($path[$i]);
-                $pick = [$this->ensure([CategoryPlan::READING, $name]), 'medium', ['Görseldeki “Türü” için yeni kategori: '.$name, ...$why], $i, null];
             } elseif ($group) {
                 $pick = [$group, 'low', ['Yeterli ipucu yok; '.$group->name.' ana kategorisine konuldu', ...$why], null, null];
             }
@@ -203,6 +209,10 @@ class CategoryMapper
                 $why[$c][] = 'benzer kitaplar bu kategoride';
             }
         }
+        foreach ($this->learner->distinctive(CategoryLearner::tokens($text), $ids) as $c => $n) {
+            $scores[$c] += 1.5 * min(2, $n);
+            $why[$c][] = 'adındaki kelimeler bu kategorideki kitaplarda geçiyor';
+        }
         foreach ([['publisher', 3, 3, 'yayınevinin kitaplarının çoğu burada'], ['author', 1, 4, 'yazarın diğer kitapları burada']] as [$kind, $min, $weight, $label]) {
             [$share, $total] = $this->learner->{$kind}($ctx[$kind.'_id'] ?? null);
             if ($total < $min) {
@@ -229,9 +239,13 @@ class CategoryMapper
     }
 
     /** Sınav adı okunamayan sınav kitabı için türüne göre kategori: Deneme → Deneme Kitapları, Defter → Konu Özetli Defterler. */
-    private function typeCategory(Category $group, ?string $title): ?Category
+    private function typeCategory(Category $group, ?string $title, array $path = []): ?Category
     {
-        $name = CategoryPlan::TYPE_CATEGORIES[TitleCategory::rawType($title) ?? ''] ?? null;
+        $type = TitleCategory::rawType($title);
+        foreach ($type === null ? $path : [] as $p) { // görselde "Türü: Defter"
+            $type ??= TitleCategory::rawType($p);
+        }
+        $name = CategoryPlan::TYPE_CATEGORIES[$type ?? ''] ?? null;
 
         return $name ? ($this->find($name, $group->id) ?? $this->ensure([$group->name, $name])) : null;
     }
@@ -318,16 +332,33 @@ class CategoryMapper
     }
 
     /** Yeni kategori adı olabilecek ilk parça: harfli, en fazla 4 kelime, 40 karakter. @param list<string> $path */
-    private function newCategoryIndex(array $path): ?int
+    private function newCategoryIndex(array $path, bool $exam = false): ?int
     {
         foreach ($path as $i => $name) {
             $words = preg_split('/\s+/u', trim($name));
-            if (count($words) <= 4 && mb_strlen($name) <= 40 && preg_match('/^[\p{L}\s\'’.-]+$/u', $name)) {
+            // Öbür gruptaki bir kategorinin adı (sınav kitabında "Edebiyat") ya da sınav dersi ("Paragraf") yeni kategori olmaz
+            if (! self::isGeneric($name, $exam) && $this->find($name) === null && ! ($exam && TitleCategory::subject($name) !== null)
+                && count($words) <= 4 && mb_strlen($name) <= 40 && preg_match('/^[\p{L}\s\'’.-]+$/u', $name)) {
                 return $i;
             }
         }
 
         return null;
+    }
+
+    /**
+     * Kategori adı olamayacak genel "Türü" adları: "Kitap", "Genel", "Diğer"; sınav kitaplarında ayrıca kitap türleri ve
+     * sınav sözcükleri ("Test Kitabı", "Soru Bankası", "Sınav Hazırlık"): bunlar süzgeçtir, kategori açılmaz.
+     */
+    private static function isGeneric(string $name, bool $exam): bool
+    {
+        $key = Text::key($name);
+        if (in_array($key, ['kitap', 'kitaplar', 'kitaplari', 'urun', 'urunler', 'genel', 'diger', 'tum kitaplar', 'kategori', 'yayin', 'yayinlar'], true)) {
+            return true;
+        }
+
+        return $exam && (TitleCategory::rawType($name) !== null
+            || preg_match('/\b(kitap|kitabi|kitaplari|sinav|sinavlari|sinavi|hazirlik|yardimci|kaynak|ders|soru|test|egitim)\b/', $key) === 1);
     }
 
     /** Yolun tamamının eşleme anahtarı ("Popüler Bilim / Fizik" → "populer bilim fizik"). @param list<string> $path */
@@ -402,13 +433,27 @@ class CategoryMapper
         if ($best) {
             return $best;
         }
-        // Ad içinde geçen kategori ("Psikoloji Popüler Bilim" → ilk geçen: Psikoloji); gruplar hariç
-        $padded = ' '.$key.' ';
-        $hits = $pool->filter(fn ($c) => $c->depth > 0 && str_contains($padded, ' '.$c->normalized_name.' '))
-            ->sortBy(fn ($c) => strpos($padded, ' '.$c->normalized_name.' '));
+        // Ad içinde geçen kategori ya da takma ad ("Psikoloji Popüler Bilim" → Psikoloji, "Yabancı Dil" → Dil ve Dilbilim,
+        // "Dini Kitaplar" → Din ve Mitoloji); Türkçe ek kabul edilir, gruplar hariç. İlk geçen (eşitse uzun olan) kazanır.
+        $names = $pool->filter(fn ($c) => $c->depth > 0)->map(fn ($c) => [$c->normalized_name, $c])->values()->all();
+        foreach (CategoryAlias::query()->get() as $alias) {
+            if (($cat = $pool->firstWhere('id', $alias->category_id)) && $cat->depth > 0) {
+                $names[] = [$alias->match_key, $cat];
+            }
+        }
+        $found = null;
+        foreach ($names as [$needle, $cat]) {
+            if (strlen($needle) >= 3 && preg_match('/(?:^| )'.preg_quote($needle, '/').'(?:'.self::SUFFIXES.')?(?= |$)/', $key, $m, PREG_OFFSET_CAPTURE)
+                && ($found === null || $m[0][1] < $found[0] || ($m[0][1] === $found[0] && strlen($needle) > $found[2]))) {
+                $found = [$m[0][1], $cat, strlen($needle)];
+            }
+        }
 
-        return $hits->first();
+        return $found[1] ?? null;
     }
+
+    /** Ada eklenebilen Türkçe ekler (Text::key biçiminde): "din" → "dini", "tarih" → "tarihi", "roman" → "romanlar" */
+    private const SUFFIXES = 'i|u|si|su|in|un|e|a|ler|lar|leri|lari';
 
     /** Sınav Hazırlık › TYT (sınav adı listede yoksa grubun altına açılır: MSÜ, YKS…). */
     private function examCategory(string $exam): ?Category

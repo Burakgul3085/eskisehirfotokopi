@@ -33,10 +33,10 @@ final class CategoryPlan
             'Dil ve Dilbilim' => ['dilbilim', 'dil felsefesi', 'dil', 'linguistik', 'linguistics'],
             'Sanat ve Tiyatro' => ['tiyatro', 'oyunculuk', 'sahne sanatlari', 'sinema', 'sanat', 'muzik', 'resim', 'art'],
             'Siyaset ve Ekonomi' => ['siyaset', 'siyaset bilimi', 'ekonomi', 'uluslararasi iliskiler', 'hukuk', 'politics', 'economics'],
-            'Din ve Mitoloji' => ['din', 'mitoloji', 'ilahiyat'],
+            'Din ve Mitoloji' => ['din', 'mitoloji', 'ilahiyat', 'dini kitaplar', 'islam', 'kuran'],
             'Biyografi ve Anı' => ['biyografi', 'ani', 'otobiyografi', 'hatirat'],
             'Eğitim' => ['egitim', 'pedagoji'],
-            'Çocuk ve Gençlik' => ['cocuk', 'genclik', 'cocuk kitaplari'],
+            'Çocuk ve Gençlik' => ['cocuk', 'genclik', 'cocuk kitaplari', 'boyama', 'masal'],
         ],
         self::EXAM => [
             'TYT' => [], 'AYT' => [], 'LGS' => [], 'KPSS' => [], 'ALES' => [], 'DGS' => [], 'YDS ve YDT' => ['yds', 'ydt', 'yokdil'],

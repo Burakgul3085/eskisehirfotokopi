@@ -95,6 +95,41 @@ class SmartPlacementTest extends TestCase
         $this->assertStringContainsString('yayınevi', implode(' ', $r['reasons']));
     }
 
+    public function test_written_type_beats_publisher_history_and_matches_with_suffixes(): void
+    {
+        $pub = Publisher::create(['name' => 'Atlas Akademik', 'slug' => 'atlas-akademik', 'match_key' => 'atlas akademik', 'is_active' => true]);
+        $first = $this->map('Büyük Türkçe Sözlük', ['Sözlük'], ['publisher_id' => $pub->id]);
+        $this->assertSame('Okuma Kitapları › Sözlük', $first['category']->fullName());
+        foreach (['Cep Sözlüğü', 'Eş Anlamlılar Sözlüğü', 'Deyimler Sözlüğü'] as $t) {
+            $this->product($t, $first['category'], ['publisher_id' => $pub->id]);
+        }
+        // Yayınevinin tüm kitapları Sözlük'te olsa da açıkça yazılmış farklı "Türü" kendi kategorisine gider
+        $this->assertSame('Okuma Kitapları › Atlas', $this->map('Dünya Atlası', ['Atlas'], ['publisher_id' => $pub->id])['category']->fullName());
+        $this->assertSame('Okuma Kitapları › Gezi', $this->map('Kapadokya Gezi Rehberi', ['Gezi', 'Seyahat'], ['publisher_id' => $pub->id])['category']->fullName());
+        // Türkçe ekli ve takma adlı eşleşme
+        $this->assertSame('Din ve Mitoloji', $this->map("Kur'an-ı Kerim Meali", ['Dini Kitaplar'])['category']->name);
+        $this->assertSame('Dil ve Dilbilim', $this->map('Adım Adım İngilizce Gramer', ['Yabancı Dil'])['category']->name);
+        $this->assertSame('Çocuk ve Gençlik', $this->map('Hayvanlar Boyama Kitabı', ['Boyama'])['category']->name);
+        // Genel ad ("Kitap") kategori olmaz
+        $this->assertSame('Popüler Bilim', $this->map('Sayıların Büyüsü', ['Kitap', 'Bilim ve Mühendislik', 'Matematik'])['category']->name);
+
+        // Sınav tarafı: listede olmayan sınav türü kendi kategorisini açar; "Test Kitabı" gibi genel tür açmaz
+        $this->assertSame('Sınav Hazırlık › Sürücü Kursu', $this->map('Ehliyet Sınavı Soru Bankası', ['Sürücü Kursu'])['category']->fullName());
+        $this->assertSame([], $this->map('Problemler Yaprak Test', ['Test Kitabı'])['created']);
+        $this->assertNull(Category::where('name', 'Test Kitabı')->first());
+    }
+
+    public function test_book_type_category_comes_before_publisher_history(): void
+    {
+        $pub = Publisher::create(['name' => 'Kuzey', 'slug' => 'kuzey', 'match_key' => 'kuzey', 'is_active' => true]);
+        foreach (['TYT Matematik', 'TYT Geometri', 'TYT Fizik', 'TYT Kimya'] as $t) {
+            $this->product($t, $this->cat('TYT'), ['publisher_id' => $pub->id]);
+        }
+        $this->assertSame('Konu Özetli Defterler', $this->map('Geometri Konu Özetli Defter', [], ['publisher_id' => $pub->id])['category']->name);
+        $this->assertSame('Konu Özetli Defterler', $this->map('Kimya', ['Defter'], ['publisher_id' => $pub->id])['category']->name);
+        $this->assertSame('Deneme Kitapları', $this->map('Matematik 15 Deneme', [], ['publisher_id' => $pub->id])['category']->name);
+    }
+
     public function test_author_history_and_similar_books(): void
     {
         $russell = Author::resolve('Bertrand Russell');
