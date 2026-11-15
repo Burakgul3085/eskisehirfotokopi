@@ -84,7 +84,7 @@ class FlatCategoryTest extends TestCase
         $mapper = app(CategoryMapper::class);
         // Türü bir okuma kategorisine benzese de ("Edebiyat") soru bankası Sınav Hazırlık'ta kalır
         $r = $mapper->map(['Edebiyat', 'Paragraf'], 'Paragraf Soru Bankası');
-        $this->assertSame('Sınav Hazırlık › Genel', $r['category']->fullName());
+        $this->assertSame('Sınav Hazırlık', $r['category']->fullName()); // ipucu yok: grubun kendisi
         $this->assertSame(['Edebiyat'], $r['topics']); // tür ve ders konu olarak tekrarlanmaz
         // Türü sınav grubundaki bir kategoriye uyuyorsa o seçilir
         $this->assertSame('Sınav Hazırlık › KPSS', $mapper->map(['KPSS', 'Tarih'], 'Tarih Konu Anlatımı')['category']->fullName());

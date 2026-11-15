@@ -15,6 +15,40 @@
 
     <x-flash class="mb-5" />
 
+    @if ($guesses->isNotEmpty())
+        <section class="card mb-5 p-5">
+            <h2 class="font-bold">Tahminle yerleştirilen kitaplar ({{ $guesses->count() }})</h2>
+            <p class="mt-1 text-sm text-muted">Bu kitapların adında sınav adı ya da görselde tanınan bir “Türü” yoktu; ipuçlarına göre en olası kategoriye
+                yerleştirildi ve yayına hazır. Bakmanız gerekmez; yanlış olanı taşırsanız sistem bundan öğrenir.</p>
+            <ul class="mt-4 divide-y divide-line">
+                @foreach ($guesses as $g)
+                    <li class="flex flex-wrap items-center gap-3 py-2.5">
+                        <span class="min-w-0 flex-1">
+                            <span class="font-medium">{{ $g['item']->product?->title ?? $g['item']->folder }}</span>
+                            <span class="text-sm">→ {{ $g['category']?->fullName() ?? '—' }}</span>
+                            <span class="badge {{ $g['confidence'] === 'medium' ? 'bg-warning-soft text-warning' : 'bg-danger-soft text-danger' }}">{{ $g['confidence'] === 'medium' ? 'olası' : 'zayıf tahmin' }}</span>
+                            @if ($g['reasons'])<span class="block text-xs text-muted">{{ implode(' · ', $g['reasons']) }}</span>@endif
+                        </span>
+                        <form method="post" action="{{ route('admin.imports.placement', $g['item']) }}">@csrf<button class="btn-ghost btn-sm"><x-icon name="check" class="size-4" />Doğru</button></form>
+                        @if ($g['alternative'])
+                            <form method="post" action="{{ route('admin.imports.placement', $g['item']) }}">@csrf<input type="hidden" name="category_id" value="{{ $g['alternative']->id }}"><button class="btn-ghost btn-sm">“{{ $g['alternative']->name }}” olsun</button></form>
+                        @endif
+                        <form method="post" action="{{ route('admin.imports.placement', $g['item']) }}" class="flex items-center gap-2">
+                            @csrf
+                            <select name="category_id" class="field-input w-auto max-w-xs py-1.5 text-sm" required>
+                                <option value="">Başka kategori…</option>
+                                @foreach ($categories as $c)
+                                    @if ($c['depth'] <= 1)<option value="{{ $c['id'] }}">{{ str_repeat('— ', $c['depth']) }}{{ $c['name'] }}</option>@endif
+                                @endforeach
+                            </select>
+                            <button class="btn-ghost btn-sm">Taşı</button>
+                        </form>
+                    </li>
+                @endforeach
+            </ul>
+        </section>
+    @endif
+
     @if ($newCategories->isNotEmpty())
         <section class="card mb-5 p-5">
             <h2 class="font-bold">Bu yüklemede açılan yeni kategoriler ({{ $newCategories->count() }})</h2>

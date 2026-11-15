@@ -149,7 +149,7 @@ class ImportParsingTest extends TestCase
             'TYT Matematik Konu Özetli Soru Bankası 2023' => ['Soru Bankası', 'TYT', 'Matematik'],
             'TYT Kimya Video Destekli Defter 2024' => ['Defter', 'TYT', 'Kimya'],
             'TYT Biyoloji Video Destekli Defteri 2024' => ['Defter', 'TYT', 'Biyoloji'],
-            'AYT Eşit Ağırlık Sözel Tam Tekrar 6 Fasikül 2 Deneme 2023' => ['Tam Tekrar', 'AYT', 'Eşit Ağırlık Sözel'],
+            'AYT Eşit Ağırlık Sözel Tam Tekrar 6 Fasikül 2 Deneme 2023' => ['Tam Tekrar', 'AYT', 'Eşit Ağırlık'],
             'TYT Din Kültürü Soru Bankası 2022' => ['Soru Bankası', 'TYT', 'Din Kültürü'],
             'Dil Bilgisi Soru Bankası 2023' => ['Soru Bankası', 'Dil Bilgisi'],
             'KPSS TARİH SORU BANKASI' => ['Soru Bankası', 'KPSS', 'Tarih'],

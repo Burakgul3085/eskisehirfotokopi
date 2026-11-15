@@ -17,13 +17,14 @@ final class CategoryPlan
 
     public const EXAM = 'Sınav Hazırlık';
 
-    /** Sınav adı okunamayan sınav kitapları (Paragraf Soru Bankası…) */
-    public const EXAM_GENERAL = 'Genel';
+    /** Sınav adı okunamayan sınav kitapları türüne göre bu kategorilere gider ("Konu Özetli Defter" → Konu Özetli Defterler) */
+    public const TYPE_CATEGORIES = ['Deneme' => 'Deneme Kitapları', 'Defter' => 'Konu Özetli Defterler'];
 
     /** grup => [kategori => eşlenecek okunan adlar] */
     public const TREE = [
         self::READING => [
-            'Edebiyat' => ['roman', 'oyku', 'hikaye', 'siir', 'edebiyat', 'turk edebiyati', 'dunya edebiyati', 'klasikler', 'novel', 'fiction'],
+            'Edebiyat' => ['roman', 'oyku', 'hikaye', 'siir', 'edebiyat', 'turk edebiyati', 'dunya edebiyati', 'klasikler', 'novel', 'fiction',
+                'dram', 'drama', 'deneme yazilari', 'anlati', 'novella'],
             'Tarih' => ['dunya tarihi', 'avrupa tarihi', 'osmanli tarihi', 'turk tarihi', 'yakin tarih', 'history'],
             'Felsefe' => ['toplum ve dusunce', 'dusunce', 'philosophy'],
             'Psikoloji' => ['insan davranislari', 'psychology'],
@@ -41,6 +42,7 @@ final class CategoryPlan
             'TYT' => [], 'AYT' => [], 'LGS' => [], 'KPSS' => [], 'ALES' => [], 'DGS' => [], 'YDS ve YDT' => ['yds', 'ydt', 'yokdil'],
             'Ara Sınıflar' => ['9 sinif', '10 sinif', '11 sinif', '12 sinif', 'lise'], 'Ortaokul' => ['5 sinif', '6 sinif', '7 sinif', '8 sinif'],
             'İlkokul' => ['1 sinif', '2 sinif', '3 sinif', '4 sinif'],
+            'Deneme Kitapları' => ['deneme sinavlari', 'deneme sinavi'], 'Konu Özetli Defterler' => ['konu ozetli defter', 'akilli defter'],
         ],
     ];
 
@@ -89,6 +91,12 @@ final class CategoryPlan
         }
 
         return false;
+    }
+
+    /** Okuma kitapları grubu (yoksa null). */
+    public static function readingGroup(): ?Category
+    {
+        return Category::whereNull('parent_id')->where('normalized_name', Text::key(self::READING))->first();
     }
 
     /** Sınav grubu (yoksa null). */

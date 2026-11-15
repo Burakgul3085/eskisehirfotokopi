@@ -225,7 +225,7 @@ class ImportTest extends TestCase
         $p = $item->product;
         $this->assertSame("Almanya'nın Kısa Tarihi", $p->title);
         $this->assertSame('Mary Fulbrook', $p->author->name);
-        $this->assertNull($p->category_id);
+        $this->assertSame('Okuma Kitapları', $p->category->fullName()); // kategorisiz kalmaz ("Kısa Tarihi" okuma kitabı ipucu)
     }
 
     public function test_soru_bankasi_folder_without_separators_and_bulk_approve(): void

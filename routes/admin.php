@@ -86,6 +86,7 @@ Route::prefix('yonetim')->name('admin.')->group(function () {
             Route::get('/kalem/{item}', 'review')->name('review');
             Route::put('/kalem/{item}', 'update')->name('update');
             Route::post('/kalem/{item}/onayla', 'approve')->name('approve');
+            Route::post('/kalem/{item}/yerlesim', 'placement')->name('placement');
             Route::post('/kalem/{item}/tekrarla', 'retry')->name('retry');
             Route::get('/kalem/{item}/gorsel', 'image')->name('image');
             Route::get('/kalem/{item}/alan/{field}', 'crop')->name('crop')->where('field', '[a-z]+|extra:[0-9]+');

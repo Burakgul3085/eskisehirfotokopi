@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Domain\Catalog\CategoryLearner;
 use App\Domain\Catalog\CategoryMapper;
 use App\Domain\Catalog\CategoryPlan;
 use App\Domain\Catalog\CategoryTree;
@@ -23,6 +24,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
@@ -125,6 +127,7 @@ class ImportController extends Controller
         return view('admin.imports.show', [
             'batch' => $batch, 'items' => $items, 'counts' => $batch->counts(), 'status' => $status,
             'newCategories' => $this->newCategories($batch),
+            'guesses' => $this->guesses($batch),
             'categories' => app(CategoryTree::class)->flat(),
             'specOptions' => Product::specOptions(),
         ]);
@@ -141,6 +144,57 @@ class ImportController extends Controller
             ->unique()->diff($batch->checked_categories ?? []);
 
         return Category::whereIn('id', $ids)->withCount('products')->orderBy('path')->get();
+    }
+
+    /**
+     * Tahminle (orta/düşük güvenle) yerleştirilen ve henüz "doğru" denmemiş kitaplar; ürünün kategorisi o zamandan
+     * beri değiştiyse (yönetici taşıdı) listeden düşer.
+     *
+     * @return Collection<int, array{item: ImportItem, category: ?Category, alternative: ?Category, confidence: string, reasons: list<string>}>
+     */
+    private function guesses(ImportBatch $batch): Collection
+    {
+        // Yalnız yerleştirme alanı çekilir (10 bin kitaplık yüklemede tüm OCR verisi belleğe alınmasın)
+        $rows = $batch->items()->whereNotNull('product_id')
+            ->whereRaw("JSON_UNQUOTE(JSON_EXTRACT(parsed, '$.placement.confidence')) IN ('medium', 'low')")
+            ->whereRaw("COALESCE(JSON_UNQUOTE(JSON_EXTRACT(parsed, '$.placement.checked')), 'false') <> 'true'")
+            ->with('product:id,title,category_id')->orderBy('id')->limit(500)
+            ->get(['id', 'batch_id', 'folder', 'product_id', DB::raw("JSON_EXTRACT(parsed, '$.placement') as placement_json")])
+            ->map(fn (ImportItem $i) => [$i, json_decode((string) $i->placement_json, true) ?: []])
+            ->filter(fn ($r) => $r[0]->product?->category_id === ($r[1]['category'] ?? null)); // sonradan taşınan düşer
+        $cats = Category::whereIn('id', $rows->flatMap(fn ($r) => [$r[1]['category'] ?? null, $r[1]['alternative'] ?? null])->filter()->unique())
+            ->get()->keyBy('id');
+
+        return $rows->map(fn ($r) => [
+            'item' => $r[0],
+            'category' => $cats[$r[1]['category'] ?? 0] ?? null,
+            'alternative' => $cats[$r[1]['alternative'] ?? 0] ?? null,
+            'confidence' => $r[1]['confidence'],
+            'reasons' => $r[1]['reasons'] ?? [],
+        ])->values();
+    }
+
+    /**
+     * Tahmini yerleştirmeyi onaylar ("Doğru") ya da kitabı başka kategoriye taşır. Taşıma hatırlanır: aynı "Türü"
+     * sonraki yüklemelerde oraya gider, benzer kitap tahminleri de bu seçimden öğrenir.
+     */
+    public function placement(Request $request, ImportItem $item, CategoryMapper $mapper): RedirectResponse
+    {
+        $data = $request->validate(['category_id' => ['nullable', 'integer', 'exists:categories,id']]);
+        $parsed = $item->parsed ?? [];
+        abort_unless($item->product && isset($parsed['placement']), 404);
+        if (! empty($data['category_id']) && (int) $data['category_id'] !== $item->product->category_id) {
+            $category = Category::findOrFail($data['category_id']);
+            $item->product->update(['category_id' => $category->id]);
+            $mapper->remember($parsed['category'] ?? [], $category);
+            CategoryLearner::forget();
+            $parsed['placement']['category'] = $category->id;
+            $message = "“{$item->product->title}”, “{$category->fullName()}” kategorisine taşındı; seçiminiz hatırlanacak.";
+        }
+        $parsed['placement']['checked'] = true;
+        $item->update(['parsed' => $parsed]);
+
+        return back()->with('status', $message ?? 'Yerleştirme doğru olarak işaretlendi.');
     }
 
     /** Yüklemedeki tüm ürünlerde bir bilginin müşteriye gösterimini değiştirir (ör. ISBN'i gizle). */

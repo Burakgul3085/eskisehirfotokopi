@@ -2,7 +2,6 @@
 
 namespace App\Domain\Catalog;
 
-use App\Domain\Import\TitleCategory;
 use App\Models\Category;
 use App\Models\ImportItem;
 use App\Models\Product;
@@ -48,9 +47,13 @@ class CategoryFlattener
                     $path = array_values(array_filter((array) ($item?->parsed['category'] ?? [])));
                 }
                 $inPlan = $p->category_id && in_array($p->category_id, $planIds, true);
-                $parsed = TitleCategory::parse($p->title);
-                $mapped = $this->mapper->map($inPlan ? [] : $path, $p->title);
-                $target = $inPlan && ! $mapped['matched'] ? Category::find($p->category_id) : $mapped['category'];
+                $mapped = $this->mapper->map($inPlan ? [] : $path, $p->title, null, [
+                    'subtitle' => $p->subtitle, 'publisher_id' => $p->publisher_id, 'author_id' => $p->author_id,
+                    'extras' => array_column($p->extra_specs ?? [], 'label'),
+                ]);
+                // Zaten kısa listedeki ürün yalnız kesin bir kuralla (adda sınav adı) taşınır; tahminle yerinden oynatılmaz
+                $target = $inPlan && $mapped['confidence'] !== 'high' ? Category::find($p->category_id) : $mapped['category'];
+                $parsed = ['type' => $mapped['book_type'], 'subject' => $mapped['subject']];
 
                 if (! $target) {
                     if ($path) {

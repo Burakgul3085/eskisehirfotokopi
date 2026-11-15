@@ -6,32 +6,59 @@ use App\Domain\Catalog\CategoryTree;
 use App\Support\Text;
 
 /**
- * Bilgi tablosunda "Türü" yoksa kategori kitap adından tahmin edilir: Tür › Sınav › Ders.
- *   "AYT Biyoloji Soru Bankası 2023"              → Soru Bankası › AYT › Biyoloji
- *   "TYT Matematik Konu Özetli Soru Bankası 2023" → Soru Bankası › TYT › Matematik
- *   "TYT Kimya Video Destekli Defter 2024"        → Defter › TYT › Kimya
- *   "Dil Bilgisi Soru Bankası 2023"               → Soru Bankası › Dil Bilgisi
- * Ne tür ne sınav tanınırsa tahmin yapılmaz (yanlış kategori açmaktansa kategorisiz kalır).
+ * Kitap adından (ve klasör adından) sınav, sınıf düzeyi, kitap türü ve ders:
+ *   "345 TYT Matematik Soru Bankası 2024"  → sınav TYT, tür Soru Bankası, ders Matematik
+ *   "Matematik AYT Konu Anlatımı"          → sınav AYT (adın neresinde olursa olsun)
+ *   "TYT MAT"                              → sınav TYT, ders Matematik (kısaltmalar)
+ *   "10. Sınıf Fizik Konu Anlatımı"        → düzey Ara Sınıflar, ders Fizik
+ * Karşılaştırma Text::key ile yapılır: büyük/küçük harf, Türkçe karakter ve noktalama farkı yok sayılır.
  */
 class TitleCategory
 {
-    /** küçük harfli arama ifadesi => kategori adı; adda en önce geçen tür seçilir */
+    /** düzenli ifade (Text::key biçiminde) => tür adı; adda en önce geçen seçilir */
     private const TYPES = [
-        'soru bankas' => 'Soru Bankası',
-        'konu anlat' => 'Konu Anlatımı',
-        'tam tekrar' => 'Tam Tekrar',
-        'yaprak test' => 'Yaprak Test',
-        'deneme' => 'Deneme',
-        'defter' => 'Defter',
-        'fasikül' => 'Fasikül',
+        '/\bsoru bankasi\b/' => 'Soru Bankası',
+        '/\bkonu anlatim/' => 'Konu Anlatımı',
+        '/\btam tekrar\b/' => 'Tam Tekrar',
+        '/\byaprak test/' => 'Yaprak Test',
+        '/\bcikmis soru/' => 'Çıkmış Sorular',
+        '/\bfasikul/' => 'Fasikül',
+        '/\bfoy(u|ler|leri)?\b/' => 'Föy',
+        '/\bdeneme(si|ler|leri)?\b/' => 'Deneme',
+        '/\bdefter(i|ler|leri)?\b/' => 'Defter',
+        '/\btest(i|ler|leri)?\b/' => 'Test',
     ];
 
-    private const WEAK_TYPES = ['Deneme', 'Defter'];
+    /** Okuma kitabı adlarında da geçen türler ("Deneme Yazıları", "Leonardo'nun Defterleri", "Kişilik Testi") */
+    public const WEAK_TYPES = ['Deneme', 'Defter', 'Test'];
 
-    private const EXAMS = ['TYT', 'AYT', 'YKS', 'YDT', 'KPSS', 'EKPSS', 'ALES', 'DGS', 'LGS', 'YDS', 'YÖKDİL', 'MSÜ', 'ÖABT', 'TUS', 'DUS', 'PMYO', 'POMEM'];
+    /** Text::key biçiminde sınav adı => görünen ad */
+    private const EXAMS = [
+        'tyt' => 'TYT', 'ayt' => 'AYT', 'yks' => 'YKS', 'ydt' => 'YDT', 'yds' => 'YDS', 'yokdil' => 'YÖKDİL',
+        'kpss' => 'KPSS', 'ekpss' => 'EKPSS', 'ales' => 'ALES', 'dgs' => 'DGS', 'lgs' => 'LGS', 'msu' => 'MSÜ',
+        'oabt' => 'ÖABT', 'pmyo' => 'PMYO', 'pomem' => 'POMEM', 'tus' => 'TUS', 'dus' => 'DUS', 'yos' => 'YÖS',
+    ];
 
-    /** Ders adından atılan nitelik kelimeleri */
-    private const MODIFIERS = ['konu', 'özetli', 'video', 'destekli', 'çözümlü', 'yeni', 'nesil', 've'];
+    /** Ders sözlüğü: Text::key biçiminde ifade => ders adı (uzun ifadeler önce denenir) */
+    private const SUBJECTS = [
+        'turk dili ve edebiyati' => 'Türk Dili ve Edebiyatı', 'inkilap tarihi' => 'İnkılap Tarihi', 'din kulturu' => 'Din Kültürü',
+        'fen bilimleri' => 'Fen Bilimleri', 'sosyal bilgiler' => 'Sosyal Bilgiler', 'dil bilgisi' => 'Dil Bilgisi', 'dilbilgisi' => 'Dil Bilgisi',
+        'esit agirlik' => 'Eşit Ağırlık', 'genel yetenek' => 'Genel Yetenek', 'genel kultur' => 'Genel Kültür',
+        'guncel bilgiler' => 'Güncel Bilgiler', 'egitim bilimleri' => 'Eğitim Bilimleri', 'sayisal mantik' => 'Sayısal Mantık',
+        'matematik' => 'Matematik', 'geometri' => 'Geometri', 'fizik' => 'Fizik', 'kimya' => 'Kimya', 'biyoloji' => 'Biyoloji',
+        'turkce' => 'Türkçe', 'paragraf' => 'Paragraf', 'problemler' => 'Problemler', 'edebiyat' => 'Edebiyat', 'tarih' => 'Tarih',
+        'cografya' => 'Coğrafya', 'felsefe' => 'Felsefe', 'ingilizce' => 'İngilizce', 'almanca' => 'Almanca',
+        'sayisal' => 'Sayısal', 'sozel' => 'Sözel', 'vatandaslik' => 'Vatandaşlık', 'mantik' => 'Mantık',
+    ];
+
+    /** Kısaltmalar: yalnız sınav/düzey/tür varsa ders sayılır ("Kim Korkar" bir okuma kitabıdır) */
+    private const ABBREVIATIONS = [
+        'mat' => 'Matematik', 'geo' => 'Geometri', 'fiz' => 'Fizik', 'kim' => 'Kimya', 'biyo' => 'Biyoloji',
+        'cog' => 'Coğrafya', 'ing' => 'İngilizce', 'edb' => 'Edebiyat', 'trk' => 'Türkçe',
+    ];
+
+    /** Ders adından atılan nitelik kelimeleri (sözlükte olmayan ders için) */
+    private const MODIFIERS = ['konu', 'ozetli', 'video', 'destekli', 'cozumlu', 'yeni', 'nesil', 've', 'akilli', 'kazanim', 'odakli'];
 
     /** Sınıf düzeyi → kategori adı (Sınav Hazırlık altında) */
     public const GRADES = ['Ara Sınıflar' => '9|10|11|12', 'Ortaokul' => '5|6|7|8', 'İlkokul' => '1|2|3|4'];
@@ -39,10 +66,10 @@ class TitleCategory
     /** Tanınan kitap türleri (yönetim formundaki öneri listesi). @return list<string> */
     public static function types(): array
     {
-        return array_values(self::TYPES);
+        return array_values(array_unique(self::TYPES));
     }
 
-    /** Eski biçim (Tür › Sınav › Ders); yeni düzende parse() kullanılır. @return list<string> */
+    /** Eski biçim (Tür › Sınav › Ders). @return list<string> */
     public static function guess(?string $title): array
     {
         $p = self::parse($title);
@@ -51,55 +78,23 @@ class TitleCategory
     }
 
     /**
-     * Kitap adından tür, sınav, sınıf düzeyi ve ders:
-     *   "345 TYT Matematik Soru Bankası 2024" → tür Soru Bankası, sınav TYT, ders Matematik
-     *   "10. Sınıf Fizik Konu Anlatımı"       → tür Konu Anlatımı, düzey Ara Sınıflar, ders Fizik
-     * "Deneme" yalnız sınav/düzey varsa tür sayılır (okuma kitaplarında "deneme" edebî türdür).
+     * Kitap adından tür, sınav, sınıf düzeyi ve ders. Sınav ve düzey ek metinde (klasör adı) de aranır.
+     * Zayıf türler ("Deneme", "Defter", "Test") yalnız sınav/düzey varsa tür sayılır; sınavsız adda kararı
+     * CategoryMapper verir (rawType()).
      *
      * @return array{type: ?string, exam: ?string, grade: ?string, subject: ?string}
      */
-    public static function parse(?string $title): array
+    public static function parse(?string $title, ?string $extra = null): array
     {
         $none = ['type' => null, 'exam' => null, 'grade' => null, 'subject' => null];
-        $title = trim(preg_replace('/\s+/u', ' ', (string) $title));
-        $title = trim(preg_replace('/\b(19|20)\d{2}(\s*-\s*(19|20)?\d{2})?$/u', '', $title));
-        if ($title === '') {
+        $key = Text::key(preg_replace('/\b(19|20)\d{2}(\s*-\s*(19|20)?\d{2})?\b/u', ' ', (string) $title));
+        if ($key === '') {
             return $none;
         }
-        $lower = Text::lower($title);
-
-        $type = null;
-        $typeAt = null;
-        foreach (self::TYPES as $needle => $name) {
-            $at = mb_strpos($lower, $needle);
-            if ($at !== false && ($typeAt === null || $at < $typeAt)) {
-                [$type, $typeAt] = [$name, $at];
-            }
-        }
-
-        // Sınav adı ilk üç kelimeden birinde olabilir ("345 TYT Matematik", "Palme Yayınları AYT Fizik")
-        $words = explode(' ', $title);
-        $exam = null;
-        $examEnd = 0;
-        foreach (array_slice($words, 0, 4) as $i => $w) {
-            $up = Text::upper(trim($w, ',.:;-'));
-            if (in_array($up, self::EXAMS, true)) {
-                $exam = $up;
-                $examEnd = mb_strlen(implode(' ', array_slice($words, 0, $i + 1))) + 1;
-                break;
-            }
-        }
-        $grade = null;
-        if (preg_match('/\b('.implode('|', array_unique(explode('|', implode('|', self::GRADES)))).')\s*\.?\s*sınıf\b/u', $lower, $m, PREG_OFFSET_CAPTURE)) {
-            foreach (self::GRADES as $name => $list) {
-                if (in_array($m[1][0], explode('|', $list), true)) {
-                    $grade = $name;
-                }
-            }
-            $examEnd = max($examEnd, mb_strlen(substr($lower, 0, $m[0][1] + strlen($m[0][0]))) + 1);
-        }
-        // "Deneme" ve "Defter" okuma kitabı adlarında da geçer ("Deneme Yazıları", "Leonardo'nun Defterleri"):
-        // yalnız sınav/düzey varsa tür sayılır.
+        $both = trim($key.' '.Text::key((string) $extra));
+        $exam = self::exam($both);
+        $grade = self::grade($both);
+        $type = self::rawType($key);
         if (in_array($type, self::WEAK_TYPES, true) && $exam === null && $grade === null) {
             $type = null;
         }
@@ -107,12 +102,95 @@ class TitleCategory
             return $none;
         }
 
-        // Ders: sınavdan/düzeyden sonra, türden önceki kelimeler (nitelikler ve sayılar atılır).
-        $middle = mb_substr($title, $examEnd, $typeAt !== null ? max(0, $typeAt - $examEnd) : null);
-        $subject = implode(' ', array_filter(explode(' ', trim($middle)),
-            fn ($w) => $w !== '' && ! preg_match('/^\d+\.?$/', $w) && ! in_array(Text::lower($w), self::MODIFIERS, true)));
-        $subject = $subject !== '' && mb_strlen($subject) <= 60 ? CategoryTree::displayName($subject) : null;
+        return ['type' => $type, 'exam' => $exam, 'grade' => $grade, 'subject' => self::subject((string) $title, true)];
+    }
 
-        return ['type' => $type, 'exam' => $exam, 'grade' => $grade, 'subject' => $subject];
+    /** Metinde geçen ilk sınav adı ("TYT-AYT" → TYT). */
+    public static function exam(string $key): ?string
+    {
+        foreach (explode(' ', Text::key($key)) as $w) {
+            if (isset(self::EXAMS[$w])) {
+                return self::EXAMS[$w];
+            }
+        }
+
+        return null;
+    }
+
+    /** "10. Sınıf", "9.sınıf", "Ara Sınıf" → düzey kategorisi. */
+    public static function grade(string $key): ?string
+    {
+        $key = Text::key($key);
+        if (preg_match('/\b(1[0-2]|[1-9]) ?sinif\b/', $key, $m)) {
+            foreach (self::GRADES as $name => $list) {
+                if (in_array($m[1], explode('|', $list), true)) {
+                    return $name;
+                }
+            }
+        }
+
+        return preg_match('/\bara sinif/', $key) ? 'Ara Sınıflar' : null;
+    }
+
+    /** Adda en önce geçen tür (zayıf türler dahil). */
+    public static function rawType(?string $title): ?string
+    {
+        $key = Text::key((string) $title);
+        $type = null;
+        $at = null;
+        foreach (self::TYPES as $re => $name) {
+            if (preg_match($re, $key, $m, PREG_OFFSET_CAPTURE) && ($at === null || $m[0][1] < $at)) {
+                [$type, $at] = [$name, $m[0][1]];
+            }
+        }
+
+        return $type;
+    }
+
+    /**
+     * Ders: önce sözlük ("Matematik", "Dil Bilgisi"; $abbrev ile "MAT", "GEO"); yoksa sınav/düzeyden sonra,
+     * türden önceki kelimeler ("TYT Mantık Soru Bankası" → Mantık).
+     */
+    public static function subject(string $title, bool $abbrev = false): ?string
+    {
+        $key = ' '.Text::key($title).' ';
+        $best = null;
+        $bestAt = null;
+        $dict = $abbrev ? self::SUBJECTS + self::ABBREVIATIONS : self::SUBJECTS;
+        foreach ($dict as $needle => $name) {
+            $at = strpos($key, ' '.$needle.' ');
+            if ($at !== false && ($bestAt === null || $at < $bestAt)) {
+                [$best, $bestAt] = [$name, $at];
+            }
+        }
+        if ($best) {
+            return $best;
+        }
+
+        // Sözlükte yok: sınav adından/sınıf düzeyinden hemen sonra, türden önce gelen kelimeler (özgün yazımla)
+        $words = array_values(array_filter(preg_split('/[^\p{L}\p{N}]+/u', $title), fn ($w) => $w !== ''));
+        $out = [];
+        $started = false;
+        foreach ($words as $w) {
+            $k = Text::key($w);
+            if (! $started) {
+                $started = isset(self::EXAMS[$k]) || $k === 'sinif';
+
+                continue;
+            }
+            if (preg_match('/^\d+$/', $k) || in_array($k, self::MODIFIERS, true)) {
+                if ($out) {
+                    break;
+                }
+
+                continue;
+            }
+            if (in_array($k, ['soru', 'konu', 'tam', 'yaprak', 'cikmis'], true) || self::rawType($w) !== null) {
+                break;
+            }
+            $out[] = $w;
+        }
+
+        return $out && count($out) <= 3 ? CategoryTree::displayName(implode(' ', $out)) : null;
     }
 }

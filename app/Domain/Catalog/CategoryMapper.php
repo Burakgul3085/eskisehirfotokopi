@@ -10,20 +10,33 @@ use App\Support\Text;
 use Illuminate\Support\Collection;
 
 /**
- * Toplu yüklemede kategori seçimi: görseldeki "Türü" yolu ("Popüler Bilim / Fizik / Parçacık Fiziği") ağaca
- * eklenmez; yöneticinin kısa listesindeki (en fazla iki kat) en uygun kategori seçilir. Yoldaki diğer ayrıntılı adlar
- * konu etiketi olur. Sırayla:
- *  1. Kitap adında sınav/sınıf düzeyi varsa ("345 TYT Matematik Soru Bankası") → Sınav Hazırlık › TYT
- *  2. Yoldaki adlar baştan sona: kayıtlı eşleme (CategoryAlias) → aynı ad → OCR harf hatası (bulanık) → ad içinde geçen
- *     kategori ("Psikoloji Popüler Bilim" → Psikoloji)
- *  3. Hiçbiri tutmazsa yeni kategori açılmaz; yüklemenin varsayılan kategorisi (varsa) kullanılır ve kitap kontrole düşer.
+ * Toplu yüklemede kitabı kategoriye yerleştirir. Kategoriler en fazla iki kat (Okuma Kitapları › Tarih,
+ * Sınav Hazırlık › TYT); görseldeki "Türü" yolunun ayrıntıları konu etiketi olur. Karar sırası:
+ *
+ *  1. Kesin kurallar (güven: yüksek)
+ *     - adda ya da klasör adında sınav adı ("AYT Fizik" → AYT, "ALES" → ALES, "YDS" → YDS ve YDT) veya sınıf düzeyi
+ *       ("10. Sınıf" → Ara Sınıflar); listede olmayan sınav (MSÜ) Sınav Hazırlık altına açılır
+ *     - yöneticinin bu "Türü" yolu için daha önce seçtiği kategori
+ *  2. Sınav kitabı mı okuma kitabı mı? İpuçları puanlanır (BookSignals): tür kelimeleri (soru bankası, konu özetli,
+ *     föy…), okul dersleri, roman/öykü/şiir, çevirmen, görseldeki "Türü", yayınevinin ve yazarın diğer kitapları,
+ *     sitedeki benzer kitaplar (CategoryLearner).
+ *  3. Grubun içinde kategori: "Türü" eşleşmesi (yüksek) → benzer kitaplar + yayınevi/yazar dağılımı (orta/düşük) →
+ *     sınav kitabında türüne göre (Deneme Kitapları, Konu Özetli Defterler) → varsayılan kategori → okuma kitabında
+ *     "Türü" adıyla yeni tek katlı kategori → grubun kendisi.
+ * Kitap hiçbir zaman kategorisiz kalmaz; orta/düşük güvenli yerleştirmeler yükleme sayfasında gerekçesiyle listelenir.
  */
 class CategoryMapper
 {
     /** @var ?Collection<int, Category> */
     private ?Collection $pool = null;
 
-    public function __construct(private CategoryTree $tree) {}
+    /** @var list<int> bu yerleştirmede açılan kategoriler */
+    private array $created = [];
+
+    /** @var ?list<int> */
+    private ?array $restrict = null;
+
+    public function __construct(private CategoryTree $tree, private CategoryLearner $learner) {}
 
     /** Kategoriler değişince (birleştirme, yeni kategori) önbelleği sıfırlar. */
     public function flush(): void
@@ -33,72 +46,63 @@ class CategoryMapper
 
     /**
      * @param  list<string>  $path  "Türü" yolunun parçaları
-     * @return array{category: ?Category, topics: list<string>, matched: bool, created: list<int>}
+     * @param  array{folder_title?: ?string, subtitle?: ?string, publisher_id?: ?int, author_id?: ?int, extras?: list<string>}  $ctx
+     * @return array{category: ?Category, topics: list<string>, matched: bool, created: list<int>, confidence: string, reasons: list<string>, alternative: ?int, book_type: ?string, subject: ?string}
      */
-    public function map(array $path, ?string $title = null, ?int $defaultId = null): array
+    public function map(array $path, ?string $title = null, ?int $defaultId = null, array $ctx = []): array
     {
         $path = array_values(array_filter(array_map(fn ($p) => trim(preg_replace('/^[^\p{L}\p{N}]+|[^\p{L}\p{N}]+$/u', '', (string) $p)), $path),
             fn ($p) => mb_strlen(preg_replace('/[^\p{L}]/u', '', $p)) >= 3 && ! EmptyValue::is($p)));
-        $created = [];
         $this->ensurePlan();
+        $this->created = [];
+        $default = $defaultId ? Category::find($defaultId) : null;
+        $parsed = TitleCategory::parse($title, $ctx['folder_title'] ?? null);
+        $examBook = $parsed['exam'] !== null || $parsed['grade'] !== null;
+        $pick = null; // [kategori, güven, gerekçeler, kullanılan yol indeksi, ikinci seçenek]
 
-        $category = null;
-        $usedIndex = null;
-        $parsed = TitleCategory::parse($title);
-        if ($exam = $parsed['exam'] ?? $parsed['grade']) {
-            [$category, $created] = $this->examCategory($exam);
-        }
-        // Adında sınav yok ama türü sınav kitabı ("Paragraf Soru Bankası"): yalnız Sınav Hazırlık altında aranır;
-        // okuma kategorilerine (Edebiyat, Tarih…) düşmez. Bulunamazsa varsayılan kategori, o da yoksa Sınav Hazırlık › Genel.
-        $examBook = ! $category && $parsed['type'] !== null && ($group = CategoryPlan::examGroup());
+        // 1. Kesin: adda/klasör adında sınav adı ya da sınıf düzeyi
         if ($examBook) {
-            foreach ($path as $i => $name) {
-                if ($category = $this->find($name, $group->id)) {
-                    $usedIndex = $i;
-                    break;
-                }
-            }
-            if (! $category && ! ($defaultId && Category::whereKey($defaultId)->exists())) {
-                $this->tree->created = [];
-                $category = $this->tree->ensurePath([$group->name, CategoryPlan::EXAM_GENERAL]);
-                $created = $this->tree->created;
-                $this->flush();
-            }
+            $pick = [$this->examCategory($parsed['exam'] ?? $parsed['grade']), 'high',
+                [$parsed['exam'] ? "Adda “{$parsed['exam']}” geçiyor" : "Adda sınıf düzeyi var ({$parsed['grade']})"], null, null];
         }
-        // Yöneticinin bu yolun tamamı için daha önce seçtiği kategori
-        if (! $category && ! $examBook && count($path) > 1 && ($alias = CategoryAlias::where('match_key', self::pathKey($path))->first())) {
-            $category = $this->pool()->firstWhere('id', $alias->category_id);
-            $usedIndex = $category ? -1 : null;
-        }
-        if (! $category && ! $examBook) {
-            foreach ($path as $i => $name) {
-                if ($category = $this->find($name)) {
-                    $usedIndex = $i;
-                    break;
-                }
-            }
-        }
-        $matched = $category !== null;
-        if (! $category && $defaultId) {
-            $category = Category::find($defaultId);
-            $matched = $category !== null;
-        }
-        // Hiçbiri tutmadı: kitap kategorisiz bırakılmaz, yolun ilk adıyla Okuma Kitapları altına tek katlı kategori açılır
-        // ("Gastronomi"). Yükleme sayfasındaki "yeni kategoriler" bölümünde görünür; istenirse birleştirilir.
-        if (! $category && ($i = $this->newCategoryIndex($path)) !== null) {
-            $name = $this->tree->closestName($path[$i]) ?? CategoryTree::displayName($path[$i]);
-            $this->tree->created = [];
-            $category = $this->tree->ensurePath([CategoryPlan::READING, $name]);
-            $created = $this->tree->created;
-            $usedIndex = $i;
-            $matched = $category !== null;
-            $this->flush();
+        // 1b. Kesin: yöneticinin bu "Türü" yolu için daha önce seçtiği kategori
+        if (! $pick && count($path) > 1 && ($alias = CategoryAlias::where('match_key', self::pathKey($path))->first())
+            && ($hit = $this->pool()->firstWhere('id', $alias->category_id))) {
+            $pick = [$hit, 'high', ['Bu “Türü” için daha önce seçtiğiniz kategori'], -1, null];
+            $examBook = $this->inGroup($hit, CategoryPlan::examGroup());
         }
 
-        // Konu etiketleri: seçilen kategorinin adı ve grup adları dışındaki ayrıntılar
-        // (kitap türü ve ders ayrı alanda tutulur, konu olarak tekrarlanmaz)
+        if (! $pick) {
+            // 2. Sınav kitabı mı okuma kitabı mı; 3. grubun içinde hangi kategori
+            [$pathHit, $pathIndex] = $this->pathHit($path);
+            [$examBook, $why] = $this->isExamBook($title, $ctx + ['has_path' => $path !== []], $pathHit);
+            $group = $examBook ? CategoryPlan::examGroup() : CategoryPlan::readingGroup();
+            $inGroupHit = $pathHit && $this->inGroup($pathHit, $group) ? [$pathHit, $pathIndex] : $this->pathHitIn($path, $group?->id);
+
+            if ($inGroupHit) {
+                $pick = [$inGroupHit[0], 'high', ['Görseldeki “Türü”: '.$path[$inGroupHit[1]], ...$why], $inGroupHit[1], null];
+            } elseif ($group && ($best = $this->bestIn($group, $title, $ctx))) {
+                $pick = [$best[0], $best[2] ? 'medium' : 'low', [...$best[1], ...$why], null, $best[3]];
+            } elseif ($examBook && $group && ($typeCat = $this->typeCategory($group, $title))) {
+                $pick = [$typeCat, 'medium', ['Kitap türü: '.TitleCategory::rawType($title), ...$why], null, null];
+            } elseif ($default) {
+                $pick = [$default, 'low', ['Yüklemede seçilen varsayılan kategori', ...$why], null, null];
+            } elseif (! $examBook && ($i = $this->newCategoryIndex($path)) !== null) {
+                $name = $this->tree->closestName($path[$i]) ?? CategoryTree::displayName($path[$i]);
+                $pick = [$this->ensure([CategoryPlan::READING, $name]), 'medium', ['Görseldeki “Türü” için yeni kategori: '.$name, ...$why], $i, null];
+            } elseif ($group) {
+                $pick = [$group, 'low', ['Yeterli ipucu yok; '.$group->name.' ana kategorisine konuldu', ...$why], null, null];
+            }
+        }
+        [$category, $confidence, $reasons, $usedIndex, $alternative] = $pick ?? [null, 'low', [], null, null];
+
+        // Kitap türü ve ders yalnız sınav kitaplarında (okuma kitabında "Deneme" edebî türdür)
+        $bookType = $examBook ? ($parsed['type'] ?? TitleCategory::rawType($title)) : null;
+        $subject = $examBook ? ($parsed['subject'] ?? TitleCategory::subject((string) $title, true)) : null;
+
+        // Konu etiketleri: seçilen kategorinin adı, grup adları, tür ve ders dışındaki ayrıntılar
         $skip = array_filter([$category?->normalized_name, Text::key(CategoryPlan::READING), Text::key(CategoryPlan::EXAM),
-            $parsed['type'] ? Text::key($parsed['type']) : null, $parsed['subject'] ? Text::key($parsed['subject']) : null]);
+            $bookType ? Text::key($bookType) : null, $subject ? Text::key($subject) : null]);
         $topics = [];
         foreach ($path as $i => $name) {
             $key = Text::key($name);
@@ -112,7 +116,164 @@ class CategoryMapper
             }
         }
 
-        return ['category' => $category, 'topics' => $this->cleanTopics(array_values($topics), $category), 'matched' => $matched, 'created' => $created];
+        return [
+            'category' => $category, 'topics' => $this->cleanTopics(array_values($topics), $category), 'matched' => $category !== null,
+            'created' => $this->created, 'confidence' => $confidence, 'reasons' => array_values(array_unique($reasons)),
+            'alternative' => $alternative, 'book_type' => $bookType, 'subject' => $subject,
+        ];
+    }
+
+    /**
+     * Sınav kitabı mı? Metin ipuçları + görseldeki "Türü" + çevirmen + yayınevi/yazar geçmişi + benzer kitaplar.
+     *
+     * @return array{0: bool, 1: list<string>} karar ve gerekçe
+     */
+    private function isExamBook(?string $title, array $ctx, ?Category $pathHit): array
+    {
+        $text = implode(' ', array_filter([$title, $ctx['subtitle'] ?? null, $ctx['folder_title'] ?? null]));
+        [$exam, $examWhy] = BookSignals::exam($text);
+        [$read, $readWhy] = BookSignals::reading($text);
+        $examGroup = CategoryPlan::examGroup();
+        $inExam = fn (int $catId) => ($c = $this->pool()->firstWhere('id', $catId)) !== null && $this->inGroup($c, $examGroup);
+        $why = [];
+
+        if ($pathHit) {
+            if ($inExam($pathHit->id)) {
+                $exam += 6;
+            } else {
+                $read += 6;
+            }
+        } elseif ($ctx['has_path'] ?? false) {
+            $read += 2; // görselde "Türü" satırı olan künye tablosu okuma kitaplarına özgüdür
+        }
+        if (collect($ctx['extras'] ?? [])->contains(fn ($l) => str_contains(Text::key((string) $l), 'cevirmen'))) {
+            $read += 3;
+            $readWhy[] = 'çevirmenli';
+        }
+        // Yayınevi (en az 3 kitap) ve yazar (en az 1 kitap) geçmişi
+        foreach ([['publisher', 3, 4, 'yayınevinin kitapları'], ['author', 1, 4, 'yazarın diğer kitapları']] as [$kind, $min, $weight, $label]) {
+            [$share, $total] = $this->learner->{$kind}($ctx[$kind.'_id'] ?? null);
+            if ($total >= $min) {
+                $e = 0.0;
+                foreach ($share as $c => $s) {
+                    $e += $inExam((int) $c) ? $s : 0;
+                }
+                $exam += $weight * $e;
+                $read += $weight * (1 - $e);
+                $why[] = $label.': %'.round($e * 100).' sınav kitabı';
+            }
+        }
+        // Sitedeki benzer kitaplar
+        $probs = $this->learner->predict(CategoryLearner::tokens($text), $this->pool()->pluck('id')->all());
+        if ($probs) {
+            $e = 0.0;
+            foreach ($probs as $c => $p) {
+                $e += $inExam((int) $c) ? $p : 0;
+            }
+            $exam += 3 * $e;
+            $read += 3 * (1 - $e);
+        }
+        $isExam = $exam > $read;
+
+        return [$isExam, array_values(array_filter([
+            $isExam && $examWhy ? 'Sınav kitabı ipuçları: '.implode(', ', $examWhy) : null,
+            ! $isExam && $readWhy ? 'Okuma kitabı ipuçları: '.implode(', ', $readWhy) : null,
+            ...$why,
+        ]))];
+    }
+
+    /**
+     * Grubun alt kategorileri arasında en olası olan: benzer kitaplar + yayınevi ve yazar dağılımı.
+     *
+     * @return ?array{0: Category, 1: list<string>, 2: bool, 3: ?int} kategori, gerekçe, yeterince emin mi, ikinci seçenek
+     */
+    private function bestIn(Category $group, ?string $title, array $ctx): ?array
+    {
+        $children = $this->pool()->where('parent_id', $group->id)->keyBy('id');
+        if ($children->isEmpty()) {
+            return null;
+        }
+        $ids = $children->keys()->all();
+        $scores = array_fill_keys($ids, 0.0);
+        $why = array_fill_keys($ids, []);
+        $text = implode(' ', array_filter([$title, $ctx['subtitle'] ?? null]));
+        foreach ($this->learner->predict(CategoryLearner::tokens($text), $ids) as $c => $p) {
+            $scores[$c] += 3 * $p;
+            if ($p >= 0.5) {
+                $why[$c][] = 'benzer kitaplar bu kategoride';
+            }
+        }
+        foreach ([['publisher', 3, 3, 'yayınevinin kitaplarının çoğu burada'], ['author', 1, 4, 'yazarın diğer kitapları burada']] as [$kind, $min, $weight, $label]) {
+            [$share, $total] = $this->learner->{$kind}($ctx[$kind.'_id'] ?? null);
+            if ($total < $min) {
+                continue;
+            }
+            foreach ($share as $c => $s) {
+                if (isset($scores[$c])) {
+                    $scores[$c] += $weight * $s;
+                    if ($s >= 0.5) {
+                        $why[$c][] = $label;
+                    }
+                }
+            }
+        }
+        arsort($scores);
+        $ranked = array_keys($scores);
+        [$best, $second] = [$ranked[0], $ranked[1] ?? null];
+        if ($scores[$best] < 1.5) {
+            return null; // yeterli ipucu yok
+        }
+        $sure = $scores[$best] >= 3 && ($second === null || $scores[$best] - $scores[$second] >= 1.5);
+
+        return [$children[$best], $why[$best] ?: ['benzer kitaplar ve yayınevi geçmişi'], $sure, $second !== null && $scores[$second] > 0 ? $second : null];
+    }
+
+    /** Sınav adı okunamayan sınav kitabı için türüne göre kategori: Deneme → Deneme Kitapları, Defter → Konu Özetli Defterler. */
+    private function typeCategory(Category $group, ?string $title): ?Category
+    {
+        $name = CategoryPlan::TYPE_CATEGORIES[TitleCategory::rawType($title) ?? ''] ?? null;
+
+        return $name ? ($this->find($name, $group->id) ?? $this->ensure([$group->name, $name])) : null;
+    }
+
+    private function inGroup(Category $category, ?Category $group): bool
+    {
+        return $group !== null && ($category->id === $group->id || $category->parent_id === $group->id);
+    }
+
+    /** "Türü" yolunda bir kategoriye uyan ilk ad. @return array{0: ?Category, 1: ?int} */
+    private function pathHit(array $path): array
+    {
+        foreach ($path as $i => $name) {
+            if ($hit = $this->find($name)) {
+                return [$hit, $i];
+            }
+        }
+
+        return [null, null];
+    }
+
+    /** @return ?array{0: Category, 1: int} */
+    private function pathHitIn(array $path, ?int $groupId): ?array
+    {
+        foreach ($groupId ? $path : [] as $i => $name) {
+            if ($hit = $this->find($name, $groupId)) {
+                return [$hit, $i];
+            }
+        }
+
+        return null;
+    }
+
+    /** @param list<string> $names */
+    private function ensure(array $names): ?Category
+    {
+        $this->tree->created = [];
+        $cat = $this->tree->ensurePath($names);
+        $this->created = [...$this->created, ...$this->tree->created];
+        $this->flush();
+
+        return $cat;
     }
 
     /**
@@ -176,13 +337,14 @@ class CategoryMapper
     }
 
     /**
-     * Kontrol ekranında yöneticinin seçtiği kategoriyi hatırlar: yolun tamamı ve hiçbir kategoriye uymayan adlar
-     * ("Spor Sosyolojisi") seçilen kategoriye bağlanır. Zaten bir kategoriye uyan ad ("Popüler Bilim") değiştirilmez.
+     * Yöneticinin seçtiği kategoriyi hatırlar: yolun tamamı ve hiçbir kategoriye uymayan adlar ("Spor Sosyolojisi")
+     * seçilen kategoriye bağlanır. Zaten bir kategoriye uyan ad ("Popüler Bilim") değiştirilmez.
      *
      * @param  list<string>  $path
      */
     public function remember(array $path, Category $category): void
     {
+        CategoryLearner::forget(); // seçim benzer kitap tahminlerine hemen yansısın
         $path = array_values(array_filter(array_map('trim', $path), fn ($p) => mb_strlen($p) >= 3 && ! EmptyValue::is($p)));
         if (! $path) {
             return;
@@ -248,21 +410,15 @@ class CategoryMapper
         return $hits->first();
     }
 
-    /** @return array{0: ?Category, 1: list<int>} Sınav Hazırlık › TYT (sınav adı listede yoksa grubun altına açılır). */
-    private function examCategory(string $exam): array
+    /** Sınav Hazırlık › TYT (sınav adı listede yoksa grubun altına açılır: MSÜ, YKS…). */
+    private function examCategory(string $exam): ?Category
     {
-        if ($found = $this->find($exam)) {
-            return [$found, []];
-        }
         $group = CategoryPlan::examGroup();
-        if (! $group) {
-            return [null, []];
+        if ($found = $this->find($exam, $group?->id)) {
+            return $found;
         }
-        $this->tree->created = [];
-        $cat = $this->tree->ensurePath([$group->name, $exam]);
-        $this->flush();
 
-        return [$cat, $this->tree->created];
+        return $group ? $this->ensure([$group->name, $exam]) : null;
     }
 
     /** Yalnız bu kategoriler arasından seç (eski ağacı sadeleştirirken: yalnız kısa liste). @param ?list<int> $ids */
@@ -271,9 +427,6 @@ class CategoryMapper
         $this->restrict = $ids;
         $this->flush();
     }
-
-    /** @var ?list<int> */
-    private ?array $restrict = null;
 
     /** @return Collection<int, Category> en fazla iki kat */
     private function pool(): Collection
