@@ -17,6 +17,12 @@ final class CategoryPlan
 
     public const EXAM = 'Sınav Hazırlık';
 
+    /** Okuma ya da sınav kitabı olmayanlar: Sözlük, Atlas, Tıp, Bilgisayar, Hobi, Kırtasiye… ("Türü" adıyla alt kategori açılır) */
+    public const OTHER = 'Diğer Kitaplar';
+
+    /** Listede olmayan bir "Türü" bu kelimelerden birini içeriyorsa okuma türüdür ("Polisiye" → Okuma Kitapları › Polisiye) */
+    public const READING_GENRES = '/\b(roman|romanlar|oyku|hikaye|siir|kurgu|bilimkurgu|polisiye|fantastik|fantazi|macera|gerilim|korku|distopya|mizah|klasik|klasikler|anlati|novella|edebiyat|edebi|masal|efsane|destan|genclik|cocuk|deneme)\b/';
+
     /** Sınav adı okunamayan sınav kitapları türüne göre bu kategorilere gider ("Konu Özetli Defter" → Konu Özetli Defterler) */
     public const TYPE_CATEGORIES = ['Deneme' => 'Deneme Kitapları', 'Defter' => 'Konu Özetli Defterler'];
 
@@ -24,7 +30,7 @@ final class CategoryPlan
     public const TREE = [
         self::READING => [
             'Edebiyat' => ['roman', 'oyku', 'hikaye', 'siir', 'edebiyat', 'turk edebiyati', 'dunya edebiyati', 'klasikler', 'novel', 'fiction',
-                'dram', 'drama', 'deneme yazilari', 'anlati', 'novella'],
+                'dram', 'drama', 'deneme yazilari', 'anlati', 'novella', 'bilim kurgu', 'bilimkurgu', 'polisiye', 'fantastik', 'gerilim', 'korku', 'macera'],
             'Tarih' => ['dunya tarihi', 'avrupa tarihi', 'osmanli tarihi', 'turk tarihi', 'yakin tarih', 'history'],
             'Felsefe' => ['toplum ve dusunce', 'dusunce', 'philosophy'],
             'Psikoloji' => ['insan davranislari', 'psychology'],
@@ -44,6 +50,7 @@ final class CategoryPlan
             'İlkokul' => ['1 sinif', '2 sinif', '3 sinif', '4 sinif'],
             'Deneme Kitapları' => ['deneme sinavlari', 'deneme sinavi'], 'Konu Özetli Defterler' => ['konu ozetli defter', 'akilli defter'],
         ],
+        self::OTHER => [],
     ];
 
     /** Başlangıç düzenini kurar (var olanlara dokunmaz); kurulan/var olan kategorilerin kimlikleri. @return list<int> */
@@ -67,11 +74,11 @@ final class CategoryPlan
         return $ids;
     }
 
-    /** İki grup da duruyorsa bir şey yapmaz; biri silinmişse (ör. tüm kategoriler silindi) düzeni yeniden kurar. */
+    /** Üç grup da duruyorsa bir şey yapmaz; biri silinmişse (ör. tüm kategoriler silindi) düzeni yeniden kurar. */
     public static function ensure(CategoryTree $tree): void
     {
-        $groups = Category::whereNull('parent_id')->whereIn('normalized_name', [Text::key(self::READING), Text::key(self::EXAM)])->count();
-        if ($groups < 2) {
+        $names = array_map(fn ($g) => Text::key($g), array_keys(self::TREE));
+        if (Category::whereNull('parent_id')->whereIn('normalized_name', $names)->count() < count($names)) {
             self::install($tree);
         }
     }
@@ -97,6 +104,18 @@ final class CategoryPlan
     public static function readingGroup(): ?Category
     {
         return Category::whereNull('parent_id')->where('normalized_name', Text::key(self::READING))->first();
+    }
+
+    /** "Diğer Kitaplar" grubu (yoksa null). */
+    public static function otherGroup(): ?Category
+    {
+        return Category::whereNull('parent_id')->where('normalized_name', Text::key(self::OTHER))->first();
+    }
+
+    /** Ana grup adları (Text::key biçiminde). @return list<string> */
+    public static function groupKeys(): array
+    {
+        return array_map(fn ($g) => Text::key($g), array_keys(self::TREE));
     }
 
     /** Sınav grubu (yoksa null). */

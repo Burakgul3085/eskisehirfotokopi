@@ -2,6 +2,7 @@
 
 namespace App\Domain\Catalog;
 
+use App\Models\Author;
 use App\Models\Product;
 use App\Support\Text;
 use Illuminate\Support\Facades\Cache;
@@ -17,7 +18,7 @@ use Illuminate\Support\Facades\Cache;
  */
 class CategoryLearner
 {
-    private const CACHE = 'category-learner:v3';
+    private const CACHE = 'category-learner:v4';
 
     /** Ürünler değiştiyse model en geç bu kadar saniye sonra yeniden kurulur */
     private const REFRESH = 15;
@@ -30,6 +31,9 @@ class CategoryLearner
         'soru', 'sorular', 'sorulari', 'bankasi', 'konu', 'anlatimi', 'anlatim', 'anlatimli', 'yaprak', 'test', 'testi', 'testler',
         'deneme', 'denemesi', 'denemeleri', 'sinavi', 'sinav', 'ozetli', 'ozet', 'defter', 'defteri', 'fasikul', 'foy', 'cikmis',
         'tekrar', 'tam', 'nesil', 'video', 'cozumlu', 'etkinlik', 'calisma', 'kitapligi', 'seti', 'serisi'];
+
+    /** Gerçek yazar olmayan ortak adlar: geçmişleri her türden kitabı karıştırır, yazar sinyali sayılmaz */
+    public const COLLECTIVE_AUTHORS = ['kolektif', 'komisyon', 'anonim', 'kurul', 'yayin kurulu', 'heyet', 'ortak kitap', 'cesitli yazarlar', 'collective', 'various'];
 
     private ?array $model = null;
 
@@ -159,6 +163,7 @@ class CategoryLearner
     private function build(): array
     {
         $m = ['docs' => [], 'words' => [], 'totals' => [], 'vocab' => [], 'publishers' => [], 'authors' => []];
+        $collective = Author::query()->whereIn('match_key', self::COLLECTIVE_AUTHORS)->pluck('id')->flip();
         $rows = Product::query()->whereNotNull('category_id')
             ->select(['id', 'title', 'subtitle', 'topics', 'subject', 'book_type', 'category_id', 'publisher_id', 'author_id'])->cursor();
         foreach ($rows as $p) {
@@ -174,7 +179,7 @@ class CategoryLearner
             if ($p->publisher_id) {
                 $m['publishers'][$p->publisher_id][$c] = ($m['publishers'][$p->publisher_id][$c] ?? 0) + 1;
             }
-            if ($p->author_id) {
+            if ($p->author_id && ! isset($collective[$p->author_id])) {
                 $m['authors'][$p->author_id][$c] = ($m['authors'][$p->author_id][$c] ?? 0) + 1;
             }
         }

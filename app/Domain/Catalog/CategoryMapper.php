@@ -76,7 +76,9 @@ class CategoryMapper
             // 2. Sınav kitabı mı okuma kitabı mı; 3. grubun içinde hangi kategori
             [$pathHit, $pathIndex] = $this->pathHit($path);
             [$examBook, $why] = $this->isExamBook($title, $ctx + ['has_path' => $path !== []], $pathHit);
-            $group = $examBook ? CategoryPlan::examGroup() : CategoryPlan::readingGroup();
+            // Okuma kitabı değilse: "Türü" Diğer Kitaplar'daki bir kategoriye uyuyorsa (ikinci Sözlük) o grup
+            $other = CategoryPlan::otherGroup();
+            $group = $examBook ? CategoryPlan::examGroup() : ($pathHit && $this->inGroup($pathHit, $other) ? $other : CategoryPlan::readingGroup());
             $inGroupHit = $pathHit && $this->inGroup($pathHit, $group) ? [$pathHit, $pathIndex] : $this->pathHitIn($path, $group?->id);
 
             // Sıra: görseldeki "Türü" → kitap türü (defter/deneme) → "Türü" için yeni kategori → benzer kitaplar ve
@@ -88,10 +90,13 @@ class CategoryMapper
                 $pick = [$typeCat, 'medium', ['Kitap türü: '.(TitleCategory::rawType($title) ?? implode(' ', $path)), ...$why], null, null];
             } elseif ($group && ($i = $this->newCategoryIndex($path, $examBook)) !== null) {
                 // Tanınmayan "Türü": yüklemede varsayılan kategori seçildiyse oraya, yoksa bu adla yeni kategori
+                // Okuma kitabı da değilse (Sözlük, Tıp, Kırtasiye…) Diğer Kitaplar altına açılır; okuma türü adı
+                // ("Polisiye") ya da adda/çevirmende okuma ipucu varsa Okuma Kitapları altına
                 $name = $this->tree->closestName($path[$i]) ?? CategoryTree::displayName($path[$i]);
+                $target = $examBook || $this->readingLike($path[$i], $title, $ctx) ? $group->name : CategoryPlan::OTHER;
                 $pick = $default
                     ? [$default, 'low', ['“Türü” ('.$path[$i].') tanınmadı; yüklemede seçilen varsayılan kategori', ...$why], null, null]
-                    : [$this->ensure([$group->name, $name]), 'medium', ['Görseldeki “Türü” için yeni kategori: '.$name, ...$why], $i, null];
+                    : [$this->ensure([$target, $name]), 'medium', ['Görseldeki “Türü” için yeni kategori: '.$target.' › '.$name, ...$why], $i, null];
             } elseif ($group && ($best = $this->bestIn($group, $title, $ctx))) {
                 $pick = [$best[0], $best[2] ? 'medium' : 'low', [...$best[1], ...$why], null, $best[3]];
             } elseif ($default) {
@@ -107,7 +112,7 @@ class CategoryMapper
         $subject = $examBook ? ($parsed['subject'] ?? TitleCategory::subject((string) $title, true)) : null;
 
         // Konu etiketleri: seçilen kategorinin adı, grup adları, tür ve ders dışındaki ayrıntılar
-        $skip = array_filter([$category?->normalized_name, Text::key(CategoryPlan::READING), Text::key(CategoryPlan::EXAM),
+        $skip = array_filter([$category?->normalized_name, ...CategoryPlan::groupKeys(),
             $bookType ? Text::key($bookType) : null, $subject ? Text::key($subject) : null]);
         $topics = [];
         foreach ($path as $i => $name) {
@@ -250,6 +255,19 @@ class CategoryMapper
         return $name ? ($this->find($name, $group->id) ?? $this->ensure([$group->name, $name])) : null;
     }
 
+    /** Listede olmayan "Türü" bir okuma türü mü: adı okuma türü kelimesi içeriyor ya da kitap adı/çevirmen okuma kitabını gösteriyor. */
+    private function readingLike(string $type, ?string $title, array $ctx): bool
+    {
+        if (preg_match(CategoryPlan::READING_GENRES, Text::key($type))) {
+            return true;
+        }
+        if (collect($ctx['extras'] ?? [])->contains(fn ($l) => str_contains(Text::key((string) $l), 'cevirmen'))) {
+            return true;
+        }
+
+        return BookSignals::reading((string) $title)[0] >= 4;
+    }
+
     private function inGroup(Category $category, ?Category $group): bool
     {
         return $group !== null && ($category->id === $group->id || $category->parent_id === $group->id);
@@ -299,7 +317,7 @@ class CategoryMapper
      */
     public function cleanTopics(array $topics, ?Category $category): array
     {
-        $groups = [Text::key(CategoryPlan::READING), Text::key(CategoryPlan::EXAM)];
+        $groups = CategoryPlan::groupKeys();
         $out = [];
         foreach ($topics as $t) {
             $key = Text::key((string) $t);

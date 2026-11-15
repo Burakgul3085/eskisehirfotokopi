@@ -99,13 +99,20 @@ class SmartPlacementTest extends TestCase
     {
         $pub = Publisher::create(['name' => 'Atlas Akademik', 'slug' => 'atlas-akademik', 'match_key' => 'atlas akademik', 'is_active' => true]);
         $first = $this->map('Büyük Türkçe Sözlük', ['Sözlük'], ['publisher_id' => $pub->id]);
-        $this->assertSame('Okuma Kitapları › Sözlük', $first['category']->fullName());
+        $this->assertSame('Diğer Kitaplar › Sözlük', $first['category']->fullName());
         foreach (['Cep Sözlüğü', 'Eş Anlamlılar Sözlüğü', 'Deyimler Sözlüğü'] as $t) {
             $this->product($t, $first['category'], ['publisher_id' => $pub->id]);
         }
         // Yayınevinin tüm kitapları Sözlük'te olsa da açıkça yazılmış farklı "Türü" kendi kategorisine gider
-        $this->assertSame('Okuma Kitapları › Atlas', $this->map('Dünya Atlası', ['Atlas'], ['publisher_id' => $pub->id])['category']->fullName());
-        $this->assertSame('Okuma Kitapları › Gezi', $this->map('Kapadokya Gezi Rehberi', ['Gezi', 'Seyahat'], ['publisher_id' => $pub->id])['category']->fullName());
+        $this->assertSame('Diğer Kitaplar › Atlas', $this->map('Dünya Atlası', ['Atlas'], ['publisher_id' => $pub->id])['category']->fullName());
+        $this->assertSame('Diğer Kitaplar › Gezi', $this->map('Kapadokya Gezi Rehberi', ['Gezi', 'Seyahat'], ['publisher_id' => $pub->id])['category']->fullName());
+        // Diğer Kitaplar'daki kategoriye ikinci kitap da gider (yeni açılmaz); okuma türü adı Okuma Kitapları'na açılır
+        $this->assertSame($first['category']->id, $this->map('Osmanlıca Sözlük', ['Sözlük'])['category']->id);
+        $this->assertSame('Okuma Kitapları › Edebiyat', $this->map('Gece Yarısı Cinayeti', ['Polisiye'])['category']->fullName());
+        $this->assertSame('Okuma Kitapları › Edebiyat', $this->map('Yıldız Göçü', ['Bilim Kurgu'])['category']->fullName());
+        $this->assertSame('Okuma Kitapları › Distopya', $this->map('Gri Şehir', ['Distopya'])['category']->fullName()); // listede yok, okuma türü
+        $this->assertSame('Okuma Kitapları › Seyir Defteri', $this->map('Uzak Kıyılar', ['Seyir Defteri'], ['extras' => ['Çevirmen']])['category']->fullName());
+        $this->assertSame('Diğer Kitaplar › Kırtasiye', $this->map('2027 Öğrenci Ajandası', ['Kırtasiye'])['category']->fullName());
         // Türkçe ekli ve takma adlı eşleşme
         $this->assertSame('Din ve Mitoloji', $this->map("Kur'an-ı Kerim Meali", ['Dini Kitaplar'])['category']->name);
         $this->assertSame('Dil ve Dilbilim', $this->map('Adım Adım İngilizce Gramer', ['Yabancı Dil'])['category']->name);
@@ -114,7 +121,13 @@ class SmartPlacementTest extends TestCase
         $this->assertSame('Popüler Bilim', $this->map('Sayıların Büyüsü', ['Kitap', 'Bilim ve Mühendislik', 'Matematik'])['category']->name);
 
         // Sınav tarafı: listede olmayan sınav türü kendi kategorisini açar; "Test Kitabı" gibi genel tür açmaz
-        $this->assertSame('Sınav Hazırlık › Sürücü Kursu', $this->map('Ehliyet Sınavı Soru Bankası', ['Sürücü Kursu'])['category']->fullName());
+        // "Kolektif" gerçek yazar değil: sözlük/atlas geçmişi sınav kitabını Diğer Kitaplar'a çekmez
+        $kolektif = Author::resolve('Kolektif');
+        foreach (['Cep Atlası', 'Resimli Sözlük', 'Hayvanlar Boyama'] as $t) {
+            $this->product($t, $first['category'], ['author_id' => $kolektif->id, 'publisher_id' => $pub->id]);
+        }
+        $this->assertSame('Sınav Hazırlık › Sürücü Kursu', $this->map('Ehliyet Sınavı Soru Bankası', ['Sürücü Kursu'],
+            ['author_id' => $kolektif->id, 'publisher_id' => $pub->id])['category']->fullName());
         $this->assertSame([], $this->map('Problemler Yaprak Test', ['Test Kitabı'])['created']);
         $this->assertNull(Category::where('name', 'Test Kitabı')->first());
     }

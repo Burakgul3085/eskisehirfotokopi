@@ -71,9 +71,9 @@ class FlatCategoryTest extends TestCase
 
         $this->assertSame($before, Category::count()); // buraya kadar yeni kategori açılmadı
 
-        // Tanınmayan yol: kitap kategorisiz kalmaz; ilk adla Okuma Kitapları altına tek katlı kategori açılır
+        // Tanınmayan yol: kitap kategorisiz kalmaz; ilk adla Diğer Kitaplar altına tek katlı kategori açılır (okuma türü değil)
         $r = $mapper->map(['Kuantum Gastronomisi', 'Moleküler Mutfak'], 'Bilinmeyen');
-        $this->assertSame('Okuma Kitapları › Kuantum Gastronomisi', $r['category']->fullName());
+        $this->assertSame('Diğer Kitaplar › Kuantum Gastronomisi', $r['category']->fullName());
         $this->assertSame(['Moleküler Mutfak'], $r['topics']);
         $this->assertCount(1, $r['created']);
         $this->assertSame($r['category']->id, $mapper->map(['Kuantum Gastronomisi'], 'Başka')['category']->id); // ikinci kez açılmaz
@@ -126,7 +126,7 @@ class FlatCategoryTest extends TestCase
         // Varsayılan yoksa kendiliğinden yeni kategori açılır; yine kontrol gerekmez
         $item = $this->importBook(FakeOcrEngine::sample(['category' => ['Türü', 'Kuantum Gastronomisi']], 'Mutfakta Biyoloji'), 'BOĞAZİÇİ ÜNİVERSİTESİ YAYINEVİ - MUTFAKTA BİYOLOJİ - MARY FULBROOK');
         $this->assertSame('imported', $item->status, json_encode($item->issues));
-        $this->assertSame('Okuma Kitapları › Kuantum Gastronomisi', $item->product->category->fullName());
+        $this->assertSame('Diğer Kitaplar › Kuantum Gastronomisi', $item->product->category->fullName());
         $auto = $item->product->category_id;
 
         // Yönetici isterse kontrol ekranında Popüler Bilim'i seçer → boş kalan otomatik kategori silinir, seçim hatırlanır
