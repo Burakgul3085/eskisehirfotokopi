@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Mail\SiteMail;
 use App\Models\Admin;
 use App\Models\Setting;
 use App\Support\Settings;
@@ -49,18 +50,32 @@ class AdminSettingsTest extends TestCase
         $this->get('/yonetim/giris')->assertOk();
     }
 
-    public function test_mail_password_is_encrypted_and_kept_when_blank(): void
+    public function test_mail_needs_only_address_and_app_password(): void
     {
-        $base = ['mail_host' => 'smtp.gmail.com', 'mail_port' => '587', 'mail_encryption' => 'tls', 'mail_username' => 'a@b.com', 'notify_emails' => 'x@y.com, z@y.com'];
+        $base = ['mail_username' => 'Dukkan@Gmail.com'];
 
-        $this->put('/yonetim/ayarlar/eposta', $base + ['mail_password' => 'uygulama-sifresi'])->assertSessionHasNoErrors();
-        $this->assertNotSame('uygulama-sifresi', Setting::find('mail_password')->value);
-        $this->assertSame('uygulama-sifresi', Settings::secret('mail_password'));
+        // İlk kayıtta uygulama şifresi zorunlu ve 16 hane olmalı
+        $this->put('/yonetim/ayarlar/eposta', $base)->assertSessionHasErrors('mail_password');
+        $this->put('/yonetim/ayarlar/eposta', $base + ['mail_password' => 'kisa'])->assertSessionHasErrors('mail_password');
 
+        // Google'ın gösterdiği boşluklu biçim kabul edilir, boşluklar atılır
+        $this->put('/yonetim/ayarlar/eposta', $base + ['mail_password' => 'abcd efgh ijkl mnop'])->assertSessionHasNoErrors();
+        $this->assertNotSame('abcdefghijklmnop', Setting::find('mail_password')->value);
+        $this->assertSame('abcdefghijklmnop', Settings::secret('mail_password'));
+        $this->assertSame('dukkan@gmail.com', Settings::get('mail_username'));
+
+        // Boş bırakılınca mevcut şifre korunur
         $this->put('/yonetim/ayarlar/eposta', $base + ['mail_password' => ''])->assertSessionHasNoErrors();
-        $this->assertSame('uygulama-sifresi', Settings::secret('mail_password'));
+        $this->assertSame('abcdefghijklmnop', Settings::secret('mail_password'));
 
         $this->put('/yonetim/ayarlar/eposta', ['notify_emails' => 'gecersiz'] + $base)->assertSessionHasErrors('notify_emails');
+        $this->put('/yonetim/ayarlar/eposta', ['mail_username' => 'adres-degil'])->assertSessionHasErrors('mail_username');
+
+        // Sunucu adresten belirlenir; bildirim adresi yoksa gönderen hesaba gider
+        $this->assertSame('smtp.gmail.com', Settings::mailServer('dukkan@gmail.com')['host']);
+        $this->assertSame('smtp.office365.com', Settings::mailServer('a@hotmail.com')['host']);
+        $this->assertSame('smtp.gmail.com', Settings::mailServer('info@firmam.com.tr')['host']);
+        $this->assertSame(['dukkan@gmail.com'], SiteMail::adminRecipients());
     }
 
     public function test_appearance_colors_and_logo(): void

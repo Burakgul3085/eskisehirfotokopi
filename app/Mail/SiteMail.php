@@ -195,8 +195,9 @@ class SiteMail extends Mailable implements ShouldQueue
     public static function adminRecipients(): array
     {
         $list = preg_split('/[\s,;]+/', (string) Settings::get('notify_emails'), -1, PREG_SPLIT_NO_EMPTY);
-        if (! $list && Settings::get('email')) {
-            $list = [Settings::get('email')];
+        if (! $list) {
+            // Bildirim adresi girilmediyse iletişim e-postası, o da yoksa gönderen hesabın kendisi
+            $list = array_filter([Settings::get('email') ?: Settings::get('mail_username')]);
         }
 
         return array_values(array_unique(array_filter($list, fn ($e) => filter_var($e, FILTER_VALIDATE_EMAIL))));

@@ -98,6 +98,26 @@ printer|Belge baskısı|Belgeni yükle, biz basalım', // simge|Başlık|Açıkl
 
     public const SECRETS = ['mail_password'];
 
+    /**
+     * Gönderen adresin alan adına göre SMTP sunucusu (yönetimde yalnız adres ve uygulama şifresi girilir).
+     * Tanınmayan alan adları Google Workspace kabul edilir.
+     *
+     * @return array{host: string, port: int, scheme: string}
+     */
+    public static function mailServer(string $address): array
+    {
+        $domain = mb_strtolower((string) substr(strrchr($address, '@') ?: '', 1));
+        $host = match (true) {
+            in_array($domain, ['outlook.com', 'hotmail.com', 'live.com', 'msn.com'], true) => 'smtp.office365.com',
+            str_starts_with($domain, 'yandex.') => 'smtp.yandex.com',
+            str_starts_with($domain, 'yahoo.') => 'smtp.mail.yahoo.com',
+            in_array($domain, ['icloud.com', 'me.com'], true) => 'smtp.mail.me.com',
+            default => 'smtp.gmail.com',
+        };
+
+        return ['host' => $host, 'port' => 587, 'scheme' => 'smtp'];
+    }
+
     private const CACHE_KEY = 'settings.saved';
 
     /** @return array<string, ?string> */

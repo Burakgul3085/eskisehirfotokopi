@@ -165,21 +165,25 @@ class SettingsController extends Controller
 
     private function mail(Request $request): array
     {
+        // Yalnız e-posta adresi ve uygulama şifresi girilir; Google'ın gösterdiği aradaki boşluklar atılır.
+        $request->merge(['mail_password' => preg_replace('/\s+/', '', (string) $request->input('mail_password'))]);
         $data = $request->validate([
-            'mail_host' => ['nullable', 'string', 'max:190'],
-            'mail_port' => ['nullable', 'integer', 'between:1,65535'],
-            'mail_encryption' => ['nullable', 'in:tls,ssl,none'],
-            'mail_username' => ['nullable', 'string', 'max:190'],
-            'mail_password' => ['nullable', 'string', 'max:255'],
-            'mail_from_address' => ['nullable', 'email', 'max:190'],
+            'mail_username' => ['required', 'email', 'max:190'],
+            'mail_password' => [Settings::secret('mail_password') ? 'nullable' : 'required', 'string', 'regex:/^[A-Za-z0-9]{16}$/'],
             'mail_from_name' => ['nullable', 'string', 'max:80'],
             'notify_emails' => ['nullable', 'string', 'max:500'],
+        ], [
+            'mail_password.regex' => 'Uygulama şifresi 16 harf/rakamdan oluşur (boşluklar sorun değil).',
+            'mail_password.required' => 'Uygulama şifresini girin.',
         ]);
+        $data['mail_username'] = mb_strtolower(trim($data['mail_username']));
         // Parola alanı boş bırakılırsa mevcut parola korunur.
         if (filled($data['mail_password'] ?? null)) {
             Settings::putSecret('mail_password', $data['mail_password']);
         }
         unset($data['mail_password']);
+        // Eski elle girilen sunucu ayarları temizlenir (artık adresten belirleniyor).
+        $data += ['mail_host' => null, 'mail_from_address' => null];
         $emails = collect(preg_split('/[\s,;]+/', (string) ($data['notify_emails'] ?? '')))->filter()->unique();
         if ($emails->contains(fn ($e) => ! filter_var($e, FILTER_VALIDATE_EMAIL))) {
             throw ValidationException::withMessages(['notify_emails' => 'Bildirim adreslerinden biri geçersiz.']);

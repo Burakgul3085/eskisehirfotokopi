@@ -33,23 +33,24 @@ class AppServiceProvider extends ServiceProvider
                 return;
             }
             try {
-                $host = Settings::get('mail_host');
+                $address = Settings::get('mail_username');
             } catch (Throwable) {
                 return; // kurulum sırasında ayarlar tablosu henüz yoksa
             }
-            if (! $host) {
+            if (! $address || ! filter_var($address, FILTER_VALIDATE_EMAIL)) {
                 return;
             }
-            $encryption = Settings::get('mail_encryption');
+            // Sunucu, port ve şifreleme adresten belirlenir; gönderen adres ve ad da buradan gelir.
+            $server = Settings::mailServer($address);
             config([
                 'mail.default' => 'smtp',
-                'mail.mailers.smtp.host' => $host,
-                'mail.mailers.smtp.port' => (int) Settings::get('mail_port', '587'),
-                'mail.mailers.smtp.scheme' => $encryption === 'ssl' ? 'smtps' : 'smtp',
-                'mail.mailers.smtp.username' => Settings::get('mail_username'),
+                'mail.mailers.smtp.host' => $server['host'],
+                'mail.mailers.smtp.port' => $server['port'],
+                'mail.mailers.smtp.scheme' => $server['scheme'],
+                'mail.mailers.smtp.username' => $address,
                 'mail.mailers.smtp.password' => Settings::secret('mail_password'),
-                'mail.from.address' => Settings::get('mail_from_address') ?? Settings::get('mail_username'),
-                'mail.from.name' => Settings::get('mail_from_name') ?? Settings::siteName(),
+                'mail.from.address' => $address,
+                'mail.from.name' => Settings::get('mail_from_name') ?: Settings::siteName(),
             ]);
         });
     }
