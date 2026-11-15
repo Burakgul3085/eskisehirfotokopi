@@ -389,8 +389,7 @@ class ImportItemProcessor
             if (array_key_exists('topics', $data) && array_key_exists('category_id', $data)) {
                 $values['topics'] = array_values(array_filter($data['topics'] ?? [])) ?: null;
             } elseif ($mapped['topics']) {
-                $topics = collect([...($product?->topics ?? []), ...$mapped['topics']])->unique(fn ($t) => Text::key($t))->values()->all();
-                $values['topics'] = $topics;
+                $values['topics'] = $this->mapper->cleanTopics([...($product?->topics ?? []), ...$mapped['topics']], $category) ?: null;
             }
 
             // Açıklama (kapaktaki özellikler) yalnız boşsa yazılır; elle girilen açıklama korunur.

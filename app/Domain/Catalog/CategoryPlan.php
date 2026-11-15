@@ -62,6 +62,23 @@ final class CategoryPlan
         return $ids;
     }
 
+    /** Başlangıç düzenindeki bir grup veya kategori mi? */
+    public static function isPlanned(Category $category): bool
+    {
+        foreach (self::TREE as $group => $children) {
+            if ($category->normalized_name === Text::key($group)) {
+                return true;
+            }
+            foreach (array_keys($children) as $name) {
+                if ($category->normalized_name === Text::key($name)) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
     /** Sınav grubu (yoksa null). */
     public static function examGroup(): ?Category
     {

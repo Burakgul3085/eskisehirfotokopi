@@ -4,8 +4,8 @@ namespace App\Domain\Catalog;
 
 use App\Domain\Import\TitleCategory;
 use App\Models\Category;
+use App\Models\ImportItem;
 use App\Models\Product;
-use App\Support\Text;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -41,6 +41,12 @@ class CategoryFlattener
 
             Product::query()->orderBy('id')->each(function (Product $p) use (&$report, $trail, $planIds) {
                 $path = $trail($p->category_id);
+                $item = null;
+                if (! $p->category_id) {
+                    // Kategorisiz kalmış ürün: toplu yüklemede okunan "Türü" yolu kullanılır
+                    $item = ImportItem::where('product_id', $p->id)->whereNotNull('parsed')->latest('id')->first();
+                    $path = array_values(array_filter((array) ($item?->parsed['category'] ?? [])));
+                }
                 $inPlan = $p->category_id && in_array($p->category_id, $planIds, true);
                 $parsed = TitleCategory::parse($p->title);
                 $mapped = $this->mapper->map($inPlan ? [] : $path, $p->title);
@@ -53,7 +59,7 @@ class CategoryFlattener
 
                     return;
                 }
-                $topics = collect([...($p->topics ?? []), ...$mapped['topics']])->unique(fn ($t) => Text::key($t))->values()->all();
+                $topics = $this->mapper->cleanTopics([...($p->topics ?? []), ...$mapped['topics']], $target);
                 $changes = array_filter([
                     'category_id' => $target->id !== $p->category_id ? $target->id : null,
                     'book_type' => $p->book_type === null ? $parsed['type'] : null,
@@ -65,6 +71,13 @@ class CategoryFlattener
                 }
                 $report['moved'][] = ['product' => $p->title, 'from' => $path ? implode(' › ', $path) : null, 'to' => $target->fullName(), 'topics' => $topics];
                 $p->fill($changes)->save();
+                if ($item && isset($changes['category_id'])) {
+                    // Yalnız kategori yüzünden kontrole düşmüş kalem artık tamamdır
+                    $issues = array_values(array_filter($item->issues ?? [], fn ($i) => ! str_contains($i, 'kategorilerden birine eşlenemedi')
+                        && ! str_contains($i, 'ürün kategorisiz kaldı')));
+                    $item->update(['issues' => $issues ?: null] + ($issues || $item->status !== 'review' ? [] : ['status' => 'imported']));
+                    $item->batch?->refreshStatus();
+                }
             });
 
             // Ürünü ve alt kategorisi kalmayan eski (kısa listede olmayan) kategoriler: en derinden başlayarak silinir.

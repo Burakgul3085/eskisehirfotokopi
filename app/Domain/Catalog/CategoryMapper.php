@@ -40,6 +40,7 @@ class CategoryMapper
         $path = array_values(array_filter(array_map(fn ($p) => trim(preg_replace('/^[^\p{L}\p{N}]+|[^\p{L}\p{N}]+$/u', '', (string) $p)), $path),
             fn ($p) => mb_strlen(preg_replace('/[^\p{L}]/u', '', $p)) >= 3 && ! EmptyValue::is($p)));
         $created = [];
+        $this->ensurePlan();
 
         $category = null;
         $usedIndex = null;
@@ -63,6 +64,18 @@ class CategoryMapper
         $matched = $category !== null;
         if (! $category && $defaultId) {
             $category = Category::find($defaultId);
+            $matched = $category !== null;
+        }
+        // Hiçbiri tutmadı: kitap kategorisiz bırakılmaz, yolun ilk adıyla Okuma Kitapları altına tek katlı kategori açılır
+        // ("Gastronomi"). Yükleme sayfasındaki "yeni kategoriler" bölümünde görünür; istenirse birleştirilir.
+        if (! $category && ($i = $this->newCategoryIndex($path)) !== null) {
+            $name = $this->tree->closestName($path[$i]) ?? CategoryTree::displayName($path[$i]);
+            $this->tree->created = [];
+            $category = $this->tree->ensurePath([CategoryPlan::READING, $name]);
+            $created = $this->tree->created;
+            $usedIndex = $i;
+            $matched = $category !== null;
+            $this->flush();
         }
 
         // Konu etiketleri: seçilen kategorinin adı ve grup adları dışındaki ayrıntılar
@@ -80,7 +93,65 @@ class CategoryMapper
             }
         }
 
-        return ['category' => $category, 'topics' => array_values($topics), 'matched' => $matched, 'created' => $created];
+        return ['category' => $category, 'topics' => $this->cleanTopics(array_values($topics), $category), 'matched' => $matched, 'created' => $created];
+    }
+
+    /**
+     * Konu etiketlerinden kategorinin kendisini anlatanları atar: kategori/grup adı ve ona eşlenen adlar
+     * (Popüler Bilim'deki kitapta "Bilim", Sanat ve Tiyatro'daki kitapta "Tiyatro"). Yinelenenler de atılır.
+     *
+     * @param  list<string>  $topics
+     * @return list<string>
+     */
+    public function cleanTopics(array $topics, ?Category $category): array
+    {
+        $groups = [Text::key(CategoryPlan::READING), Text::key(CategoryPlan::EXAM)];
+        $out = [];
+        foreach ($topics as $t) {
+            $key = Text::key((string) $t);
+            if ($key === '' || isset($out[$key]) || in_array($key, $groups, true)) {
+                continue;
+            }
+            // Kelimeleri kategori adında geçen ("Bilim" ⊂ "Popüler Bilim") ya da kategori adını kapsayan ("Psikoloji
+            // Popüler Bilim" ⊃ "Psikoloji") etiket kategoriyi tekrarlar; "Fizik", "Avrupa Tarihi" gibi ayrıntılar kalır.
+            if ($category) {
+                $tw = explode(' ', $key);
+                $cw = array_diff(explode(' ', $category->normalized_name), ['ve']);
+                if (! array_diff($tw, [...$cw, 've']) || ! array_diff($cw, $tw)) {
+                    continue;
+                }
+            }
+            $out[$key] = $t;
+        }
+
+        return array_values($out);
+    }
+
+    /** Başlangıç düzeni silinmişse (ör. tüm kategoriler silindi) yeniden kurulur; yükleme hiçbir zaman eşleyecek liste olmadan kalmaz. */
+    private function ensurePlan(): void
+    {
+        if ($this->restrict !== null) {
+            return;
+        }
+        $groups = Category::whereNull('parent_id')
+            ->whereIn('normalized_name', [Text::key(CategoryPlan::READING), Text::key(CategoryPlan::EXAM)])->count();
+        if ($groups < 2) {
+            CategoryPlan::install($this->tree);
+            $this->flush();
+        }
+    }
+
+    /** Yeni kategori adı olabilecek ilk parça: harfli, en fazla 4 kelime, 40 karakter. @param list<string> $path */
+    private function newCategoryIndex(array $path): ?int
+    {
+        foreach ($path as $i => $name) {
+            $words = preg_split('/\s+/u', trim($name));
+            if (count($words) <= 4 && mb_strlen($name) <= 40 && preg_match('/^[\p{L}\s\'’.-]+$/u', $name)) {
+                return $i;
+            }
+        }
+
+        return null;
     }
 
     /** Yolun tamamının eşleme anahtarı ("Popüler Bilim / Fizik" → "populer bilim fizik"). @param list<string> $path */
@@ -105,11 +176,19 @@ class CategoryMapper
             CategoryAlias::updateOrCreate(['match_key' => self::pathKey($path)], ['category_id' => $category->id]);
         }
         foreach ($path as $name) {
-            if (! $this->find($name)) {
+            $found = $this->find($name);
+            // Yüklemenin kendiliğinden açtığı ve artık boş kalan kategori ("Kuantum Gastronomisi") yöneticinin seçimine bırakılır
+            $autoEmpty = $found && $found->id !== $category->id && ! CategoryPlan::isPlanned($found)
+                && ! $found->products()->exists() && ! Category::where('parent_id', $found->id)->exists();
+            if (! $found || $autoEmpty) {
                 CategoryAlias::remember($name, $category);
             }
+            if ($autoEmpty) {
+                $found->delete();
+                $this->tree->flush();
+            }
+            $this->flush();
         }
-        $this->flush();
     }
 
     /** Okunan ada uyan kategori (yalnız ilk iki kat). */

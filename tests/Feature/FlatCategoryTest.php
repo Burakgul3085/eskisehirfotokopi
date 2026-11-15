@@ -35,7 +35,7 @@ class FlatCategoryTest extends TestCase
     private function importBook(FakeOcrEngine $ocr, string $folder, array $extra = []): ImportItem
     {
         $this->app->instance(OcrEngine::class, $ocr);
-        $book = ['publisher_folder' => 'YAYINLAR', 'folder' => $folder, 'info' => 'Ekran görüntüsü.png', 'mockup' => 'ChatGPT Görseli.png'];
+        $book = ['publisher_folder' => 'BOĞAZİÇİ ÜNİVERSİTESİ YAYINEVİ', 'folder' => $folder, 'info' => 'Ekran görüntüsü.png', 'mockup' => 'ChatGPT Görseli.png'];
         $res = $this->postJson(route('admin.imports.store'), ['name' => 'KİTAPLAR', 'books' => [$book]] + $extra)->assertOk();
         foreach (['info' => 'Ekran görüntüsü.png', 'mockup' => 'ChatGPT Görseli.png'] as $role => $name) {
             $this->post(route('admin.imports.upload', [$res->json('batch'), $res->json('items.0')]), ['role' => $role, 'file' => UploadedFile::fake()->image($name, 600, 400)])->assertOk();
@@ -69,25 +69,42 @@ class FlatCategoryTest extends TestCase
         $this->assertSame('Sınav Hazırlık › AYT', $mapper->map([], '345 AYT Biyoloji Soru Bankası')['category']->fullName());
         $this->assertSame('Sınav Hazırlık › Ara Sınıflar', $mapper->map([], '9. Sınıf Kimya Yaprak Test')['category']->fullName());
 
-        // Tanınmayan yol: yeni kategori açılmaz
-        $r = $mapper->map(['Kuantum Gastronomisi'], 'Bilinmeyen');
-        $this->assertNull($r['category']);
-        $this->assertFalse($r['matched']);
-        $this->assertSame($before, Category::count());
+        $this->assertSame($before, Category::count()); // buraya kadar yeni kategori açılmadı
+
+        // Tanınmayan yol: kitap kategorisiz kalmaz; ilk adla Okuma Kitapları altına tek katlı kategori açılır
+        $r = $mapper->map(['Kuantum Gastronomisi', 'Moleküler Mutfak'], 'Bilinmeyen');
+        $this->assertSame('Okuma Kitapları › Kuantum Gastronomisi', $r['category']->fullName());
+        $this->assertSame(['Moleküler Mutfak'], $r['topics']);
+        $this->assertCount(1, $r['created']);
+        $this->assertSame($r['category']->id, $mapper->map(['Kuantum Gastronomisi'], 'Başka')['category']->id); // ikinci kez açılmaz
     }
 
-    public function test_unmatched_book_uses_default_category_and_review_choice_is_remembered(): void
+    public function test_starter_list_is_rebuilt_when_all_categories_were_deleted(): void
+    {
+        $this->withoutStarterCategories();
+        $r = app(CategoryMapper::class)->map(['Tarih', 'Avrupa Tarihi'], "Fransa'nın Kısa Tarihi");
+        $this->assertSame('Okuma Kitapları › Tarih', $r['category']->fullName());
+        $this->assertSame(['Avrupa Tarihi'], $r['topics']);
+    }
+
+    public function test_unknown_type_is_automatic_and_a_later_review_choice_is_remembered(): void
     {
         $this->actingAs(Admin::factory()->create(), 'admin');
-        $default = Category::where('name', 'Edebiyat')->firstOrFail();
         $ocr = FakeOcrEngine::sample(['category' => ['Türü', 'Kuantum Gastronomisi']], 'Mutfakta Fizik');
-        $item = $this->importBook($ocr, 'YAYINLAR - MUTFAKTA FİZİK - MARY FULBROOK', ['category_id' => $default->id]);
 
-        $this->assertSame('review', $item->status);
-        $this->assertStringContainsString('eşlenemedi', implode(' ', $item->issues));
-        $this->assertSame($default->id, $item->product->category_id);
+        // Varsayılan kategori seçildiyse tanınmayan tür oraya gider; kontrol gerekmez
+        $default = Category::where('name', 'Edebiyat')->firstOrFail();
+        $first = $this->importBook($ocr, 'BOĞAZİÇİ ÜNİVERSİTESİ YAYINEVİ - MUTFAKTA FİZİK - MARY FULBROOK', ['category_id' => $default->id]);
+        $this->assertSame('imported', $first->status, json_encode($first->issues));
+        $this->assertSame($default->id, $first->product->category_id);
 
-        // Yönetici kontrol ekranında Popüler Bilim'i seçer → "Kuantum Gastronomisi" artık oraya gider
+        // Varsayılan yoksa kendiliğinden yeni kategori açılır; yine kontrol gerekmez
+        $item = $this->importBook(FakeOcrEngine::sample(['category' => ['Türü', 'Kuantum Gastronomisi']], 'Mutfakta Biyoloji'), 'BOĞAZİÇİ ÜNİVERSİTESİ YAYINEVİ - MUTFAKTA BİYOLOJİ - MARY FULBROOK');
+        $this->assertSame('imported', $item->status, json_encode($item->issues));
+        $this->assertSame('Okuma Kitapları › Kuantum Gastronomisi', $item->product->category->fullName());
+        $auto = $item->product->category_id;
+
+        // Yönetici isterse kontrol ekranında Popüler Bilim'i seçer → boş kalan otomatik kategori silinir, seçim hatırlanır
         $target = Category::where('name', 'Popüler Bilim')->firstOrFail();
         $this->get(route('admin.imports.review', $item))->assertOk()->assertSee('Kuantum Gastronomisi');
         $this->put(route('admin.imports.update', $item), [
@@ -97,8 +114,9 @@ class FlatCategoryTest extends TestCase
         $this->assertSame($target->id, $item->product->fresh()->category_id);
         $this->assertSame(['Mutfak'], $item->product->fresh()->topics);
         $this->assertSame($target->id, CategoryAlias::where('match_key', 'kuantum gastronomisi')->value('category_id'));
+        $this->assertNull(Category::find($auto));
 
-        $second = $this->importBook($ocr, 'YAYINLAR - MUTFAKTA KİMYA - MARY FULBROOK');
+        $second = $this->importBook($ocr, 'BOĞAZİÇİ ÜNİVERSİTESİ YAYINEVİ - MUTFAKTA KİMYA - MARY FULBROOK');
         $this->assertSame($target->id, $second->product->category_id);
     }
 
