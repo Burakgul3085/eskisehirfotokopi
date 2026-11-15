@@ -179,6 +179,16 @@ class ImportTest extends TestCase
         $this->assertSame(1, Product::count());
     }
 
+    public function test_noisy_page_count_uses_digit_reading(): void
+    {
+        // OCR "178"deki 7'yi "/" okudu; rakam modundaki ikinci okuma esas alınır, kontrol gerekmez
+        $this->useOcr(FakeOcrEngine::sample(['pages' => ['Sayfa Sayısı', '1/8']]));
+        $this->app->make(OcrEngine::class)->lineAnswers = ['178'];
+        $item = $this->importBook();
+        $this->assertSame('imported', $item->status, json_encode($item->issues, JSON_UNESCAPED_UNICODE));
+        $this->assertSame(178, $item->product->page_count);
+    }
+
     public function test_mismatch_goes_to_review_and_can_be_fixed(): void
     {
         $this->useOcr(FakeOcrEngine::sample([

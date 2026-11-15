@@ -17,14 +17,19 @@ use Illuminate\Support\Facades\Cache;
  */
 class CategoryLearner
 {
-    private const CACHE = 'category-learner:v2';
+    private const CACHE = 'category-learner:v3';
 
     /** Ürünler değiştiyse model en geç bu kadar saniye sonra yeniden kurulur */
     private const REFRESH = 15;
 
     /** Anlam taşımayan kelimeler */
     private const STOP = ['ve', 'ile', 'bir', 'icin', 'gibi', 'olan', 'the', 'and', 'of', 'to', 'in', 'a', 'an', 'der', 'die', 'das', 'und',
-        'kitabi', 'kitap', 'yayinlari', 'yayinevi', 'cilt', 'baski', 'yeni', 'bu', 'da', 'de', 'mi', 'ne', 'en', 'cok'];
+        'kitabi', 'kitap', 'yayinlari', 'yayinevi', 'cilt', 'baski', 'yeni', 'bu', 'da', 'de', 'mi', 'ne', 'en', 'cok',
+        // Kitap türü kelimeleri konu benzerliği değildir ("Paragraf Soru Bankası" KPSS Soru Bankası'na benzemez);
+        // sınav/okuma ayrımını BookSignals yapar
+        'soru', 'sorular', 'sorulari', 'bankasi', 'konu', 'anlatimi', 'anlatim', 'anlatimli', 'yaprak', 'test', 'testi', 'testler',
+        'deneme', 'denemesi', 'denemeleri', 'sinavi', 'sinav', 'ozetli', 'ozet', 'defter', 'defteri', 'fasikul', 'foy', 'cikmis',
+        'tekrar', 'tam', 'nesil', 'video', 'cozumlu', 'etkinlik', 'calisma', 'kitapligi', 'seti', 'serisi'];
 
     private ?array $model = null;
 

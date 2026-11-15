@@ -201,8 +201,9 @@ class ImportItemProcessor
             if ($infoPath && isset($ocr['boxes']['pages'])) {
                 // İkinci okuma yalnız rakam modunda; iki okuma farklıysa insan kontrol eder.
                 $second = $this->number($this->ocr->line($infoPath, $ocr['boxes']['pages'], true));
-                if ($pages === null) {
-                    $pages = $second;
+                // İlk okumada rakamların arasına işaret/harf karışmışsa ("178" → "1/8") rakam modundaki okuma esas alınır
+                if ($pages === null || ($second !== null && preg_match('/\d[^\d\s]+\d/u', (string) $f['pages']))) {
+                    $pages = $second ?? $pages;
                 } elseif ($second !== null && $second !== $pages) {
                     $issues[] = "Sayfa sayısı iki okumada farklı: {$pages} / {$second}.";
                 }
