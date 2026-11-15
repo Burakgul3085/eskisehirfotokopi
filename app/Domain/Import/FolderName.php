@@ -126,8 +126,10 @@ class FolderName
         if ($ka === $kb) {
             return true;
         }
-        $max = max(strlen($ka), strlen($kb));
+        $score = fn ($x, $y) => 1 - levenshtein(substr($x, 0, 255), substr($y, 0, 255)) / min(max(strlen($x), strlen($y)), 255);
+        // OCR'ın karıştırdığı harfler eşitlenince de denenir: büyük I / küçük l / 1 / |, O / 0, rn / m ("Ilgaz" → "ligaz")
+        $fold = fn ($s) => str_replace(['rn', 'l', '1', '|', '0'], ['m', 'i', 'i', 'i', 'o'], $s);
 
-        return 1 - levenshtein(substr($ka, 0, 255), substr($kb, 0, 255)) / min($max, 255) >= $threshold;
+        return $score($ka, $kb) >= $threshold || $score($fold($ka), $fold($kb)) >= $threshold;
     }
 }

@@ -55,6 +55,11 @@ class ImportParsingTest extends TestCase
 
     public function test_folder_names(): void
     {
+        // OCR'ın karıştırdığı harfler (büyük I / küçük l, 0 / O) farklı ad sayılmaz; gerçekten farklı ad yine farklıdır
+        $this->assertTrue(FolderName::similar('Mert ligaz', 'MERT ILGAZ', 0.85));
+        $this->assertTrue(FolderName::similar('0rhan Tekin', 'ORHAN TEKİN', 0.85));
+        $this->assertFalse(FolderName::similar('Selim Aras', 'Kaan Öz', 0.85));
+
         $this->assertSame('BOĞAZİÇİ ÜNİVERSİTESİ YAYINLARI', FolderName::publisher('BOĞAZİÇİ ÜNİVERSİTESİ YAYINLARI EKRAN GÖRÜNTÜLERİ'));
 
         $b = FolderName::book('BOĞAZİÇİ ÜNİVERSİTESİ YAYINLARI - ALMANYA\'NIN KISA TARİHİ - MARY FULBROOK', 'BOĞAZİÇİ ÜNİVERSİTESİ YAYINLARI EKRAN GÖRÜNTÜLERİ');
