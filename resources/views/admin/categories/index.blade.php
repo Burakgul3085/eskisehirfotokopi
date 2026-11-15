@@ -31,6 +31,14 @@
 
 
     {{-- Satırlardaki tekli formlar iç içe olamayacağı için kutular toplu forma form="category-bulk" ile bağlanır. --}}
+    <div x-data="categoryTree">
+    @php($childCounts = $categories->groupBy(fn ($c) => $c['parent_id'] ?? 0)->map->count())
+    @if ($childCounts->except(0)->isNotEmpty())
+        <div class="mb-2 flex justify-end gap-2">
+            <button type="button" class="btn-ghost btn-sm" x-on:click="expandAll">Tümünü aç</button>
+            <button type="button" class="btn-ghost btn-sm" x-on:click="collapseAll">Tümünü kapat</button>
+        </div>
+    @endif
     <div class="card overflow-x-auto" x-data="bulkSelect">
         @if (count($categories))
             <form method="post" action="{{ route('admin.categories.bulk-destroy') }}" id="category-bulk"
@@ -46,12 +54,16 @@
             <thead><tr><th class="w-0"><input type="checkbox" x-on:change="toggleAll" class="size-4 accent-primary" aria-label="Tümünü seç"></th><th>Kategori</th><th class="text-right">Ürün</th><th>Durum</th><th class="w-0"></th></tr></thead>
             <tbody>
                 @forelse ($categories as $c)
-                    <tr>
+                    <tr @if ($c['depth']) data-parent="{{ $c['parent_id'] }}" @endif>
                         <td><input type="checkbox" name="ids[]" value="{{ $c['id'] }}" form="category-bulk" x-on:change="recount" class="size-4 accent-primary" aria-label="{{ $c['name'] }} seç"></td>
                         <td>
                             <div class="flex items-center gap-2" style="padding-left: {{ $c['depth'] * 22 }}px">
                                 @if ($c['depth'])<span class="text-slate-300">└</span>@endif
-                                <a href="{{ route('admin.categories.edit', $c['id']) }}" class="font-semibold hover:text-primary {{ $c['depth'] ? '' : 'text-base' }}">{{ $c['name'] }}</a>
+                                @if (! $c['depth'] && ($childCounts[$c['id']] ?? 0))
+                                    <button type="button" class="-ml-1 rounded p-1 text-muted hover:bg-surface hover:text-primary" x-on:click="toggle" data-toggle-id data-id="{{ $c['id'] }}" aria-expanded="false" aria-label="{{ $c['name'] }} alt kategorilerini aç/kapat"><x-icon name="chevron-right" class="size-4 transition-transform" /></button>
+                                @endif
+                                <a href=""{{ route('admin.categories.edit', $c['id']) }}" class="font-semibold hover:text-primary {{ $c['depth'] ? '' : 'text-base' }}">{{ $c['name'] }}</a>
+                                @if (! $c['depth'] && ($childCounts[$c['id']] ?? 0))<span class="text-xs text-muted">{{ $childCounts[$c['id']] }} alt kategori</span>@endif
                             </div>
                         </td>
                         <td class="text-right">
@@ -74,5 +86,6 @@
                 @endforelse
             </tbody>
         </table>
+    </div>
     </div>
 </x-layouts.admin>

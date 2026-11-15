@@ -25,7 +25,7 @@ class PublisherController extends Controller
             ->when($q !== '', fn ($w) => $w->where('match_key', 'like', '%'.Publisher::matchKey($q).'%'))
             ->when($request->query('filtre') === 'logosuz', fn ($w) => $w->whereNull('logo_path'))
             ->when($request->query('filtre') === 'one-cikan', fn ($w) => $w->where('is_featured', true))
-            ->orderBy('name')->paginate(60)->withQueryString();
+            ->orderBy('name')->paginate(15)->withQueryString();
 
         return view('admin.publishers.index', compact('publishers', 'q'));
     }

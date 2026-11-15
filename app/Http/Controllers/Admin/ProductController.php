@@ -40,7 +40,7 @@ class ProductController extends Controller
     {
         $filters = array_filter($request->only(self::FILTERS), fn ($v) => is_string($v) && $v !== '');
         $products = $this->filtered($filters)->with(['publisher:id,name', 'category:id,name', 'author:id,name'])
-            ->orderByDesc('id')->paginate((int) $request->query('adet', 50) === 200 ? 200 : 50)->withQueryString();
+            ->orderByDesc('id')->paginate(in_array((int) $request->query('adet'), [50, 200], true) ? (int) $request->query('adet') : 15)->withQueryString();
 
         return view('admin.products.index', [
             'products' => $products,

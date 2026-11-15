@@ -98,8 +98,9 @@ export function bulkSelect() {
             return [...this.$root.querySelectorAll('input[name="ids[]"]')];
         },
         toggleAll(event) {
+            // Kapalı (gizli) satırlar seçilmez: görünmeyen kategori yanlışlıkla silinmesin
             this.boxes().forEach((b) => {
-                b.checked = event.target.checked;
+                b.checked = event.target.checked && !b.closest('tr[hidden]');
             });
             this.recount();
         },
@@ -548,6 +549,61 @@ export function productBulk() {
             } else {
                 delete form.dataset.confirm;
             }
+        },
+    };
+}
+
+/**
+ * Yönetim › Kategoriler: ana kategorilerin alt kategorilerini aç/kapa. Alt satırlar data-parent taşır, düğmeler data-id.
+ * Açık olanlar bu tarayıcıda hatırlanır (yalnız kolaylık; saklanamazsa hepsi kapalı başlar).
+ */
+export function categoryTree() {
+    const KEY = 'yonetim-kategori-acik';
+    return {
+        open: [],
+        init() {
+            try {
+                this.open = JSON.parse(window.localStorage.getItem(KEY) || '[]').map(String);
+            } catch (e) {
+                this.open = [];
+            }
+            this.apply();
+        },
+        save() {
+            try {
+                window.localStorage.setItem(KEY, JSON.stringify(this.open));
+            } catch (e) {
+                // tarayıcı saklamaya izin vermiyor; yalnız bu sayfada geçerli
+            }
+        },
+        toggle(event) {
+            const id = String(event.currentTarget.dataset.id);
+            this.open = this.open.includes(id) ? this.open.filter((x) => x !== id) : [...this.open, id];
+            this.save();
+            this.apply();
+        },
+        ids() {
+            return [...this.$root.querySelectorAll('[data-toggle-id]')].map((b) => String(b.dataset.id));
+        },
+        expandAll() {
+            this.open = this.ids();
+            this.save();
+            this.apply();
+        },
+        collapseAll() {
+            this.open = [];
+            this.save();
+            this.apply();
+        },
+        apply() {
+            this.$root.querySelectorAll('tr[data-parent]').forEach((row) => {
+                row.hidden = !this.open.includes(String(row.dataset.parent));
+            });
+            this.$root.querySelectorAll('[data-toggle-id]').forEach((button) => {
+                const isOpen = this.open.includes(String(button.dataset.id));
+                button.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+                button.querySelector('svg')?.classList.toggle('rotate-90', isOpen);
+            });
         },
     };
 }
