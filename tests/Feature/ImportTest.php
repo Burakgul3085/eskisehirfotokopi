@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Domain\Catalog\CategoryTree;
 use App\Domain\Import\Ocr\OcrEngine;
 use App\Models\Admin;
 use App\Models\Category;
@@ -54,6 +55,47 @@ class ImportTest extends TestCase
             ->assertOk();
 
         return ImportItem::findOrFail($id);
+    }
+
+    public function test_ocr_noise_is_cleaned_subtitle_kept_and_categories_corrected(): void
+    {
+        // Mevcut doğru kategori; OCR "Popüler Bilim"i "Port ir Bilim", "Oyunculuk"u "Üyunculuk" okumuş.
+        app(CategoryTree::class)->ensurePath(['Popüler Bilim', 'Fizik']);
+        $this->useOcr(FakeOcrEngine::sample([
+            'publisher' => ['Yayınevi', 'Boğaziçi Yayınları'],
+            'category' => ['Türü', '* Port ir Bilim / Fizik / Üyunculuk'],
+        ], "Almanya'nın Kısa Tarihi — Bir Ulusun Doğuşu"));
+        $item = $this->importBook();
+
+        $p = Product::with('category')->findOrFail($item->product_id);
+        $this->assertSame("Almanya'nın Kısa Tarihi", $p->title);
+        $this->assertSame('Bir Ulusun Doğuşu', $p->subtitle);
+        $this->assertSame('Popüler Bilim › Fizik › Oyunculuk', $p->category->fullName());
+        $this->assertSame(1, Category::whereNull('parent_id')->count());
+        // Alt başlık ve kısa yayınevi adı "kontrol gerekli" sebebi değil
+        $this->assertSame('imported', $item->status, json_encode($item->issues));
+
+        // Görseldeki başlık "Ad — Yazar" biçimindeyse yazar alt başlık sayılmaz; OCR harf hatası klasörden düzelir.
+        $this->useOcr(FakeOcrEngine::sample(['code' => ['Ürün Kodu', 'AKT-999']], "\Mimanya'nın Kısa Tarihi — Mary Fulbrook"));
+        $item = $this->importBook('BOĞAZİÇİ ÜNİVERSİTESİ YAYINLARI - ALMANYANIN KISA TARİHİ - MARY FULBROOK');
+        $p = Product::findOrFail($item->product_id);
+        $this->assertSame('Almanyanın Kısa Tarihi', $p->title);
+        $this->assertNull($p->subtitle);
+    }
+
+    public function test_category_merge_moves_products_and_merges_same_named_children(): void
+    {
+        $tree = app(CategoryTree::class);
+        $good = $tree->ensurePath(['Tarih', 'Dünya Tarihi']);
+        $bad = $tree->ensurePath(['Ah', 'Dünya Tarihi', 'Rusya Tarihi']);
+        $p = Product::create(['title' => 'Rusya', 'slug' => 'rusya', 'category_id' => $bad->id]);
+
+        $tree->merge(Category::where('name', 'Ah')->first(), Category::where('name', 'Tarih')->first());
+
+        $this->assertSame('Tarih › Dünya Tarihi › Rusya Tarihi', $p->fresh()->category->fullName());
+        $this->assertSame(1, Category::where('name', 'Dünya Tarihi')->count());
+        $this->assertNull(Category::where('name', 'Ah')->first());
+        $this->assertTrue($good->fresh()->children()->exists());
     }
 
     public function test_book_folder_becomes_draft_product(): void

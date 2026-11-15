@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Domain\Import\FolderName;
 use App\Models\Concerns\HasUniqueSlug;
 use App\Support\Text;
 use Illuminate\Database\Eloquent\Builder;
@@ -24,6 +25,22 @@ class Publisher extends Model
     protected function casts(): array
     {
         return ['is_active' => 'boolean', 'is_featured' => 'boolean'];
+    }
+
+    /** İki ad aynı yayınevi mi: anahtarlar aynı/benzer ya da biri ötekinin kısaltması ("Boğaziçi" ⊂ "Boğaziçi Üniversitesi"). */
+    public static function sameName(string $a, string $b): bool
+    {
+        [$ka, $kb] = [self::matchKey($a), self::matchKey($b)];
+        if ($ka === '' || $kb === '') {
+            return false;
+        }
+        if ($ka === $kb || FolderName::similar($ka, $kb, 0.8)) {
+            return true;
+        }
+        [$wa, $wb] = [explode(' ', $ka), explode(' ', $kb)];
+        [$short, $long] = count($wa) <= count($wb) ? [$wa, $wb] : [$wb, $wa];
+
+        return $short[0] === $long[0] && ! array_diff($short, $long);
     }
 
     public static function matchKey(string $name): string

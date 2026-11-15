@@ -60,6 +60,7 @@
                     </a>
                 @endif
                 <h1 class="mt-2 text-2xl leading-tight font-extrabold sm:text-3xl">{{ $product->title }}</h1>
+                @if ($product->subtitle)<p class="mt-1 text-lg font-medium text-slate-600">{{ $product->subtitle }}</p>@endif
                 @if ($product->author)<p class="mt-2 text-muted">{{ $product->author->name }}</p>@endif
 
                 <div class="mt-6 rounded-2xl border border-line/70 bg-white p-5">

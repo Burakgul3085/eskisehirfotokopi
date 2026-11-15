@@ -13,6 +13,7 @@
         <div class="space-y-6">
             <section class="card space-y-5 p-6 sm:p-8">
                 <x-field name="title" label="Kitap adı" :value="$product->title" required />
+                <x-field name="subtitle" label="Alt başlık" :value="$product->subtitle" help="İsteğe bağlı; ürün sayfasında adın altında görünür." />
                 <div class="grid gap-5 sm:grid-cols-2">
                     <x-field name="author" label="Yazar" :value="$product->author?->name" help="Yeni ad yazılırsa yazar oluşturulur." />
                     <div>

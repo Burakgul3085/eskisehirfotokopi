@@ -125,9 +125,20 @@ class ImportItemProcessor
             }
         }
 
-        // Kitap adı: OCR başlığı düzgün harflidir; klasör adıyla uyuşmazsa klasör adı esas alınır (insan yazdı).
-        $title = $this->pick('Kitap adı', $ocr['title'], $folder['title'], $issues, 0.85);
+        // Kitap adı: görseldeki başlık "Ad — Alt başlık" ya da "Ad — Yazar" olabilir; ad klasörle karşılaştırılır.
+        [$ocrTitle, $ocrRest] = self::splitTitle($ocr['title']);
+        if ($ocrRest !== null && ! FolderName::similar($ocrTitle, $folder['title'], 0.85) && FolderName::similar($ocr['title'], $folder['title'], 0.85)) {
+            [$ocrTitle, $ocrRest] = [$ocr['title'], null]; // adın kendisinde tire varmış
+        }
+        $title = $this->pick('Kitap adı', $ocrTitle, $folder['title'], $issues, 0.85);
         $author = $this->pick('Yazar', $f['author'] ?? null, $folder['author'], $issues, 0.8);
+        $subtitle = null;
+        if ($ocrRest !== null && ! FolderName::similar($ocrRest, $author, 0.75) && ! FolderName::similar($ocrRest, $folder['author'], 0.75)) {
+            $subtitle = $ocrRest;
+            if (preg_match('/\p{L}\d|\d\p{L}/u', $subtitle)) {
+                $issues[] = "Alt başlık görselden okundu, harf hatası olabilir: “{$subtitle}”.";
+            }
+        }
         if ($author === null && $page['author']) {
             $author = $page['author'];
             $issues[] = "Yazar kapaktan okundu: “{$author}”; doğruluğunu kontrol edin.";
@@ -136,8 +147,7 @@ class ImportItemProcessor
         // Yayınevi: klasör kimliği belirler; OCR adı aynı yayınevini gösteriyorsa düzgün yazımı için kullanılır.
         $publisher = $folder['publisher'] ?? ($f['publisher'] ?? null);
         $publisherOcr = $f['publisher'] ?? null;
-        if ($folder['publisher'] && $publisherOcr && Publisher::matchKey($folder['publisher']) !== Publisher::matchKey($publisherOcr)
-            && ! FolderName::similar(Publisher::matchKey($folder['publisher']), Publisher::matchKey($publisherOcr), 0.8)) {
+        if ($folder['publisher'] && $publisherOcr && ! Publisher::sameName($folder['publisher'], $publisherOcr)) {
             $issues[] = "Yayınevi uyuşmuyor: klasörde “{$folder['publisher']}”, görselde “{$publisherOcr}”.";
         }
 
@@ -210,6 +220,7 @@ class ImportItemProcessor
 
         return [[
             'title' => $title,
+            'subtitle' => $subtitle,
             'author' => $author,
             'publisher' => $publisherOcr && $publisher && Publisher::matchKey($publisherOcr) === Publisher::matchKey($publisher) ? $publisherOcr : $publisher,
             'publisher_folder' => $folder['publisher'],
@@ -239,7 +250,7 @@ class ImportItemProcessor
         [$publisher, $category, $author] = Cache::lock('import-taxonomy', 30)->block(30, function () use ($data) {
             return [
                 $this->resolvePublisher($data['publisher'] ?? null, $data['publisher_folder'] ?? null),
-                $data['category'] ? $this->tree->ensurePath($data['category']) : null,
+                $data['category'] ? $this->tree->ensurePath($data['category'], fuzzy: true) : null,
                 Author::resolve($data['author'] ?? null),
             ];
         });
@@ -261,6 +272,7 @@ class ImportItemProcessor
 
             $values = array_filter([
                 'title' => $data['title'],
+                'subtitle' => $data['subtitle'] ?? null,
                 'publisher_id' => $publisher?->id,
                 'author_id' => $author?->id,
                 'category_id' => $category?->id,
@@ -339,9 +351,15 @@ class ImportItemProcessor
     /** OCR değeri ile klasör değerinden birini seçer. */
     private function pick(string $label, ?string $ocr, ?string $folder, array &$issues, float $threshold): ?string
     {
+        $ocr = $ocr !== null ? self::clean($ocr) : null;
         if ($ocr && $folder) {
-            if (FolderName::similar($ocr, $folder, $threshold)) {
+            // Harfler birebir aynıysa görseldeki düzgün yazım (büyük/küçük harf, kesme işareti) kullanılır;
+            // yalnız benziyorsa OCR bir harfi yanlış okumuştur ("\Mimanya"), doğru harfler klasördedir.
+            if (FolderName::similar($ocr, $folder, 1.0)) {
                 return $ocr;
+            }
+            if (FolderName::similar($ocr, $folder, $threshold)) {
+                return CategoryTree::displayName($folder);
             }
             $issues[] = "{$label} uyuşmuyor: klasörde “{$folder}”, görselde “{$ocr}”.";
 
@@ -352,6 +370,27 @@ class ImportItemProcessor
         }
 
         return $ocr;
+    }
+
+    /** "Ad — Alt başlık" → ['Ad', 'Alt başlık']; ayraç yoksa [ad, null]. */
+    public static function splitTitle(?string $title): array
+    {
+        $title = $title !== null ? self::clean($title) : null;
+        if ($title === null || $title === '') {
+            return [null, null];
+        }
+        $parts = preg_split('/\s+[—–-]\s+|\s*:\s+/u', $title, 2);
+        $rest = isset($parts[1]) ? self::clean($parts[1]) : '';
+
+        return [self::clean($parts[0]), mb_strlen(preg_replace('/[^\p{L}]/u', '', $rest)) >= 3 ? $rest : null];
+    }
+
+    /** Baştaki/sondaki OCR artıklarını atar: "\Mimanya'nın", "* Ah", "“Samachandran". */
+    public static function clean(string $s): string
+    {
+        $s = trim(preg_replace('/\s+/u', ' ', $s));
+
+        return trim(preg_replace('/^[^\p{L}\p{N}]+|[^\p{L}\p{N}.)!?]+$/u', '', $s));
     }
 
     private function number(?string $s): ?int

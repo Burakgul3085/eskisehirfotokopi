@@ -3,6 +3,7 @@
 namespace App\Domain\Catalog;
 
 use App\Models\Category;
+use App\Models\Product;
 use App\Support\Text;
 use DomainException;
 use Illuminate\Support\Collection;
@@ -87,21 +88,116 @@ class CategoryTree
     /**
      * "Tarih / Avrupa Tarihi / Almanya Tarihi" yolundaki kategorileri bulur, eksikleri oluşturur; en alttakini döndürür.
      * Ad karşılaştırması büyük/küçük harf ve Türkçe karakterden bağımsızdır.
+     *
+     * $fuzzy (toplu yükleme): OCR'nin bozduğu adlar ("Port ir Bilim", "Üyunculuk") mevcut kategori adlarına ve bilinen
+     * tür adlarına yakınsa onlara düzeltilir; baştaki/sondaki işaretler atılır, 3 harften kısa artıklar ("* Ah") yok sayılır.
      */
-    public function ensurePath(array $names): ?Category
+    public function ensurePath(array $names, bool $fuzzy = false): ?Category
     {
         $parent = null;
         foreach ($names as $name) {
             $name = trim(preg_replace('/\s+/u', ' ', (string) $name));
+            if ($fuzzy) {
+                $name = trim(preg_replace('/^[^\p{L}\p{N}]+|[^\p{L}\p{N}]+$/u', '', $name));
+                if (mb_strlen(preg_replace('/[^\p{L}]/u', '', $name)) < 3) {
+                    continue;
+                }
+            }
             if ($name === '' || Text::key($name) === '') {
                 continue;
             }
             $existing = Category::where('parent_id', $parent?->id)->where('normalized_name', Text::key($name))->first();
+            if (! $existing && $fuzzy && ($fixed = $this->closestName($name, $parent)) !== null) {
+                $name = $fixed;
+                $existing = Category::where('parent_id', $parent?->id)->where('normalized_name', Text::key($name))->first();
+            }
             $parent = $existing ?? $this->create(['name' => self::displayName($name)], $parent);
         }
 
         return $parent;
     }
+
+    /** Bozuk okunmuş ada en yakın doğru ad: önce aynı seviyedeki kategoriler, sonra tüm kategori adları ve bilinen türler. */
+    public function closestName(string $name, ?Category $parent = null): ?string
+    {
+        $siblings = Category::where('parent_id', $parent?->id)->pluck('name')->all();
+        $all = Category::query()->distinct()->pluck('name')->all();
+        foreach ([$siblings, [...$all, ...self::KNOWN_NAMES]] as $pool) {
+            $best = null;
+            $bestScore = 0.0;
+            foreach (array_unique($pool) as $candidate) {
+                $score = self::nameScore($name, $candidate);
+                if ($score > $bestScore) {
+                    [$best, $bestScore] = [$candidate, $score];
+                }
+            }
+            if ($best !== null) {
+                return $best;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * İki adın aynı kategori olma puanı (0 = değil). OCR hataları için: uzun adlarda %80 benzerlik yeter; kısa adlarda
+     * (Tarih/Tarım gibi gerçekten farklı olabilecekler) %86. Ayrıca ilk harfi ve son 4 harfi aynı, en fazla 4 harf farklı
+     * adlar da eşleşir ("Port ir Bilim" → "Popüler Bilim").
+     */
+    public static function nameScore(string $a, string $b): float
+    {
+        $ka = str_replace(' ', '', Text::key($a));
+        $kb = str_replace(' ', '', Text::key($b));
+        if ($ka === '' || $kb === '' || $ka === $kb) {
+            return $ka !== '' && $ka === $kb ? 1.0 : 0.0;
+        }
+        $max = max(strlen($ka), strlen($kb));
+        $lev = levenshtein($ka, $kb);
+        $ratio = 1 - $lev / $max;
+        $min = min(strlen($ka), strlen($kb));
+        if ($ratio >= ($min < 8 ? 0.86 : 0.8)) {
+            return $ratio;
+        }
+        if ($min >= 8 && $lev <= 4 && abs(strlen($ka) - strlen($kb)) <= 2 && $ka[0] === $kb[0] && substr($ka, -4) === substr($kb, -4)) {
+            return $ratio;
+        }
+
+        return 0.0;
+    }
+
+    /**
+     * Kategoriyi başka bir kategoriyle birleştirir: ürünleri taşınır, aynı adlı alt kategoriler de birleşir, diğer alt
+     * kategoriler hedefin altına taşınır; kaynak silinir.
+     */
+    public function merge(Category $from, Category $into): Category
+    {
+        if ($from->is($into) || str_starts_with($into->path, $from->path)) {
+            throw new DomainException('Kategori kendisiyle veya kendi alt kategorisiyle birleştirilemez.');
+        }
+
+        return DB::transaction(function () use ($from, $into) {
+            foreach ($from->children()->get() as $child) {
+                $same = Category::where('parent_id', $into->id)->where('normalized_name', $child->normalized_name)->first();
+                $same ? $this->merge($child, $same) : $this->update($child, [], $into->fresh());
+            }
+            Product::where('category_id', $from->id)->update(['category_id' => $into->id]);
+            $from->delete();
+            $this->flush();
+
+            return $into->fresh();
+        });
+    }
+
+    /** Toplu yüklemede yazım düzeltmesi için bilinen tür adları (kitapların "Türü" satırında sık geçenler). */
+    public const KNOWN_NAMES = [
+        'Popüler Bilim', 'Bilim', 'Fizik', 'Kimya', 'Biyoloji', 'Matematik', 'Astronomi', 'Nörobilim', 'Tıp', 'Sağlık',
+        'Tarih', 'Dünya Tarihi', 'Avrupa Tarihi', 'Türkiye Tarihi', 'Osmanlı Tarihi', 'Felsefe', 'Sosyoloji', 'Psikoloji',
+        'Antropoloji', 'Arkeoloji', 'Dilbilim', 'Dil Felsefesi', 'Edebiyat', 'Roman', 'Öykü', 'Şiir', 'Deneme', 'Biyografi',
+        'Anı', 'İnceleme', 'Araştırma', 'Kültürel Çalışmalar', 'Siyaset', 'Siyaset Bilimi', 'Uluslararası İlişkiler',
+        'Ekonomi', 'İktisat', 'İşletme', 'Hukuk', 'Eğitim', 'Din', 'Mitoloji', 'Sanat', 'Sanat Tarihi', 'Sinema', 'Tiyatro',
+        'Oyunculuk', 'Sahne Sanatları', 'Müzik', 'Mimarlık', 'Coğrafya', 'Kişisel Gelişim', 'Çocuk', 'Gençlik',
+        'Soru Bankası', 'Konu Anlatımı', 'Deneme Sınavı', 'Yaprak Test', 'Fasikül', 'Defter',
+    ];
 
     /** Tamamı büyük harfli adlar başlık biçimine çevrilir ("SORU BANKASI" → "Soru Bankası"); kısaltmalar korunur. */
     public static function displayName(string $name): string

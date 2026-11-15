@@ -35,7 +35,7 @@ class Product extends Model
     /** Görsel boyutları (genişlik, px). */
     public const IMAGE_SIZES = ['sm' => 320, 'md' => 640, 'lg' => 1400];
 
-    protected $fillable = ['code', 'isbn', 'title', 'slug', 'publisher_id', 'author_id', 'category_id', 'page_count', 'print_year',
+    protected $fillable = ['code', 'isbn', 'title', 'subtitle', 'slug', 'publisher_id', 'author_id', 'category_id', 'page_count', 'print_year',
         'description', 'price_bw', 'price_color', 'price_bw_2up', 'price_color_2up', 'compare_bw', 'compare_color', 'status', 'is_featured', 'image_key', 'image_width',
         'image_height', 'sales_count', 'view_count', 'meta_title', 'meta_description', 'published_at'];
 
@@ -57,7 +57,7 @@ class Product extends Model
             if ($p->isDirty('page_count') || ($p->page_count && $p->price_bw === null)) {
                 $p->fill(app(BookPricing::class)->prices($p->page_count ? (int) $p->page_count : null));
             }
-            if ($p->isDirty(['title', 'code', 'isbn', 'author_id', 'publisher_id', 'category_id']) || $p->search_text === null) {
+            if ($p->isDirty(['title', 'subtitle', 'code', 'isbn', 'author_id', 'publisher_id', 'category_id']) || $p->search_text === null) {
                 $p->search_text = $p->buildSearchText();
             }
         });
@@ -87,7 +87,7 @@ class Product extends Model
 
     public function buildSearchText(): string
     {
-        $parts = [$this->title, $this->code, $this->isbn,
+        $parts = [$this->title, $this->subtitle, $this->code, $this->isbn,
             $this->author_id ? Author::find($this->author_id)?->name : null,
             $this->publisher_id ? Publisher::find($this->publisher_id)?->name : null,
             $this->category_id ? Category::find($this->category_id)?->fullName(' ') : null];

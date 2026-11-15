@@ -230,6 +230,7 @@ class ProductController extends Controller
         $request->merge(['isbn' => preg_replace('/[^0-9X]/i', '', (string) $request->input('isbn')) ?: null]);
         $data = $request->validate([
             'title' => ['required', 'string', 'max:255'],
+            'subtitle' => ['nullable', 'string', 'max:255'],
             'code' => ['nullable', 'string', 'max:40', Rule::unique('products', 'code')->ignore($product)],
             'isbn' => ['nullable', 'string', 'between:10,13', Rule::unique('products', 'isbn')->ignore($product)],
             'author' => ['nullable', 'string', 'max:150'],
