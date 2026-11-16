@@ -55,6 +55,14 @@ Yayınevleri|/yayinevleri
 Belge Yükle|/fotokopi
 Sipariş Takibi|/siparis-takip
 İletişim|/iletisim', // Etiket|Adres
+        // Header'ın üstünde kayan bant: "simge|Metin|ROZET" (boşsa bant gösterilmez; duyuru da başa eklenir)
+        'topbar_items' => 'truck|Eskişehir içi|KAPIYA TESLİM
+cash|Ödeme kapıda|NAKİT VEYA KART
+printer|Belgeni yükle|BİZ BASALIM
+book|Binlerce kitap|TEK ADRESTE
+whatsapp|WhatsApp ile|HIZLI DESTEK',
+        'header_welcome' => 'Hoş geldiniz',
+        'header_support_label' => 'Hızlı destek',
 
         // Kategori menüsü (header'daki "Tüm kategoriler" paneli; içinde yayında ürün olmayan kategori gösterilmez)
         'menu_all_label' => 'Tüm kategoriler',

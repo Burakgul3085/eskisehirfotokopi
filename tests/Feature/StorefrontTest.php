@@ -156,6 +156,12 @@ class StorefrontTest extends TestCase
         $this->assertSame([['label' => 'Kampanyalar', 'url' => '/kampanya']], Settings::links('header_links'));
 
         $this->get('/')->assertOk()->assertSee('Kampanyalar')->assertSee('Güvenli alışveriş')->assertDontSee('javascript:alert', false);
+
+        // Kayan üst bant ayardan gelir; duyuru başa eklenir; boşsa bant hiç çizilmez.
+        Settings::put(['topbar_items' => 'truck|Aynı gün|HIZLI KARGO', 'announcement' => 'Bayramda açığız']);
+        $this->get('/')->assertSee('header-ticker', false)->assertSeeInOrder(['Bayramda açığız', 'Aynı gün', 'HIZLI KARGO']);
+        Settings::put(['topbar_items' => '', 'announcement' => '']);
+        $this->get('/')->assertDontSee('header-ticker', false);
     }
 
     public function test_admin_manages_home_blocks(): void

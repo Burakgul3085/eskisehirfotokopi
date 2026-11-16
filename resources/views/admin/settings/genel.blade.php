@@ -23,6 +23,15 @@
         <x-field name="header_links" type="textarea" rows="4" label="Menü bağlantıları" :value="$s['header_links']"
                  help="“Tüm kategoriler” düğmesinin yanındaki bağlantılar (telefonda menüde). Her satır: Etiket|/adres (ör. Yayınevleri|/yayinevleri)." />
         <fieldset class="space-y-3 rounded-xl border border-line p-4">
+            <legend class="px-1 text-sm font-semibold">Üst bant ve header</legend>
+            <x-field name="topbar_items" type="textarea" rows="5" label="Kayan üst bant" :value="$s['topbar_items']"
+                     help="Header'ın üstünde kayan şerit. Her satır: simge|Metin|ROZET (ör. truck|Eskişehir içi|KAPIYA TESLİM). Simgeler: truck, cash, card, printer, book, shield, whatsapp, phone, clock, package, check. Boş bırakılırsa bant gizlenir; duyuru yazısı varsa başa eklenir." />
+            <div class="grid gap-5 sm:grid-cols-2">
+                <x-field name="header_welcome" label="Giriş düğmesi üst yazısı" :value="$s['header_welcome']" />
+                <x-field name="header_support_label" label="WhatsApp destek düğmesi üst yazısı" :value="$s['header_support_label']" help="WhatsApp numarası girilmişse menü satırının sağında görünür." />
+            </div>
+        </fieldset>
+        <fieldset class="space-y-3 rounded-xl border border-line p-4">
             <legend class="px-1 text-sm font-semibold">Kategori menüsü</legend>
             <p class="field-help">İçinde yayında ürün olmayan kategoriler vitrinde gösterilmez; 1 ürün bile yayına alınınca kendiliğinden görünür.</p>
             <div class="grid gap-5 sm:grid-cols-2">
