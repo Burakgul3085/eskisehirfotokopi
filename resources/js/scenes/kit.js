@@ -56,6 +56,128 @@ export function documentTexture(accent, colorful = false, primary = '#0f766e') {
     });
 }
 
+/** Yumuşak ışık noktası dokusu (kıvılcım, hale) */
+export function dotTexture() {
+    return canvasTexture(64, 64, (g, w) => {
+        const r = g.createRadialGradient(w / 2, w / 2, 0, w / 2, w / 2, w / 2);
+        r.addColorStop(0, 'rgba(255,255,255,1)');
+        r.addColorStop(0.35, 'rgba(255,255,255,0.45)');
+        r.addColorStop(1, 'rgba(255,255,255,0)');
+        g.fillStyle = r;
+        g.fillRect(0, 0, w, w);
+    });
+}
+
+/**
+ * Kıvılcım havuzu: eklemeli karışımla parlayan noktalar. Her nokta ömrü boyunca rengini siyaha söndürür
+ * (eklemeli karışımda siyah görünmez), böylece tek bir çizim çağrısıyla yüzlerce parçacık solarak kaybolur.
+ */
+export function createSparks(parent, keep, { max = 200, size = 0.08 } = {}) {
+    const pos = new Float32Array(max * 3);
+    const col = new Float32Array(max * 3);
+    const vel = new Float32Array(max * 3);
+    const base = new Float32Array(max * 3);
+    const life = new Float32Array(max);
+    const span = new Float32Array(max).fill(1);
+    const geo = keep(new THREE.BufferGeometry());
+    geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+    geo.setAttribute('color', new THREE.BufferAttribute(col, 3));
+    const mat = keep(new THREE.PointsMaterial({ size, map: keep(dotTexture()), vertexColors: true, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }));
+    const points = new THREE.Points(geo, mat);
+    points.frustumCulled = false;
+    parent.add(points);
+    let cursor = 0;
+    let alive = 0;
+
+    return {
+        /** p: konum, n: adet, color: THREE.Color; speed: dağılma hızı, up: yukarı itki, life: saniye, spread: başlangıç dağınıklığı */
+        emit(p, n, color, { speed = 0.6, up = 0.3, life: L = 0.9, spread = 0.05 } = {}) {
+            for (let k = 0; k < n; k++) {
+                const i = cursor;
+                cursor = (cursor + 1) % max;
+                const a = Math.random() * Math.PI * 2;
+                const z = Math.random() * 2 - 1;
+                const r = Math.sqrt(1 - z * z);
+                const v = speed * (0.35 + Math.random() * 0.65);
+                pos[i * 3] = p.x + (Math.random() - 0.5) * spread;
+                pos[i * 3 + 1] = p.y + (Math.random() - 0.5) * spread;
+                pos[i * 3 + 2] = p.z + (Math.random() - 0.5) * spread;
+                vel[i * 3] = Math.cos(a) * r * v;
+                vel[i * 3 + 1] = Math.sin(a) * r * v + up;
+                vel[i * 3 + 2] = z * v;
+                base[i * 3] = color.r;
+                base[i * 3 + 1] = color.g;
+                base[i * 3 + 2] = color.b;
+                life[i] = span[i] = L * (0.6 + Math.random() * 0.7);
+            }
+            alive = max;
+        },
+        update(dt) {
+            if (!alive) {
+                return;
+            }
+            let any = 0;
+            const damp = Math.exp(-dt * 1.6);
+            for (let i = 0; i < max; i++) {
+                if (life[i] <= 0) {
+                    continue;
+                }
+                life[i] -= dt;
+                const f = Math.max(0, life[i] / span[i]);
+                const glow = f * f * (3 - 2 * f); // yumuşak sönüş
+                for (let a = 0; a < 3; a++) {
+                    const j = i * 3 + a;
+                    vel[j] *= damp;
+                    pos[j] += vel[j] * dt;
+                    col[j] = base[j] * glow;
+                }
+                vel[i * 3 + 1] -= dt * 0.15;
+                any++;
+            }
+            alive = any;
+            geo.attributes.position.needsUpdate = true;
+            geo.attributes.color.needsUpdate = true;
+        },
+    };
+}
+
+/** Halka dalgası: ince parlak halka büyüyerek söner (çarpma, iniş anları). */
+export function createWaves(parent, keep, color, { pool = 6 } = {}) {
+    const geo = keep(new THREE.RingGeometry(0.86, 1, 72));
+    const waves = Array.from({ length: pool }, () => {
+        const m = new THREE.Mesh(geo, keep(new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0, side: THREE.DoubleSide, depthWrite: false, blending: THREE.AdditiveBlending })));
+        m.visible = false;
+        parent.add(m);
+        return { m, t: 1, size: 1, dur: 1 };
+    });
+    let next = 0;
+    return {
+        /** quaternion verilmezse halka kameraya bakar (XY düzlemi) */
+        spawn(p, size = 1, quaternion = null, dur = 0.9) {
+            const w = waves[next];
+            next = (next + 1) % pool;
+            w.m.position.copy(p);
+            quaternion ? w.m.quaternion.copy(quaternion) : w.m.quaternion.identity();
+            w.t = 0;
+            w.size = size;
+            w.dur = dur;
+            w.m.visible = true;
+        },
+        update(dt) {
+            waves.forEach((w) => {
+                if (w.t >= 1) {
+                    return;
+                }
+                w.t = Math.min(1, w.t + dt / w.dur);
+                const e = 1 - Math.pow(1 - w.t, 3);
+                w.m.scale.setScalar(0.15 + e * w.size);
+                w.m.material.opacity = (1 - w.t) * 0.9;
+                w.m.visible = w.t < 1;
+            });
+        },
+    };
+}
+
 function hasWebGL() {
     try {
         const c = document.createElement('canvas');

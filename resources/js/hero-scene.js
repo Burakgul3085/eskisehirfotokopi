@@ -4,6 +4,8 @@
  *  - Ortada stilize bir fotokopi makinesi; aralıklarla içinden belge çıkar ve kitaplardan birine uçar.
  *  - Çevresinde süzülen kitaplar: kapaklar vitrindeki gerçek ürün görselleri (yoksa renk geçişli soyut kapak).
  *    Üzerine gelinen kitap öne döner ve adı görünür; tıklanınca ürün sayfası açılır.
+ *  - Makine holografik bir platformda durur; belge basmadan önce kapak aralanır ve tarama ışığı geçer.
+ *  - Uçan belge arkasında ışık izi bırakır; kitaba ulaşınca kıvılcım patlar ve halka dalgası yayılır.
  *  - Fare sahneyi hafifçe çevirir; sayfa kaydırılınca kamera uzaklaşır ve sahne solar.
  *  - Performans: görünmezken ve sekme arka plandayken çizim durur; telefonda daha az nesne ve düşük çözünürlük.
  *  - "Hareketi azalt" tercihinde tek kare çizilir (animasyon yok). WebGL yoksa sahne hiç kurulmaz (CSS yedeği kalır).
@@ -13,6 +15,7 @@
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
+import { createSparks, createWaves, dotTexture as glowDot } from './scenes/kit.js';
 
 const BOOK = { w: 0.84, h: 1.19, d: 0.18 };
 
@@ -204,12 +207,27 @@ export function mount(root) {
     const base = new THREE.Mesh(keep(new RoundedBoxGeometry(2.56, 0.16, 1.8, 3, 0.07)), graphite);
     base.position.y = -0.56;
     printer.add(base);
+    // Kapak arka kenarından menteşeli: tarama sırasında hafifçe aralanır
+    const lidPivot = new THREE.Group();
+    lidPivot.position.set(0, 0.6, -0.85);
+    printer.add(lidPivot);
     const lid = new THREE.Mesh(keep(new RoundedBoxGeometry(2.42, 0.14, 1.66, 3, 0.06)), shell);
-    lid.position.set(0, 0.6, -0.02);
-    printer.add(lid);
+    lid.position.set(0, 0, 0.83);
+    lidPivot.add(lid);
     const scanGlass = new THREE.Mesh(keep(new THREE.BoxGeometry(1.9, 0.02, 1.2)), glass);
     scanGlass.position.set(-0.1, 0.68, -0.05);
     printer.add(scanGlass);
+    // Tarama ışığı: camın üzerinde soldan sağa geçen parlak çubuk ve hale
+    const glowTex = keep(glowDot());
+    const scanMat = keep(new THREE.MeshBasicMaterial({ color: accent, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false }));
+    const scanBar = new THREE.Mesh(keep(new THREE.BoxGeometry(0.05, 0.025, 1.15)), scanMat);
+    scanBar.position.set(-0.95, 0.7, -0.05);
+    printer.add(scanBar);
+    const scanGlowMat = keep(new THREE.MeshBasicMaterial({ map: glowTex, color: accent, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false }));
+    const scanGlow = new THREE.Mesh(keep(new THREE.PlaneGeometry(0.8, 1.7)), scanGlowMat);
+    scanGlow.rotation.x = -Math.PI / 2;
+    scanGlow.position.set(-0.95, 0.715, -0.05);
+    printer.add(scanGlow);
     // Ön çıkış yuvası ve ışık şeridi
     const slot = new THREE.Mesh(keep(new RoundedBoxGeometry(1.55, 0.12, 0.08, 2, 0.04)), graphite);
     slot.position.set(-0.15, 0.12, 0.88);
@@ -250,11 +268,47 @@ export function mount(root) {
     shadow.position.set(0, -1.3, 0.1);
     rig.add(shadow);
 
+    // ---- Holografik platform: dönen ince halkalar, noktalı yörünge ve nabız gibi atan ışık diski ----
+    const white = new THREE.Color('#ffffff');
+    const platform = new THREE.Group();
+    platform.position.set(0, -1.27, 0.1);
+    platform.scale.setScalar(small ? 0.8 : 1);
+    rig.add(platform);
+    const ringColor = primary.clone().lerp(white, 0.5);
+    const ringA = new THREE.Mesh(keep(new THREE.TorusGeometry(2.05, 0.012, 8, 200)), keep(new THREE.MeshBasicMaterial({ color: ringColor, transparent: true, opacity: 0.6, blending: THREE.AdditiveBlending, depthWrite: false })));
+    const ringB = new THREE.Mesh(keep(new THREE.TorusGeometry(2.55, 0.006, 8, 200)), keep(new THREE.MeshBasicMaterial({ color: ringColor, transparent: true, opacity: 0.3, blending: THREE.AdditiveBlending, depthWrite: false })));
+    ringA.rotation.x = ringB.rotation.x = Math.PI / 2;
+    platform.add(ringA, ringB);
+    const dotCount = 60;
+    const dotPos = new Float32Array(dotCount * 3);
+    for (let k = 0; k < dotCount; k++) {
+        const a = (k / dotCount) * Math.PI * 2;
+        dotPos[k * 3] = Math.cos(a) * 2.3;
+        dotPos[k * 3 + 2] = Math.sin(a) * 2.3;
+    }
+    const dotGeo = keep(new THREE.BufferGeometry());
+    dotGeo.setAttribute('position', new THREE.BufferAttribute(dotPos, 3));
+    const dotRing = new THREE.Points(dotGeo, keep(new THREE.PointsMaterial({ size: 0.07, map: glowTex, color: accent, transparent: true, opacity: 0.85, blending: THREE.AdditiveBlending, depthWrite: false })));
+    platform.add(dotRing);
+    const discMat = keep(new THREE.MeshBasicMaterial({ map: glowTex, color: ringColor, transparent: true, opacity: 0.32, blending: THREE.AdditiveBlending, depthWrite: false }));
+    const disc = new THREE.Mesh(keep(new THREE.PlaneGeometry(5.4, 5.4)), discMat);
+    disc.rotation.x = -Math.PI / 2;
+    platform.add(disc);
+    const flat = new THREE.Quaternion().setFromEuler(new THREE.Euler(-Math.PI / 2, 0, 0));
+    let platformPulse = 0;
+    let lidOpen = 0;
+
+    // Kıvılcımlar ve halka dalgaları (belge izi, kitaba çarpma)
+    const sparks = createSparks(rig, keep, { max: small ? 160 : 320, size: small ? 0.1 : 0.085 });
+    const waves = createWaves(rig, keep, accent.clone().lerp(white, 0.25));
+    const sparkWhite = new THREE.Color('#fff7e0');
+
     // ---- Kitaplar ----
     const loader = new THREE.TextureLoader();
     const pagesMap = keep(pagesTexture());
     const pagesMat = keep(new THREE.MeshStandardMaterial({ map: pagesMap, roughness: 0.9 }));
     const bookGeo = keep(new RoundedBoxGeometry(BOOK.w, BOOK.h, BOOK.d, 2, 0.025));
+    const haloGeo = keep(new THREE.PlaneGeometry(2.1, 2.7));
 
     // Yerleşim: makinenin çevresinde, derinlikleri farklı bir halka
     const slots = small
@@ -272,13 +326,18 @@ export function mount(root) {
         const mesh = new THREE.Mesh(bookGeo, [pagesMat, edgeMat, pagesMat, pagesMat, coverMat, edgeMat]);
         const g = new THREE.Group();
         g.add(mesh);
+        // Arkadaki hale: üzerine gelince ve belge ulaşınca parlar
+        const haloMat = keep(new THREE.MeshBasicMaterial({ map: glowTex, color: accent, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false }));
+        const halo = new THREE.Mesh(haloGeo, haloMat);
+        halo.position.z = -0.25;
+        g.add(halo);
         g.position.set(pos[0], pos[1], pos[2]);
         const baseRot = new THREE.Euler(((i * 37) % 20 - 10) * 0.012, -pos[0] * 0.09 + ((i * 13) % 10 - 5) * 0.03, ((i * 29) % 16 - 8) * 0.02);
         g.rotation.copy(baseRot);
         g.scale.setScalar(0.0001);
         rig.add(g);
 
-        const obj = { g, mesh, base: new THREE.Vector3(...pos), baseRot, phase: i * 1.7, speed: 0.55 + (i % 3) * 0.12, hover: 0, pulse: 0, info, intro: i * 0.09 };
+        const obj = { g, mesh, haloMat, base: new THREE.Vector3(...pos), baseRot, phase: i * 1.7, speed: 0.55 + (i % 3) * 0.12, hover: 0, pulse: 0, info, intro: i * 0.09 };
 
         if (info && info.img) {
             loader.load(info.img, (tex) => {
@@ -346,6 +405,9 @@ export function mount(root) {
         rig.add(m);
         sheets.push({ m, t: 0, start, out, ctrl, end, target, spin: (Math.random() - 0.5) * 2.4 });
         strip.material.emissiveIntensity = 3.2;
+        platformPulse = 1;
+        waves.spawn(new THREE.Vector3(0, -1.25, 0.1), small ? 2.2 : 2.8, flat, 1.3);
+        sparks.emit(start, 8, accent, { speed: 0.5, up: 0.25, life: 0.6 });
     };
 
     // ---- Parçacıklar ----
@@ -440,6 +502,14 @@ export function mount(root) {
         strip.material.emissiveIntensity = lerp(strip.material.emissiveIntensity, 1.2 + Math.sin(t * 2) * 0.25, 0.04);
         screen.emissiveIntensity = 1 + Math.sin(t * 3.1) * 0.15;
 
+        // Platform: halkalar ters yönlerde döner, disk basımda parlar
+        ringA.rotation.z = t * 0.18;
+        ringB.rotation.z = -t * 0.1;
+        dotRing.rotation.y = -t * 0.22;
+        platformPulse = Math.max(0, platformPulse - dt * 1.4);
+        discMat.opacity = 0.26 + Math.sin(t * 1.4) * 0.05 + platformPulse * 0.45;
+        ringA.material.opacity = 0.5 + platformPulse * 0.5;
+
         // Işın: üzerine gelinen kitap
         ray.setFromCamera(ndc, camera);
         const hit = ray.intersectObjects(bookObjs.map((b) => b.mesh), false)[0];
@@ -454,6 +524,7 @@ export function mount(root) {
         }
 
         bookObjs.forEach((b) => {
+            b.haloMat.opacity = b.hover * 0.55 + Math.sin(b.pulse * Math.PI) * 0.75;
             const intro = clamp((t - 0.25 - b.intro) / 0.9, 0, 1);
             b.hover = lerp(b.hover, b === hovered ? 1 : 0, 0.12);
             b.pulse = Math.max(0, b.pulse - dt * 2.2);
@@ -471,8 +542,15 @@ export function mount(root) {
             );
         });
 
-        // Belgeler
+        // Belgeler: basmadan hemen önce kapak aralanır, tarama ışığı camdan geçer
         nextSheet -= dt;
+        const scanning = nextSheet < 1 && sheets.length < 3;
+        const sp = scanning ? clamp(1 - nextSheet, 0, 1) : 0;
+        lidOpen = lerp(lidOpen, scanning ? 1 : 0, 0.1);
+        lidPivot.rotation.x = -lidOpen * 0.3;
+        scanBar.position.x = scanGlow.position.x = lerp(-0.95, 0.75, easeInOut(sp));
+        scanMat.opacity = lerp(scanMat.opacity, scanning ? 0.95 : 0, 0.15);
+        scanGlowMat.opacity = scanMat.opacity * 0.7;
         if (nextSheet <= 0 && sheets.length < 3) {
             spawnSheet();
             nextSheet = 2.6 + Math.random() * 1.6;
@@ -497,14 +575,25 @@ export function mount(root) {
                 m.rotation.set(lerp(-0.9, 0.05, Math.min(1, u * 2.2)), Math.sin(u * Math.PI) * s.spin * 0.6, Math.sin(u * Math.PI) * 0.35 * s.spin);
                 m.scale.setScalar(lerp(1, 0.4, u * u * u));
                 m.material.opacity = u > 0.85 ? 1 - (u - 0.85) / 0.15 : 1;
+                // Işık izi
+                sparks.emit(m.position, 1, k % 2 ? sparkWhite : accent, { speed: 0.12, up: 0.04, life: 0.75, spread: 0.25 });
             }
             if (s.t >= 1) {
                 s.target.pulse = 1;
+                // Kitaba ulaşma: kıvılcım patlaması ve kameraya bakan halka dalgası
+                const hitAt = s.target.g.position.clone();
+                hitAt.z += 0.15;
+                sparks.emit(hitAt, small ? 18 : 30, accent, { speed: 1.5, up: 0.2, life: 0.9, spread: 0.3 });
+                sparks.emit(hitAt, small ? 8 : 14, sparkWhite, { speed: 1.0, up: 0.1, life: 0.7, spread: 0.2 });
+                waves.spawn(hitAt, 1.2, null, 0.8);
                 rig.remove(m);
                 m.material.dispose();
                 sheets.splice(k, 1);
             }
         }
+
+        sparks.update(dt);
+        waves.update(dt);
 
         // Toz: yavaşça yükselir
         const arr = dustGeo.attributes.position.array;

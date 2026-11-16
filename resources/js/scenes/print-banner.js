@@ -1,8 +1,9 @@
 /**
  * Belge bandı sahnesi: soldaki deste tarayıcı ışığıyla taranır, kopyası havada dönerek sağdaki desteye uçar.
  * Kopyalar dönüşümlü siyah-beyaz ve renkli; sağ deste dolunca sönüp yeniden başlar.
+ * İki deste arasında parlayan bir ışık yolu uzanır; kopya arkasında kıvılcım izi bırakır, desteye inince halka dalgası yayılır.
  */
-import { THREE, createStage, cssColor, documentTexture, easeInOut, lerp } from './kit.js';
+import { THREE, createSparks, createStage, createWaves, cssColor, documentTexture, easeInOut, lerp } from './kit.js';
 
 const SHEET = { w: 1.08, h: 1.53 };
 const GAP = 0.016;
@@ -82,6 +83,18 @@ export function mount(root) {
         return s;
     });
 
+    // Kıvılcımlar, iniş dalgası ve iki deste arasındaki ışık yolu
+    const sparks = createSparks(rig, keep, { max: small ? 120 : 220, size: 0.07 });
+    const waves = createWaves(rig, keep, accent.clone().lerp(new THREE.Color('#ffffff'), 0.2), { pool: 4 });
+    const sparkWhite = new THREE.Color('#fff7e0');
+    const pathFrom = new THREE.Vector3(0, 0, 9 * GAP + 0.02).applyMatrix4(stackA.matrix);
+    const pathTo = new THREE.Vector3(0, 0, 4 * GAP).applyMatrix4(stackB.matrix);
+    const pathCurve = new THREE.QuadraticBezierCurve3(pathFrom, pathFrom.clone().lerp(pathTo, 0.5).add(new THREE.Vector3(0, 1.7, 0.9)), pathTo);
+    const pathMat = keep(new THREE.MeshBasicMaterial({ color: accent, transparent: true, opacity: 0.18, blending: THREE.AdditiveBlending, depthWrite: false }));
+    rig.add(new THREE.Mesh(keep(new THREE.TubeGeometry(pathCurve, 80, 0.007, 6, false)), pathMat));
+    let pathPulse = 0;
+    const beamEnd = new THREE.Vector3();
+
     // Uçan kopyalar
     const flights = [];
     let copyIndex = 0;
@@ -102,6 +115,8 @@ export function mount(root) {
         const ctrl = from.clone().lerp(to, 0.5).add(new THREE.Vector3(0, 1.7, 0.9));
         flights.push({ m, t: 0, from, to, ctrl, qFrom: stackA.quaternion.clone(), qTo: stackB.quaternion.clone(), colorful });
         glowLight.intensity = 30;
+        pathPulse = 1;
+        sparks.emit(from, 6, accent, { speed: 0.4, up: 0.2, life: 0.5 });
     };
 
     const land = (f) => {
@@ -111,6 +126,10 @@ export function mount(root) {
         m.rotation.z = Math.sin(bSheets.length * 1.1) * 0.05;
         stackB.add(m);
         bSheets.push(m);
+        // İniş: desteye yatık halka dalgası ve kıvılcımlar
+        const at = new THREE.Vector3(0, 0, (bSheets.length + 1) * GAP + 0.02).applyMatrix4(stackB.matrix);
+        waves.spawn(at, 1.1, stackB.quaternion, 0.8);
+        sparks.emit(at, small ? 10 : 18, f.colorful ? accent : sparkWhite, { speed: 0.9, up: 0.35, life: 0.8, spread: 0.4 });
         if (bSheets.length > 7) {
             // Kayan deste: en alttaki kâğıt kalkar, kalanlar bir kat iner
             stackB.remove(bSheets.shift());
@@ -131,6 +150,14 @@ export function mount(root) {
         glowLight.position.y = 0.2 + sweep * 0.5;
 
         rings.forEach((r, i) => (r.rotation.z = t * (0.08 + i * 0.05)));
+
+        // Işık yolu kopya uçarken parlar; tarama çubuğunun uçlarından ara sıra kıvılcım saçılır
+        pathPulse = Math.max(0, pathPulse - dt * 0.7);
+        pathMat.opacity = 0.12 + pathPulse * 0.4 + Math.sin(t * 2) * 0.03;
+        if (Math.random() < dt * 6) {
+            beam.localToWorld(beamEnd.set((Math.random() < 0.5 ? -1 : 1) * SHEET.w * 0.54, 0, 0));
+            sparks.emit(rig.worldToLocal(beamEnd), 1, accent, { speed: 0.35, up: 0.15, life: 0.6 });
+        }
         orbiters.forEach((o, i) => {
             const a = t * (0.5 + i * 0.22) + i * 2.1;
             o.position.set(Math.cos(a) * (2.0 + i * 0.4), Math.sin(a * 1.3) * 0.7 + 0.3, Math.sin(a) * 1.1 - 1);
@@ -153,11 +180,14 @@ export function mount(root) {
             f.m.quaternion.premultiply(qSpin);
             f.m.scale.setScalar(1 + Math.sin(u * Math.PI) * 0.12);
             f.m.material.opacity = Math.min(1, f.t * 6);
+            sparks.emit(f.m.position, 1, k % 2 ? sparkWhite : accent, { speed: 0.1, up: 0.02, life: 0.6, spread: 0.3 });
             if (f.t >= 1) {
                 land(f);
                 flights.splice(k, 1);
             }
         }
+        sparks.update(dt);
+        waves.update(dt);
     });
 
     camera.lookAt(0, 0, 0);

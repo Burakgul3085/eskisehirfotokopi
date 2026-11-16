@@ -1,9 +1,11 @@
 /**
  * SSS sahnesi: cilalı 3D soru işareti (yazı tipi gerekmez: eğri boyunca tüp + nokta), çevresinde dönen yörünge ve
  * süzülen cam küreler. Fare sahneyi çevirir; soru işareti yavaşça salınır.
+ * Yörüngedeki boncuklar kuyruklu yıldız gibi iz bırakır. Bir soru açılınca soru işareti tam tur döner,
+ * nokta zıplar, kıvılcım patlar ve yörünge düzleminde halka dalgası yayılır.
  */
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
-import { THREE, createStage, cssColor, lerp } from './kit.js';
+import { THREE, createSparks, createStage, createWaves, cssColor, easeInOut, lerp } from './kit.js';
 
 export function mount(root) {
     const stage = createStage(root, { fov: 32, z: 7.2 });
@@ -77,18 +79,50 @@ export function mount(root) {
         return m;
     });
 
+    // Kuyruklu yıldız izleri, patlama kıvılcımları ve dalga
+    const sparks = createSparks(rig, keep, { max: 260, size: 0.075 });
+    const waves = createWaves(rig, keep, accent.clone().lerp(new THREE.Color('#ffffff'), 0.2), { pool: 3 });
+    const tailColors = [accent, primary.clone().lerp(new THREE.Color('#ffffff'), 0.35), primary.clone().lerp(new THREE.Color('#ffffff'), 0.6)];
+    const beadPos = new THREE.Vector3();
+    const burstColor = new THREE.Color('#fff7e0');
+
+    // Bir soru açılınca: tam tur dönüş + zıplama + patlama
+    let spin = 1;
+    let bounce = 0;
+    const section = root.closest('section');
+    section?.querySelectorAll('details').forEach((d) => d.addEventListener('toggle', () => {
+        if (!d.open || stage.reduced) {
+            return;
+        }
+        spin = 0;
+        bounce = 1;
+        const c = new THREE.Vector3(0, mark.position.y + 0.4, 0.3);
+        sparks.emit(c, 40, accent, { speed: 2.2, up: 0.3, life: 1.1, spread: 0.6 });
+        sparks.emit(c, 20, burstColor, { speed: 1.4, up: 0.2, life: 0.8, spread: 0.4 });
+        waves.spawn(new THREE.Vector3(0, 0, 0), 2.2, orbit.quaternion, 1.1);
+    }));
+
     stage.onFrame((dt, t) => {
         rig.rotation.y = lerp(rig.rotation.y, pointer.x * 0.5, 0.08);
         rig.rotation.x = lerp(rig.rotation.x, -pointer.y * 0.25, 0.08);
-        mark.rotation.y = Math.sin(t * 0.6) * 0.45;
+        spin = Math.min(1, spin + dt / 1.2);
+        bounce = Math.max(0, bounce - dt * 1.6);
+        mark.rotation.y = Math.sin(t * 0.6) * 0.45 + easeInOut(spin) * Math.PI * 2;
         mark.rotation.z = Math.sin(t * 0.4) * 0.06;
         mark.position.y = -0.12 + Math.sin(t * 1.1) * 0.08;
-        dot.position.y = -0.92 + Math.sin(t * 1.1 - 0.6) * 0.05;
+        dot.position.y = -0.92 + Math.sin(t * 1.1 - 0.6) * 0.05 - Math.sin(bounce * Math.PI) * 0.35;
+        dot.scale.setScalar(1 + Math.sin(bounce * Math.PI * 2) * 0.12);
         orbit.rotation.z = t * 0.25;
         beads.forEach((b, i) => {
             const a = t * (0.7 + i * 0.15) + i * 2.1;
             b.position.set(Math.cos(a) * 1.75, Math.sin(a) * 1.75, 0);
+            // Kuyruk: boncuğun rig içindeki konumundan sönen kıvılcımlar
+            orbit.updateMatrix();
+            beadPos.copy(b.position).applyMatrix4(orbit.matrix);
+            sparks.emit(beadPos, 1, tailColors[i], { speed: 0.05, up: 0, life: 0.55 - i * 0.1, spread: 0.02 });
         });
+        sparks.update(dt);
+        waves.update(dt);
         bubbles.forEach((b) => (b.position.y = b.userData.y + Math.sin(t * 0.8 + b.userData.phase) * 0.12));
     });
     stage.start();
