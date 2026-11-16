@@ -155,6 +155,14 @@ class OrderTest extends TestCase
         $this->post(route('orders.track'), ['number' => strtolower($order->number), 'phone' => '+90 532 123 45 67'])->assertRedirect($order->trackingUrl());
         $this->get($order->trackingUrl())->assertOk()->assertSee($order->number)->assertSee('Siparişiniz alındı');
         $this->get(route('orders.track.show', ['order' => $order->number, 'token' => 'yanlis']))->assertNotFound();
+
+        // Sorgu sayfası yazıları ayarlardan; ayrıntı sayfasındaki 3D sahne siparişin adımını alır
+        $this->get(route('orders.track'))->assertOk()->assertSee('anında gör.')->assertSee('Güvenli sorgu')->assertSee('data-scene="order-track"', false);
+        Settings::put(['track_title_accent' => 'Hemen öğren', 'track_points' => "truck|Hızlı teslim|\nbozuk satır"]);
+        $this->get(route('orders.track'))->assertSee('Hemen öğren')->assertSee('Hızlı teslim')->assertDontSee('Güvenli sorgu')->assertDontSee('bozuk satır');
+        $this->get($order->trackingUrl())->assertSee('data-step="0"', false)->assertSee('data-cancelled="0"', false);
+        $order->update(['status' => 'shipping']);
+        $this->get($order->trackingUrl())->assertSee('data-step="3"', false);
     }
 
     public function test_member_order_saves_address_and_shows_in_account(): void

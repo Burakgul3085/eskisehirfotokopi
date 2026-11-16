@@ -33,6 +33,21 @@
             </div>
             <x-field name="category_empty" label="Boş kategori sayfasındaki yazı" :value="$s['category_empty']" help="Ürünü olmayan kategorinin adresi doğrudan açılırsa gösterilir." />
         </fieldset>
+        <fieldset class="space-y-3 rounded-xl border border-line p-4">
+            <legend class="px-1 text-sm font-semibold">Sipariş takibi sayfası</legend>
+            <div class="grid gap-5 sm:grid-cols-3">
+                <x-field name="track_kicker" label="Üst etiket" :value="$s['track_kicker']" />
+                <x-field name="track_title" label="Başlık (1. satır)" :value="$s['track_title']" />
+                <x-field name="track_title_accent" label="Başlık (2. satır, renkli)" :value="$s['track_title_accent']" />
+            </div>
+            <x-field name="track_intro" type="textarea" rows="2" label="Tanıtım metni" :value="$s['track_intro']" />
+            <div class="grid gap-5 sm:grid-cols-2">
+                <x-field name="track_form_title" label="Form başlığı" :value="$s['track_form_title']" />
+                <x-field name="track_button" label="Düğme yazısı" :value="$s['track_button']" />
+            </div>
+            <x-field name="track_points" type="textarea" rows="3" label="Maddeler" :value="$s['track_points']"
+                     help="Her satır: simge|Başlık|Açıklama. Simgeler: shield, mail, clock, truck, phone, check, package." />
+        </fieldset>
         <x-field name="trust_items" type="textarea" rows="4" label="Güven şeridi" :value="$s['trust_items']"
                  help="Sayfa altındaki şerit. Her satır: simge|Başlık|Açıklama. Simgeler: truck, cash, printer, shield, clock, book, phone, check." />
         <x-field name="footer_about" type="textarea" rows="4" label="Alt bilgi metni" :value="$s['footer_about']" />

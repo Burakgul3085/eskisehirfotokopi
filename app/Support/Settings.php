@@ -62,6 +62,17 @@ Sipariş Takibi|/siparis-takip
         'menu_see_all' => 'Tümünü gör',
         'menu_no_match' => 'Eşleşen kategori yok.',
         'category_empty' => 'Bu kategoride henüz ürün yok.',
+
+        // Sipariş takibi sayfası (/siparis-takip)
+        'track_kicker' => 'Sipariş takibi',
+        'track_title' => 'Siparişin nerede,',
+        'track_title_accent' => 'anında gör.',
+        'track_intro' => 'Sipariş numaranı ve siparişte yazdığın telefonu gir; hazırlanıyor mu, yolda mı hemen öğren.',
+        'track_form_title' => 'Siparişini sorgula',
+        'track_button' => 'Siparişimi bul',
+        'track_points' => 'shield|Güvenli sorgu|Yalnız numara ve telefon eşleşirse görünür.
+mail|E-postadaki bağlantı|Sipariş e-postandaki bağlantıyla da açılır.
+clock|Anlık durum|Her adım değiştiğinde burada görünür.', // simge|Başlık|Açıklama
         'trust_items' => 'truck|Kapınıza teslim|Eskişehir içi belirlenen bölgelere
 cash|Kapıda ödeme|Nakit veya kredi kartı ile
 printer|Belge baskısı|Belgeni yükle, biz basalım', // simge|Başlık|Açıklama
@@ -235,8 +246,18 @@ printer|Belge baskısı|Belgeni yükle, biz basalım', // simge|Başlık|Açıkl
      */
     public static function trustItems(): array
     {
+        return self::iconLines('trust_items');
+    }
+
+    /**
+     * "simge|Başlık|Açıklama" satırlarından oluşan bir ayarı listeye çevirir (güven şeridi, takip sayfası maddeleri).
+     *
+     * @return list<array{icon: string, title: string, text: string}>
+     */
+    public static function iconLines(string $key): array
+    {
         $out = [];
-        foreach (preg_split('/\R/u', (string) self::get('trust_items')) as $line) {
+        foreach (preg_split('/\R/u', (string) self::get($key)) as $line) {
             $parts = array_map('trim', explode('|', $line));
             if (count($parts) >= 2 && $parts[1] !== '') {
                 $out[] = ['icon' => $parts[0] ?: 'check', 'title' => $parts[1], 'text' => $parts[2] ?? ''];
