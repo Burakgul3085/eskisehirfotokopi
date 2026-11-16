@@ -577,6 +577,7 @@
 
 /* Koyu üst bantlı sayfaların alt zemini: bandın renginden açılan tonlu geçiş, ışık lekeleri ve yukarıda belirgin nokta dokusu */
 .page-tint {
+    display: flow-root; /* iç kartın eksi üst boşluğu dışarı taşmasın: kart koyu bandın üstüne biner, zemin bandı örtmez */
     isolation: isolate;
     background:
         radial-gradient(900px 420px at 12% 0%, color-mix(in oklab, var(--color-primary) 18%, transparent), transparent 70%),
@@ -594,3 +595,36 @@
     mask-image: linear-gradient(180deg, #000, transparent 55%);
 }
 .page-tint .card { box-shadow: 0 1px 0 rgb(255 255 255 / 0.8) inset, 0 24px 48px -32px color-mix(in oklab, var(--color-primary) 55%, rgb(15 23 42)); border-color: color-mix(in oklab, var(--color-primary) 10%, var(--color-line)); }
+
+/* ---- Yayınevleri ---- */
+.pub-stat { display: inline-flex; align-items: baseline; gap: 0.5rem; border-radius: 1rem; padding: 0.6rem 1rem; font-size: 0.875rem; color: rgb(255 255 255 / 0.7); background: rgb(255 255 255 / 0.07); box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.12); backdrop-filter: blur(16px); }
+.hero-3d .pub-tip { opacity: 0; transition: opacity 0.2s ease; }
+.hero-3d .pub-tip[data-show='1'] { opacity: 1; }
+.pub-heading { text-shadow: 0 2px 12px rgb(0 0 0 / 0.35); }
+/* Öne çıkan kartlar: sırayla belirir, üzerine gelince 3D eğilir ve logo öne çıkar */
+.pub-card {
+    box-shadow: 0 1px 0 rgb(255 255 255) inset, 0 28px 50px -30px color-mix(in oklab, var(--color-primary) 60%, rgb(15 23 42));
+    transform: perspective(900px) rotateX(0) translateY(0);
+    transform-style: preserve-3d;
+    transition: transform 0.45s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.45s ease;
+    animation: pub-rise 0.7s cubic-bezier(0.2, 0.9, 0.3, 1.2) both;
+    animation-delay: calc(0.1s + var(--i) * 0.07s);
+}
+.pub-card:hover { transform: perspective(900px) rotateX(8deg) translateY(-8px); box-shadow: 0 1px 0 rgb(255 255 255) inset, 0 40px 60px -30px color-mix(in oklab, var(--color-primary) 75%, rgb(15 23 42)); }
+.pub-logo { transform: translateZ(0); transition: transform 0.45s cubic-bezier(0.2, 0.8, 0.2, 1); box-shadow: 0 16px 30px -18px rgb(15 23 42 / 0.5); }
+.pub-card:hover .pub-logo { transform: translateZ(30px) scale(1.04); }
+@keyframes pub-rise { from { opacity: 0; transform: perspective(900px) rotateX(-25deg) translateY(30px); } }
+.pub-letters { scrollbar-width: none; }
+.pub-letter { transition: background-color 0.2s ease, color 0.2s ease, transform 0.2s ease; }
+.pub-letter:hover { background: var(--color-primary); color: #fff; transform: translateY(-2px); }
+.pub-badge {
+    background: linear-gradient(140deg, color-mix(in oklab, var(--color-primary) 70%, white), var(--color-primary) 55%, color-mix(in oklab, var(--color-primary) 60%, black));
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.35), 0 12px 22px -12px var(--color-primary);
+    transform: perspective(300px) rotateX(10deg);
+}
+.pub-row { transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.3s ease, border-color 0.3s ease; }
+.pub-row:hover { transform: translateY(-3px); border-color: color-mix(in oklab, var(--color-primary) 35%, var(--color-line)); box-shadow: 0 20px 34px -24px color-mix(in oklab, var(--color-primary) 70%, rgb(15 23 42)); }
+@media (prefers-reduced-motion: reduce) {
+    .pub-card { animation: none; }
+    .pub-card:hover, .pub-row:hover, .pub-letter:hover { transform: none; }
+}

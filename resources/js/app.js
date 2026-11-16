@@ -56,6 +56,7 @@ if (heroScene) {
 const sceneLoaders = {
     'print-hero': () => import('./scenes/print-hero.js'),
     'order-track': () => import('./scenes/order-track.js'),
+    'publisher-carousel': () => import('./scenes/publisher-carousel.js'),
     'print-banner': () => import('./scenes/print-banner.js'),
     faq: () => import('./scenes/faq.js'),
     'footer-wave': () => import('./scenes/footer-wave.js'),

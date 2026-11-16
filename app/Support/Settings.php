@@ -63,6 +63,17 @@ Sipariş Takibi|/siparis-takip
         'menu_no_match' => 'Eşleşen kategori yok.',
         'category_empty' => 'Bu kategoride henüz ürün yok.',
 
+        // Yayınevleri sayfası (/yayinevleri)
+        'publishers_kicker' => 'Yayınevleri',
+        'publishers_title' => 'Sevdiğin yayınevi,',
+        'publishers_title_accent' => 'tek tıkla rafında.',
+        'publishers_intro' => 'Bir yayınevine tıkla, kitaplarının, soru bankalarının ve denemelerinin hepsini gör.',
+        'publishers_featured' => 'Öne çıkan yayınevleri',
+        'publishers_all' => 'Tüm yayınevleri (A–Z)',
+        'publishers_all_sub' => 'Mağazamızdaki yayınevlerinin tam listesi.',
+        'publishers_search' => 'Yayınevi ara…',
+        'publishers_no_match' => 'Aramana uyan yayınevi yok.',
+
         // Sipariş takibi sayfası (/siparis-takip)
         'track_kicker' => 'Sipariş takibi',
         'track_title' => 'Siparişin nerede,',

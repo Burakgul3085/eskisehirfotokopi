@@ -59,10 +59,22 @@ class CatalogController extends Controller
         $byLetter = $publishers->groupBy(fn ($p) => self::initial($p->name));
         $groups = collect(self::LETTERS)->mapWithKeys(fn ($l) => [$l => $byLetter[$l] ?? collect()]);
 
+        // Öne çıkanlar: yönetimde işaretlenenler; hiçbiri yoksa en çok ürünü olanlar
+        $featured = $publishers->where('is_featured', true)->sortBy('position')->take(12);
+        if ($featured->isEmpty()) {
+            $featured = $publishers->sortByDesc('products_count')->take(6);
+        }
+        // 3D karusel: en çok ürünü olan yayınevleri (kitap kapağı olarak)
+        $carousel = $publishers->sortByDesc('products_count')->take(12)->values()->map(fn ($p) => [
+            'name' => $p->name, 'initials' => $p->initials(), 'logo' => $p->logoUrl(), 'url' => route('publisher.show', $p), 'count' => $p->products_count,
+        ]);
+
         return view('store.catalog.publishers', [
             'groups' => $groups,
-            'featured' => $publishers->where('is_featured', true)->sortBy('position')->take(12),
+            'featured' => $featured->values(),
             'total' => $publishers->count(),
+            'productTotal' => $publishers->sum('products_count'),
+            'carousel' => $carousel,
         ]);
     }
 

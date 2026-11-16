@@ -34,6 +34,23 @@
             <x-field name="category_empty" label="Boş kategori sayfasındaki yazı" :value="$s['category_empty']" help="Ürünü olmayan kategorinin adresi doğrudan açılırsa gösterilir." />
         </fieldset>
         <fieldset class="space-y-3 rounded-xl border border-line p-4">
+            <legend class="px-1 text-sm font-semibold">Yayınevleri sayfası</legend>
+            <p class="field-help">Öne çıkan yayınevlerini Yönetim › Yayınevleri'nden “Öne çıkan” işaretiyle seçin; hiçbiri seçili değilse en çok ürünü olanlar gösterilir.</p>
+            <div class="grid gap-5 sm:grid-cols-3">
+                <x-field name="publishers_kicker" label="Üst etiket" :value="$s['publishers_kicker']" />
+                <x-field name="publishers_title" label="Başlık (1. satır)" :value="$s['publishers_title']" />
+                <x-field name="publishers_title_accent" label="Başlık (2. satır, renkli)" :value="$s['publishers_title_accent']" />
+            </div>
+            <x-field name="publishers_intro" type="textarea" rows="2" label="Tanıtım metni" :value="$s['publishers_intro']" />
+            <div class="grid gap-5 sm:grid-cols-2">
+                <x-field name="publishers_featured" label="Öne çıkanlar başlığı" :value="$s['publishers_featured']" />
+                <x-field name="publishers_all" label="Tam liste başlığı" :value="$s['publishers_all']" />
+                <x-field name="publishers_all_sub" label="Tam liste açıklaması" :value="$s['publishers_all_sub']" />
+                <x-field name="publishers_search" label="Arama kutusu yazısı" :value="$s['publishers_search']" />
+            </div>
+            <x-field name="publishers_no_match" label="Arama sonucu yoksa" :value="$s['publishers_no_match']" />
+        </fieldset>
+        <fieldset class="space-y-3 rounded-xl border border-line p-4">
             <legend class="px-1 text-sm font-semibold">Sipariş takibi sayfası</legend>
             <div class="grid gap-5 sm:grid-cols-3">
                 <x-field name="track_kicker" label="Üst etiket" :value="$s['track_kicker']" />

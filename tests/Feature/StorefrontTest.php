@@ -139,7 +139,11 @@ class StorefrontTest extends TestCase
 
     public function test_publishers_index_and_page(): void
     {
-        $this->get('/yayinevleri')->assertOk()->assertSee('Palme Yayınları')->assertSee('Hız Yayınları')->assertSee('harf-', false);
+        $this->get('/yayinevleri')->assertOk()->assertSee('Palme Yayınları')->assertSee('Hız Yayınları')->assertSee('harf-', false)
+            ->assertSee('tek tıkla rafında.')->assertSee('Öne çıkan yayınevleri')   // öne çıkan işaretli yoksa en çok ürünü olanlar
+            ->assertSee('data-scene="publisher-carousel"', false)->assertSee('"url":', false);
+        Settings::put(['publishers_title_accent' => 'Hepsi burada', 'publishers_all' => 'Bütün liste']);
+        $this->get('/yayinevleri')->assertSee('Hepsi burada')->assertSee('Bütün liste')->assertDontSee('tek tıkla rafında.');
         $this->get('/yayinevi/hiz')->assertOk()->assertSee('KPSS Tarih Denemeleri')->assertSee('TYT Geometri')->assertDontSee('TYT Matematik Soru');
 
         $this->hiz->update(['is_active' => false]);

@@ -321,6 +321,16 @@ export function filterList() {
             const t = asciiKey(this.term);
             return t === '' || (this.$el.dataset.name || '').includes(t);
         },
+        // Bölüm (ör. bir harf) içindeki öğelerden hiçbiri aramaya uymuyorsa bölüm gizlenir
+        groupMatches() {
+            const t = asciiKey(this.term);
+            return t === '' || [...this.$el.querySelectorAll('[data-name]')].some((e) => e.dataset.name.includes(t));
+        },
+        // Sayfadaki hiçbir öğe aramaya uymuyorsa "sonuç yok" yazısı görünür
+        noMatch() {
+            const t = asciiKey(this.term);
+            return t !== '' && ![...this.$root.querySelectorAll('[data-name]')].some((e) => e.dataset.name.includes(t));
+        },
     };
 }
 
