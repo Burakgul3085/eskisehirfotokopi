@@ -50,9 +50,18 @@ class Settings
         'color_accent' => '#f59e0b',
 
         // Menü ve şeritler (satır başına bir öğe)
-        'header_links' => 'Yayınevleri|/yayinevleri
+        'header_links' => 'Tüm kitaplar|/urunler
+Yayınevleri|/yayinevleri
 Belge Yükle|/fotokopi
-Sipariş Takibi|/siparis-takip', // Etiket|Adres
+Sipariş Takibi|/siparis-takip
+İletişim|/iletisim', // Etiket|Adres
+
+        // Kategori menüsü (header'daki "Tüm kategoriler" paneli; içinde yayında ürün olmayan kategori gösterilmez)
+        'menu_all_label' => 'Tüm kategoriler',
+        'menu_search_placeholder' => 'Kategori ara…',
+        'menu_see_all' => 'Tümünü gör',
+        'menu_no_match' => 'Eşleşen kategori yok.',
+        'category_empty' => 'Bu kategoride henüz ürün yok.',
         'trust_items' => 'truck|Kapınıza teslim|Eskişehir içi belirlenen bölgelere
 cash|Kapıda ödeme|Nakit veya kredi kartı ile
 printer|Belge baskısı|Belgeni yükle, biz basalım', // simge|Başlık|Açıklama

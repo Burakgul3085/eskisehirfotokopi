@@ -21,7 +21,18 @@
         </fieldset>
         <x-field name="closed_message" type="textarea" label="Bakım mesajı" :value="$s['closed_message']" />
         <x-field name="header_links" type="textarea" rows="4" label="Menü bağlantıları" :value="$s['header_links']"
-                 help="Kategori menüsünün sağındaki bağlantılar. Her satır: Etiket|/adres (ör. Yayınevleri|/yayinevleri)." />
+                 help="“Tüm kategoriler” düğmesinin yanındaki bağlantılar (telefonda menüde). Her satır: Etiket|/adres (ör. Yayınevleri|/yayinevleri)." />
+        <fieldset class="space-y-3 rounded-xl border border-line p-4">
+            <legend class="px-1 text-sm font-semibold">Kategori menüsü</legend>
+            <p class="field-help">İçinde yayında ürün olmayan kategoriler vitrinde gösterilmez; 1 ürün bile yayına alınınca kendiliğinden görünür.</p>
+            <div class="grid gap-5 sm:grid-cols-2">
+                <x-field name="menu_all_label" label="Düğme yazısı" :value="$s['menu_all_label']" />
+                <x-field name="menu_search_placeholder" label="Arama kutusu yazısı" :value="$s['menu_search_placeholder']" />
+                <x-field name="menu_see_all" label="“Tümünü gör” düğmesi" :value="$s['menu_see_all']" />
+                <x-field name="menu_no_match" label="Arama sonucu yoksa" :value="$s['menu_no_match']" />
+            </div>
+            <x-field name="category_empty" label="Boş kategori sayfasındaki yazı" :value="$s['category_empty']" help="Ürünü olmayan kategorinin adresi doğrudan açılırsa gösterilir." />
+        </fieldset>
         <x-field name="trust_items" type="textarea" rows="4" label="Güven şeridi" :value="$s['trust_items']"
                  help="Sayfa altındaki şerit. Her satır: simge|Başlık|Açıklama. Simgeler: truck, cash, printer, shield, clock, book, phone, check." />
         <x-field name="footer_about" type="textarea" rows="4" label="Alt bilgi metni" :value="$s['footer_about']" />

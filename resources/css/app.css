@@ -497,3 +497,11 @@
         radial-gradient(40rem 28rem at 0% 100%, color-mix(in oklab, var(--color-primary) 35%, transparent), transparent 65%),
         radial-gradient(30rem 20rem at 60% 110%, color-mix(in oklab, var(--color-accent) 10%, transparent), transparent 70%);
 }
+
+/* "Tüm kategoriler" paneli (store/partials/category-panel): açılınca düzleşir; seçili ana kategori ve arama eşleşmesi */
+.mega-panel.is-open { transform: none; }
+.cat-group { transition: background-color 0.15s ease, color 0.15s ease; }
+.cat-group:hover, .cat-group.is-active { background: var(--color-primary-soft); color: var(--color-primary-dark); }
+.cat-child { transition: background-color 0.15s ease, color 0.15s ease; }
+.cat-child:hover { background: var(--color-surface); color: var(--color-primary); }
+.cat-child.is-match { color: var(--color-primary-dark); font-weight: 700; background: var(--color-primary-soft); }

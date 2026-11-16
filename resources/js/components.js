@@ -607,3 +607,123 @@ export function categoryTree() {
         },
     };
 }
+
+/** Kategori araması için sade biçim (sunucudaki Text::key ile aynı: küçük harf, Türkçe harfler sadeleşir). */
+function categoryKey(value) {
+    return String(value || '')
+        .toLocaleLowerCase('tr')
+        .replace(/[ıîİ]/g, 'i').replace(/ş/g, 's').replace(/ğ/g, 'g').replace(/[üû]/g, 'u').replace(/ö/g, 'o').replace(/ç/g, 'c').replace(/â/g, 'a')
+        .normalize('NFD').replace(/[̀-ͯ]/g, '')
+        .replace(/[^a-z0-9]+/g, ' ')
+        .trim();
+}
+
+/** Arama kelimelerinin hepsi adın içinde geçiyor mu? */
+function categoryMatches(key, terms) {
+    return terms.every((t) => key.includes(t));
+}
+
+/**
+ * Header "Tüm kategoriler" paneli: tıklayınca aç/kapa; soldaki ana kategorinin üstüne gelince sağda onun alt kategorileri;
+ * arama ana ve alt kategori adlarında süzer (eşleşen alt kategoriler vurgulanır, eşleşmeyenler gizlenir).
+ */
+export function categoryMenu() {
+    return {
+        open: false,
+        expanded: 'false',
+        chevronClass: '',
+        active: null,
+        terms: [],
+        toggle() {
+            if (this.open) {
+                this.close();
+            } else {
+                this.open = true;
+                this.apply();
+                this.$nextTick(() => this.$refs.search?.focus({ preventScroll: true }));
+            }
+        },
+        close() {
+            this.open = false;
+            this.apply();
+        },
+        show(event) {
+            this.active = String(event.currentTarget.dataset.id);
+            this.apply();
+        },
+        search(event) {
+            this.terms = categoryKey(event.target.value).split(' ').filter((t) => t !== '');
+            this.active = null;
+            this.apply();
+        },
+        apply() {
+            this.expanded = this.open ? 'true' : 'false';
+            this.chevronClass = this.open ? 'rotate-180' : '';
+            this.$refs.panel?.classList.toggle('is-open', this.open);
+            const root = this.$root;
+            const groups = [...root.querySelectorAll('li[data-group]')];
+            const searching = this.terms.length > 0;
+            const visibleIds = [];
+            groups.forEach((li) => {
+                const link = li.querySelector('a[data-id]');
+                const childKeys = (li.dataset.childKeys || '').split('|').filter((k) => k !== '');
+                const hit = !searching || categoryMatches(li.dataset.key || '', this.terms) || childKeys.some((k) => categoryMatches(k, this.terms));
+                li.hidden = !hit;
+                if (hit) {
+                    visibleIds.push(String(link.dataset.id));
+                }
+            });
+            if (this.active === null || !visibleIds.includes(this.active)) {
+                this.active = visibleIds[0] ?? null;
+            }
+            const noMatch = root.querySelector('[data-no-match]');
+            if (noMatch) {
+                noMatch.hidden = visibleIds.length > 0;
+            }
+            groups.forEach((li) => {
+                const link = li.querySelector('a[data-id]');
+                const isActive = String(link.dataset.id) === this.active;
+                link.classList.toggle('is-active', isActive);
+                link.setAttribute('aria-current', isActive ? 'true' : 'false');
+            });
+            root.querySelectorAll('section[data-pane]').forEach((pane) => {
+                pane.hidden = String(pane.dataset.pane) !== this.active;
+                const group = groups.find((li) => String(li.querySelector('a[data-id]').dataset.id) === String(pane.dataset.pane));
+                // Ana kategori adı aramaya uyuyorsa bütün alt kategoriler, uymuyorsa yalnız eşleşenler
+                const groupHit = !searching || categoryMatches(group?.dataset.key || '', this.terms);
+                pane.querySelectorAll('li[data-child]').forEach((li) => {
+                    const hit = searching && categoryMatches(li.dataset.key || '', this.terms);
+                    li.hidden = !groupHit && !hit;
+                    li.querySelector('a')?.classList.toggle('is-match', hit);
+                });
+            });
+        },
+    };
+}
+
+/** Telefon menüsündeki kategoriler: arama ana/alt kategori adlarında süzer, eşleşen grubu açar. */
+export function mobileCategories() {
+    return {
+        search(event) {
+            const terms = categoryKey(event.target.value).split(' ').filter((t) => t !== '');
+            const searching = terms.length > 0;
+            let any = false;
+            this.$root.querySelectorAll('details[data-group]').forEach((group) => {
+                const groupHit = !searching || categoryMatches(group.dataset.key || '', terms);
+                let childHit = false;
+                group.querySelectorAll('[data-child]').forEach((child) => {
+                    const hit = searching && categoryMatches(child.dataset.key || '', terms);
+                    child.hidden = !groupHit && !hit;
+                    childHit = childHit || hit;
+                });
+                group.hidden = !groupHit && !childHit;
+                group.open = searching && (groupHit || childHit);
+                any = any || !group.hidden;
+            });
+            const noMatch = this.$root.querySelector('[data-no-match]');
+            if (noMatch) {
+                noMatch.hidden = any;
+            }
+        },
+    };
+}

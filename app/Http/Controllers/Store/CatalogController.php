@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Store;
 
+use App\Domain\Catalog\CategoryTree;
 use App\Domain\Catalog\ProductListing;
 use App\Http\Controllers\Controller;
 use App\Models\Category;
@@ -19,7 +20,7 @@ class CatalogController extends Controller
 {
     public const LETTERS = ['A', 'B', 'C', 'Ç', 'D', 'E', 'F', 'G', 'H', 'I', 'İ', 'J', 'K', 'L', 'M', 'N', 'O', 'Ö', 'P', 'R', 'S', 'Ş', 'T', 'U', 'Ü', 'V', 'Y', 'Z', '#'];
 
-    public function __construct(private ProductListing $listing) {}
+    public function __construct(private ProductListing $listing, private CategoryTree $tree) {}
 
     public function category(Request $request, Category $category): View
     {
@@ -28,6 +29,9 @@ class CatalogController extends Controller
         abort_if($trail->contains(fn ($c) => ! $c->is_active), 404);
 
         $base = $this->listing->base($category);
+        $visible = $this->tree->visibleIds();
+        // İçinde yayında ürün olmayan kategori menüde görünmez; adresi doğrudan açılırsa "henüz ürün yok" der.
+        $empty = ! in_array($category->id, $visible, true);
         $products = $this->listing->paginate($this->listing->sort($this->listing->filter(clone $base, $request), $request->query('sirala')));
 
         return view('store.catalog.listing', [
@@ -35,11 +39,13 @@ class CatalogController extends Controller
             'description' => $category->description,
             'trail' => $trail,
             'category' => $category,
-            'children' => $category->children()->active()->get(),
+            'children' => $category->children()->active()->whereIn('id', $visible)->get(),
             'products' => $products,
             'facets' => $this->listing->facets($base),
+            'emptyCategory' => $empty,
             'metaTitle' => $category->meta_title ?: $category->name,
             'metaDescription' => $category->meta_description ?: $category->description,
+            'noindex' => $empty,
         ]);
     }
 
@@ -134,7 +140,7 @@ class CatalogController extends Controller
             };
             $publishers = Publisher::active()->where($like('match_key'))->orderBy('name')->limit(4)->get()
                 ->map(fn ($p) => ['title' => $p->name, 'url' => route('publisher.show', $p), 'image' => $p->logoUrl()])->all();
-            $categories = Category::active()->where($like('normalized_name'))->orderBy('depth')->limit(4)->get()
+            $categories = Category::active()->whereIn('id', $this->tree->visibleIds())->where($like('normalized_name'))->orderBy('depth')->limit(4)->get()
                 ->map(fn ($c) => ['title' => $c->fullName(), 'url' => route('category.show', $c)])->all();
 
             return ['products' => $products, 'publishers' => $publishers, 'categories' => $categories, 'total' => $total];

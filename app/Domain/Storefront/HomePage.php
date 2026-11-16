@@ -68,9 +68,12 @@ class HomePage
         $items = collect($ids)->map(fn ($id) => $found[$id] ?? null)->filter()->values();
 
         if ($b->type === 'categories') {
+            // Yalnız içinde yayında ürün olan kategoriler (önbellekteki kimlikler sonradan boşalmış olabilir)
+            $visible = array_flip($this->tree->visibleIds());
+            $items = $items->filter(fn (Category $c) => isset($visible[$c->id]))->values();
             $children = $this->tree->all()->groupBy('parent_id');
             $items->each(fn (Category $c) => $c->setAttribute('child_names',
-                ($children[$c->id] ?? collect())->where('is_active', true)->take(4)->pluck('name')->all()));
+                ($children[$c->id] ?? collect())->where('is_active', true)->filter(fn ($ch) => isset($visible[$ch['id']]))->take(4)->pluck('name')->all()));
         }
 
         return $items;
@@ -112,7 +115,8 @@ class HomePage
     private function categoryIds(HomeBlock $b): array
     {
         $ids = array_map('intval', (array) $b->setting('category_ids', []));
-        $all = $this->tree->all()->where('is_active', true);
+        $visible = array_flip($this->tree->visibleIds());
+        $all = $this->tree->all()->where('is_active', true)->filter(fn ($c) => isset($visible[$c['id']]));
         $rows = $ids ? collect($ids)->filter(fn ($id) => isset($all[$id])) : $all->where('parent_id', null)->sortBy([['position', 'asc'], ['name', 'asc']])->pluck('id');
 
         return $rows->take((int) $b->setting('limit', 12))->values()->all();

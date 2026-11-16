@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Store;
 
+use App\Domain\Catalog\CategoryTree;
 use App\Http\Controllers\Controller;
 use App\Models\Category;
 use App\Models\Page;
@@ -22,7 +23,7 @@ class SitemapController extends Controller
                 [route('publishers.index'), null, '0.6'],
                 [route('contact'), null, '0.4'],
             ];
-            foreach (Category::active()->get(['slug', 'updated_at']) as $c) {
+            foreach (Category::active()->whereIn('id', app(CategoryTree::class)->visibleIds())->get(['slug', 'updated_at']) as $c) {
                 $urls[] = [route('category.show', $c->slug), $c->updated_at, '0.8'];
             }
             foreach (Publisher::active()->get(['slug', 'updated_at']) as $p) {

@@ -286,6 +286,77 @@ class CategoryTree
         return $build(0);
     }
 
+    /**
+     * Kategori başına yayındaki ürün sayısı, alt kategoriler dahil: [kategori id => sayı]. Vitrinde yalnız sayısı 0'dan büyük
+     * kategoriler görünür (toplu yüklemeyle, elle ya da boş açılmış olsun; 1 ürün bile varsa görünür). Önbellek ürünlerin
+     * sayısı ve son değişme anına bağlıdır: ürün eklenince, silinince, yayına alınınca/taşınınca kendiliğinden yenilenir.
+     *
+     * @return array<int, int>
+     */
+    public function visibleCounts(): array
+    {
+        // Aynı saniyede yapılan değişiklikler de yakalansın diye yayındakilerin kategori toplamı da imzaya girer
+        $sig = Product::query()->selectRaw("count(*) as c, sum(status = 'active') as a, sum(case when status = 'active' then category_id else 0 end) as k, max(updated_at) as m")->first();
+        $direct = Cache::memo()->remember('catalog.visible_counts.'.md5($sig?->c.'|'.$sig?->a.'|'.$sig?->k.'|'.$sig?->m), 3600,
+            fn () => Product::query()->visible()->whereNotNull('category_id')->groupBy('category_id')
+                ->selectRaw('category_id, count(*) as c')->pluck('c', 'category_id')->map(fn ($c) => (int) $c)->all());
+
+        $all = $this->all();
+        $counts = [];
+        foreach ($direct as $id => $n) {
+            if (! isset($all[$id])) {
+                continue;
+            }
+            foreach (array_filter(explode('/', (string) $all[$id]['path'])) as $ancestor) {
+                $counts[(int) $ancestor] = ($counts[(int) $ancestor] ?? 0) + $n;
+            }
+        }
+
+        return $counts;
+    }
+
+    /**
+     * Vitrin menüsü: etkin, menüde gösterilen ve içinde (alt kategorileri dahil) yayında ürün olan kategoriler;
+     * her düğümde 'count' (yayındaki ürün sayısı) ve 'key' (arama için sade ad).
+     */
+    public function storefront(): array
+    {
+        $counts = $this->visibleCounts();
+        $prune = function (array $nodes) use (&$prune, $counts): array {
+            $out = [];
+            foreach ($nodes as $node) {
+                if (($counts[$node['id']] ?? 0) < 1) {
+                    continue;
+                }
+                $out[] = ['count' => $counts[$node['id']], 'key' => Text::key($node['name']), 'children' => $prune($node['children'])] + $node;
+            }
+
+            return $out;
+        };
+
+        return $prune($this->nested(true, true));
+    }
+
+    /** Vitrinde görünen (etkin, ataları etkin ve içinde yayında ürün olan) kategori kimlikleri. @return list<int> */
+    public function visibleIds(): array
+    {
+        $counts = $this->visibleCounts();
+        $all = $this->all();
+
+        return $all->filter(function ($c) use ($counts, $all) {
+            if (($counts[$c['id']] ?? 0) < 1) {
+                return false;
+            }
+            foreach (array_filter(explode('/', (string) $c['path'])) as $id) {
+                if (! ($all[(int) $id]['is_active'] ?? false)) {
+                    return false;
+                }
+            }
+
+            return true;
+        })->keys()->map(fn ($id) => (int) $id)->values()->all();
+    }
+
     public function flush(): void
     {
         Cache::memo()->forget(self::CACHE_KEY);

@@ -159,10 +159,14 @@
                 @else
                     <div class="rounded-2xl border border-dashed border-line bg-white px-6 py-16 text-center">
                         <x-icon name="search" class="mx-auto size-10 text-slate-300" />
-                        <p class="mt-4 font-display text-lg font-bold">Ürün bulunamadı</p>
-                        <p class="mt-1 text-sm text-muted">
-                            @if ($filterCount)Filtreleri azaltmayı deneyin.@else Farklı bir kelime, yazar adı veya ISBN ile arayabilirsiniz.@endif
-                        </p>
+                        @if (! empty($emptyCategory) && ! $filterCount)
+                            <p class="mt-4 font-display text-lg font-bold">{{ $settings['category_empty'] ?: \App\Support\Settings::DEFAULTS['category_empty'] }}</p>
+                        @else
+                            <p class="mt-4 font-display text-lg font-bold">Ürün bulunamadı</p>
+                            <p class="mt-1 text-sm text-muted">
+                                @if ($filterCount)Filtreleri azaltmayı deneyin.@else Farklı bir kelime, yazar adı veya ISBN ile arayabilirsiniz.@endif
+                            </p>
+                        @endif
                     </div>
                 @endif
             </div>
