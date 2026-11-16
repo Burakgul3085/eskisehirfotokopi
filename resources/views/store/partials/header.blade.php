@@ -95,12 +95,12 @@
                     @if ($menu)
                         @include('store.partials.category-panel', ['menu' => $menu])
                     @endif
-                    <div class="flex flex-1 flex-wrap items-center gap-1 {{ $menu ? 'ml-3' : '' }} xl:gap-2">
+                    <div class="flex flex-1 items-center justify-evenly gap-1 {{ $menu ? 'ml-3' : '' }} {{ $whatsapp ? 'mr-3' : '' }}">
                         @foreach ($headerLinks as $link)
                             @php($path = parse_url($link['url'], PHP_URL_PATH) ?: '/')
                             @php($active = $path === '/' ? $current === '/' : str_starts_with($current, $path))
                             <a href="{{ $link['url'] }}" @if ($active) aria-current="page" @endif
-                               class="nav-link flex items-center gap-2 rounded-xl px-3.5 py-2.5 font-semibold {{ $active ? 'nav-link-active' : '' }}">
+                               class="nav-link flex items-center gap-2 rounded-xl px-2 py-2.5 font-semibold whitespace-nowrap xl:px-3.5 {{ $active ? 'nav-link-active' : '' }}">
                                 @isset($navIcons[$path])<x-icon :name="$navIcons[$path]" class="nav-icon size-4" />@endisset
                                 {{ $link['label'] }}
                             </a>
