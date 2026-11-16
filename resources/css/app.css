@@ -505,3 +505,27 @@
 .cat-child { transition: background-color 0.15s ease, color 0.15s ease; }
 .cat-child:hover { background: var(--color-surface); color: var(--color-primary); }
 .cat-child.is-match { color: var(--color-primary-dark); font-weight: 700; background: var(--color-primary-soft); }
+
+/* Belge Yükle (/fotokopi): koyu üst alanda açık renk konum çubuğu, 3D yükleme simgesi, yüzen adım kartları */
+.print-breadcrumb { color: rgb(255 255 255 / 0.65); }
+.print-breadcrumb a:hover { color: #fff; }
+.print-breadcrumb [aria-current] { color: #fff; }
+.print-breadcrumb svg { color: rgb(255 255 255 / 0.4); }
+.print-step { transition: transform 0.35s cubic-bezier(0.2, 0.8, 0.2, 1), background-color 0.25s ease, box-shadow 0.35s ease; }
+.print-step:hover { transform: translateY(-3px); background: var(--color-surface); box-shadow: 0 16px 30px -22px rgb(15 23 42 / 0.45); }
+.print-step-icon { box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.7), 0 10px 20px -12px currentColor; transform: perspective(300px) rotateX(8deg); transition: transform 0.35s ease; }
+.print-step:hover .print-step-icon { transform: perspective(300px) rotateX(0) translateY(-2px); }
+.print-drop { perspective: 900px; }
+.print-drop-icon {
+    background: linear-gradient(150deg, color-mix(in oklab, var(--color-primary) 80%, white), var(--color-primary-dark));
+    box-shadow: inset 0 2px 0 rgb(255 255 255 / 0.35), inset 0 -6px 12px rgb(0 0 0 / 0.18), 0 22px 34px -16px var(--color-primary), 0 6px 0 -1px color-mix(in oklab, var(--color-primary-dark) 80%, black);
+    transform: rotateX(14deg) translateZ(0);
+    animation: print-float 4s ease-in-out infinite;
+    transition: transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.print-drop:hover .print-drop-icon, .print-drop.is-dragging .print-drop-icon { animation-play-state: paused; transform: rotateX(0) translateY(-6px) scale(1.06); }
+@keyframes print-float { 0%, 100% { transform: rotateX(14deg) translateY(0); } 50% { transform: rotateX(14deg) translateY(-7px); } }
+@media (prefers-reduced-motion: reduce) {
+    .print-drop-icon { animation: none; }
+    .print-step, .print-step:hover, .print-step-icon { transform: none; }
+}

@@ -33,6 +33,34 @@
             <x-field name="prep_text" label="Hazırlık bilgisi" :value="$s['prep_text']" maxlength="200" />
         </section>
 
+        {{-- /fotokopi sayfasındaki yazılar (sitede sabit metin yok) --}}
+        <section class="card space-y-4 p-6">
+            <h2 class="font-bold">Sayfa metinleri</h2>
+            <p class="field-help">Belge Yükle sayfasındaki yazılar. Başlıklar boş bırakılırsa varsayılan yazılır; diğer alanlar boşsa gösterilmez.</p>
+            <div class="grid gap-5 sm:grid-cols-3">
+                <x-field name="page_kicker" label="Üst etiket" :value="$s['page_kicker']" maxlength="60" />
+                <x-field name="page_title" label="Başlık (1. satır)" :value="$s['page_title']" maxlength="80" />
+                <x-field name="page_title_accent" label="Başlık (2. satır, renkli)" :value="$s['page_title_accent']" maxlength="80" />
+            </div>
+            <x-field name="steps" type="textarea" rows="3" label="Adımlar" :value="$s['steps']"
+                     help="Her satır: simge|Başlık|Açıklama (en fazla 4). Simgeler: upload, settings, cart, printer, truck, check, clock, shield, layers, book." />
+            <div class="grid gap-5 sm:grid-cols-2">
+                <x-field name="upload_title" label="Yükleme kartı başlığı" :value="$s['upload_title']" maxlength="80" />
+                <x-field name="upload_subtitle" label="Yükleme kartı açıklaması" :value="$s['upload_subtitle']" maxlength="200" />
+                <x-field name="drop_title" label="Sürükle-bırak alanı başlığı" :value="$s['drop_title']" maxlength="80" />
+                <x-field name="drop_pick" label="“Seç” bağlantısı" :value="$s['drop_pick']" maxlength="60" />
+            </div>
+            <x-field name="consent_text" type="textarea" rows="2" label="Onay kutusu metni" :value="$s['consent_text']" maxlength="300" />
+            <x-field name="consent_hint" label="Onay verilmeden gösterilen ipucu" :value="$s['consent_hint']" maxlength="200" />
+            <x-field name="tip_text" type="textarea" rows="2" label="İpucu kutusu" :value="$s['tip_text']" maxlength="400" />
+            <div class="grid gap-5 sm:grid-cols-2">
+                <x-field name="price_title" label="Fiyat listesi başlığı" :value="$s['price_title']" maxlength="60" />
+                <x-field name="price_subtitle" label="Fiyat listesi açıklaması" :value="$s['price_subtitle']" maxlength="200" />
+                <x-field name="price_badge" label="Üst alandaki fiyat rozetinin alt yazısı" :value="$s['price_badge']" maxlength="80" />
+                <x-field name="price_best_label" label="En ucuz kademe etiketi" :value="$s['price_best_label']" maxlength="40" />
+            </div>
+        </section>
+
         <section class="card overflow-x-auto">
             <div class="p-6 pb-0">
                 <h2 class="font-bold">Yaprak başı fiyat kademeleri (₺)</h2>

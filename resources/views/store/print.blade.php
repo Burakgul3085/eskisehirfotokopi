@@ -2,34 +2,115 @@
     use App\Domain\Print\PrintOptions;
     use App\Support\Money;
     $tiers = collect($print['tiers'])->sortBy('from')->values();
-    $tierLabel = fn ($i) => $tiers[$i]['from'].(isset($tiers[$i + 1]) ? '–'.($tiers[$i + 1]['from'] - 1) : '+').' yaprak';
+    $tierRange = fn ($i) => $tiers[$i]['from'].(isset($tiers[$i + 1]) ? ' – '.($tiers[$i + 1]['from'] - 1) : ' +');
+    $p = app(\App\Domain\Print\PrintSettings::class);
+    $steps = $p->steps();
+    // Üst alandaki rozet: ilk açık baskı türünün en düşük yaprak fiyatı
+    $badgeColor = $colors[0] ?? 'bw';
+    $lowest = $tiers->min(fn ($t) => (float) $t[$badgeColor]);
+    $formats = [['PDF', 'bg-danger-soft text-danger'], ['Word', 'bg-info-soft text-info'], ['PowerPoint', 'bg-accent-soft text-accent-ink'], ['Excel', 'bg-success-soft text-success'], ['JPG · PNG', 'bg-primary-soft text-primary-dark']];
 @endphp
 <x-layouts.store title="Fotokopi ve belge baskısı" :description="$print['intro']">
-    <div class="container-page py-6 sm:py-10" x-data="printOrder">
-        <script type="application/json" data-print-config>@json($config)</script>
-        <x-breadcrumb :items="[['Fotokopi', null]]" />
-
-        <div class="mt-4 grid items-start gap-6 lg:grid-cols-[1fr_340px]">
-            <div class="min-w-0 space-y-6">
-                <div>
-                    <h1 class="text-2xl font-extrabold sm:text-3xl">Belgeni yükle, kapına getirelim</h1>
-                    <p class="mt-2 max-w-2xl text-muted">{{ $print['intro'] }}</p>
+    {{--
+        Üst alan: koyu zemin + ana sayfadaki 3D fotokopi makinesi sahnesi (resources/js/hero-scene.js, WebGL yoksa parlayan
+        yedek görünür); altında yüzen adım şeridi. Bütün yazılar Yönetim › Fotokopi › Sayfa metinleri'nden.
+    --}}
+    <section class="hero-3d surface-deep print-hero relative isolate overflow-hidden text-white">
+        <div class="pointer-events-none absolute inset-0 -z-10" aria-hidden="true">
+            <div class="hero-grid absolute inset-0"></div>
+            <div class="hero-spot absolute inset-0"></div>
+        </div>
+        <div class="container-page relative grid items-center gap-4 pt-6 pb-20 md:grid-cols-[1.1fr_1fr] md:pb-28 lg:pt-8">
+            <div class="relative z-10">
+                <x-breadcrumb :items="[['Fotokopi', null]]" class="print-breadcrumb" />
+                @if ($p->text('page_kicker'))
+                    <p class="hero-reveal mt-6 flex items-center gap-3 text-xs font-bold tracking-[0.25em] text-accent uppercase" style="--d: 0">
+                        <span class="flex gap-1" aria-hidden="true"><span class="size-2 rounded-full bg-danger"></span><span class="size-2 rounded-full bg-accent"></span><span class="size-2 rounded-full bg-info"></span><span class="size-2 rounded-full bg-success"></span></span>
+                        {{ $p->text('page_kicker') }}
+                    </p>
+                @endif
+                <h1 class="hero-reveal mt-4 text-4xl leading-[1.04] font-extrabold tracking-tight sm:text-5xl lg:text-6xl" style="--d: 1">
+                    <span class="block bg-gradient-to-br from-white via-white to-white/70 bg-clip-text text-transparent">{{ $p->text('page_title') }}</span>
+                    @if ($p->text('page_title_accent'))<span class="block text-accent">{{ $p->text('page_title_accent') }}</span>@endif
+                </h1>
+                @if ($print['intro'])<p class="hero-reveal mt-5 max-w-xl text-base leading-relaxed text-white/75 sm:text-lg" style="--d: 2">{{ $print['intro'] }}</p>@endif
+                <div class="hero-reveal mt-7 flex flex-wrap items-center gap-3" style="--d: 3">
+                    <a href="#yukle" class="btn-accent px-6 py-3"><x-icon name="upload" class="size-5" />{{ $p->text('upload_title') }}</a>
+                    <a href="#fiyatlar" class="inline-flex items-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold text-white ring-1 ring-white/25 backdrop-blur transition hover:bg-white/10">{{ $p->text('price_title') }}<x-icon name="chevron-down" class="size-4" /></a>
                 </div>
+            </div>
 
-                <section class="card p-5 sm:p-7">
-                    <label class="flex items-start gap-3 text-sm">
-                        <input type="checkbox" x-model="consent" class="mt-0.5 accent-primary">
-                        <span>Yüklediğim belgeleri çoğaltma hakkım olduğunu, telif hakkıyla korunan eserlerde yasal sınırlar içinde kaldığımı onaylıyorum.</span>
+            <div class="relative">
+                <div data-hero-scene class="relative h-[260px] sm:h-[340px] md:h-[400px] lg:h-[430px]">
+                    <div class="hero-fallback pointer-events-none absolute inset-0 flex items-center justify-center transition-opacity duration-1000" aria-hidden="true">
+                        <div class="size-56 rounded-full bg-gradient-to-br from-white/25 to-accent/20 blur-2xl md:size-72"></div>
+                    </div>
+                    <div class="hero-stage absolute inset-0">
+                        <canvas data-hero-canvas class="block size-full" aria-hidden="true"></canvas>
+                        <div data-hero-tip class="pointer-events-none absolute top-0 left-0" role="presentation"></div>
+                    </div>
+                    <script type="application/json" data-hero-books>[]</script>
+                </div>
+                @if ($lowest !== null)
+                    <div class="print-price-chip hero-card absolute top-2 right-0 z-10 sm:right-2 md:top-6" style="--depth: 14">
+                        <div class="hero-card-float rounded-2xl border border-white/15 bg-white/[0.09] px-5 py-4 shadow-[0_24px_50px_-24px_rgba(0,0,0,0.6)] backdrop-blur-xl" style="--d: 1">
+                            <p class="text-xs font-semibold text-white/70">{{ PrintOptions::COLORS[$badgeColor] }}</p>
+                            <p class="font-display text-3xl font-extrabold text-white">{{ Money::format($lowest) }}</p>
+                            @if ($p->text('price_badge'))<p class="text-xs text-white/60">{{ $p->text('price_badge') }}</p>@endif
+                        </div>
+                    </div>
+                @endif
+            </div>
+        </div>
+    </section>
+
+    <div class="container-page relative z-10 pb-10" x-data="printOrder">
+        <script type="application/json" data-print-config>@json($config)</script>
+
+        @if ($steps)
+            {{-- Adım şeridi: üst alanın alt kenarına biner --}}
+            <ol class="print-steps -mt-16 grid gap-3 rounded-3xl border border-line/70 bg-white p-3 shadow-[0_30px_60px_-30px_rgba(15,23,42,0.35)] {{ [1 => 'sm:grid-cols-1', 2 => 'sm:grid-cols-2', 3 => 'sm:grid-cols-3', 4 => 'sm:grid-cols-2 lg:grid-cols-4'][count($steps)] }} sm:p-4">
+                @foreach ($steps as $i => $step)
+                    <li class="print-step flex items-center gap-4 rounded-2xl p-3 sm:p-4">
+                        <span class="print-step-icon relative flex size-12 shrink-0 items-center justify-center rounded-2xl {{ ['bg-accent-soft text-accent-ink', 'bg-primary-soft text-primary-dark', 'bg-info-soft text-info', 'bg-success-soft text-success'][$i % 4] }}">
+                            <x-icon :name="$step['icon']" class="size-6" />
+                            <span class="absolute -top-2 -right-2 flex size-6 items-center justify-center rounded-full bg-ink text-xs font-bold text-white ring-2 ring-white">{{ $i + 1 }}</span>
+                        </span>
+                        <span class="min-w-0">
+                            <span class="block font-display font-bold text-ink">{{ $step['title'] }}</span>
+                            @if ($step['text'])<span class="block text-sm text-muted">{{ $step['text'] }}</span>@endif
+                        </span>
+                    </li>
+                @endforeach
+            </ol>
+        @endif
+
+        <div class="mt-8 grid items-start gap-6 lg:grid-cols-[1fr_360px]">
+            <div class="min-w-0 space-y-6">
+                <section id="yukle" class="card scroll-mt-28 p-5 sm:p-8">
+                    <h2 class="font-display text-2xl font-extrabold">{{ $p->text('upload_title') }}</h2>
+                    @if ($p->text('upload_subtitle'))<p class="mt-1 text-muted">{{ $p->text('upload_subtitle') }}</p>@endif
+
+                    <label class="mt-5 flex cursor-pointer items-start gap-3 rounded-2xl bg-surface px-4 py-4 text-sm leading-relaxed has-checked:bg-primary-soft">
+                        <input type="checkbox" x-model="consent" class="mt-0.5 size-5 shrink-0 accent-primary">
+                        <span>{{ $p->text('consent_text') }}</span>
                     </label>
 
-                    <label class="mt-5 flex cursor-pointer flex-col items-center gap-3 rounded-2xl border-2 border-dashed px-6 py-10 text-center transition"
+                    <label class="print-drop group mt-5 flex cursor-pointer flex-col items-center gap-3 rounded-3xl border-2 border-dashed px-6 py-12 text-center transition sm:py-14"
                            x-bind:class="dropClass" x-on:dragover="dragOver" x-on:dragleave="dragLeave" x-on:drop="drop">
-                        <span class="flex size-14 items-center justify-center rounded-2xl bg-primary-soft text-primary"><x-icon name="upload" class="size-7" /></span>
-                        <span class="font-display text-lg font-bold">Dosyaları buraya bırakın veya seçin</span>
-                        <span class="text-sm text-muted">PDF, Word, PowerPoint, Excel, JPG, PNG · en fazla {{ $print['max_mb'] }} MB · birden çok dosya seçebilirsiniz</span>
+                        <span class="print-drop-icon flex size-20 items-center justify-center rounded-3xl text-white" aria-hidden="true"><x-icon name="upload" class="size-9" /></span>
+                        <span class="mt-2 font-display text-xl font-bold text-ink">{{ $p->text('drop_title') }}</span>
+                        <span class="text-sm text-muted"><span class="font-semibold text-primary underline decoration-2 underline-offset-4">{{ $p->text('drop_pick') }}</span> · {{ $print['max_mb'] }} MB</span>
+                        <span class="mt-2 flex flex-wrap justify-center gap-2">
+                            @foreach ($formats as [$fmt, $cls])<span class="rounded-full px-3 py-1 text-xs font-bold {{ $cls }}">{{ $fmt }}</span>@endforeach
+                        </span>
                         <input type="file" multiple accept="{{ $accept }}" class="sr-only" x-on:change="pick">
                     </label>
+                    @if ($p->text('consent_hint'))<p x-show="noConsent" class="mt-3 text-center text-sm text-muted">{{ $p->text('consent_hint') }}</p>@endif
                     <p x-show="hasMessage" x-cloak x-text="message" class="mt-4 rounded-xl bg-danger-soft px-4 py-3 text-sm font-medium text-danger" role="alert"></p>
+                    @if ($p->text('tip_text'))
+                        <p class="mt-5 flex gap-3 rounded-2xl bg-accent-soft px-4 py-3 text-sm leading-relaxed text-accent-ink"><x-icon name="alert" class="mt-0.5 size-4 shrink-0" />{{ $p->text('tip_text') }}</p>
+                    @endif
                 </section>
 
                 <template x-for="f in files" x-bind:key="f.uid">
@@ -150,29 +231,41 @@
                 </div>
             </div>
 
-            <aside class="space-y-4 lg:sticky lg:top-24">
-                <section class="card p-5">
-                    <h2 class="font-bold">Fiyatlar (yaprak başı)</h2>
-                    <table class="mt-3 w-full text-sm">
-                        <thead><tr class="text-left text-xs text-muted"><th class="pb-2 font-medium">Yaprak</th>
-                            @foreach ($colors as $c)<th class="pb-2 text-right font-medium">{{ PrintOptions::COLORS[$c] }}</th>@endforeach</tr></thead>
+            <aside id="fiyatlar" class="scroll-mt-28 space-y-4 lg:sticky lg:top-24">
+                <section class="card overflow-hidden">
+                    <div class="p-5 pb-4">
+                        <h2 class="font-display text-xl font-extrabold">{{ $p->text('price_title') }}</h2>
+                        @if ($p->text('price_subtitle'))<p class="mt-1 text-sm text-muted">{{ $p->text('price_subtitle') }}</p>@endif
+                    </div>
+                    <table class="w-full text-sm">
+                        <thead><tr class="border-y border-line bg-surface text-left text-[11px] tracking-wider text-muted uppercase">
+                            <th class="px-5 py-2.5 font-semibold">{{ $tiers->count() ? 'Yaprak' : '' }}</th>
+                            @foreach ($colors as $c)<th class="px-5 py-2.5 text-right font-semibold">{{ PrintOptions::COLORS[$c] }}</th>@endforeach</tr></thead>
                         <tbody>
                             @foreach ($tiers as $i => $t)
-                                <tr class="border-t border-line"><td class="py-2">{{ $tierLabel($i) }}</td>
-                                    @foreach ($colors as $c)<td class="py-2 text-right font-semibold">{{ Money::format($t[$c]) }}</td>@endforeach</tr>
+                                @php($best = $i === $tiers->count() - 1 && $tiers->count() > 1)
+                                <tr class="border-b border-line {{ $best ? 'bg-accent-soft/60' : '' }}">
+                                    <td class="px-5 py-3 font-semibold">{{ $tierRange($i) }}
+                                        @if ($best && $p->text('price_best_label'))<span class="ml-1 rounded-full bg-accent px-2 py-0.5 text-[10px] font-bold text-ink">{{ $p->text('price_best_label') }}</span>@endif
+                                    </td>
+                                    @foreach ($colors as $c)<td class="px-5 py-3 text-right font-semibold whitespace-nowrap">{{ Money::format($t[$c]) }}</td>@endforeach
+                                </tr>
                             @endforeach
+                            <tr class="border-b border-line"><td class="px-5 py-3 text-muted">Spiral cilt <span class="text-xs">(kopya başına)</span></td>
+                                <td colspan="{{ count($colors) }}" class="px-5 py-3 text-right font-display text-base font-extrabold">{{ Money::format($print['spiral_price']) }}</td></tr>
                         </tbody>
                     </table>
-                    <ul class="mt-3 space-y-1 text-xs text-muted">
+                    <ul class="space-y-1 p-5 pt-4 text-xs leading-relaxed text-muted">
                         <li>Kademe yaprak sayısına göre seçilir. Önlü arkalı baskıda yaprak sayısı yarıya iner (100 sayfa = 50 yaprak).</li>
-                        <li>Spiral cilt: kopya başı {{ Money::format($print['spiral_price']) }}.</li>
                         @if ($print['a3_enabled'])<li>A3 baskı: yaprak fiyatı × {{ str_replace('.', ',', rtrim(rtrim($print['a3_multiplier'], '0'), '.')) }}.</li>@endif
                     </ul>
                 </section>
-                <section class="card space-y-3 p-5 text-sm">
-                    <p class="flex gap-2"><x-icon name="clock" class="size-4 shrink-0 text-primary" />{{ $print['prep_text'] }}</p>
-                    <p class="flex gap-2"><x-icon name="truck" class="size-4 shrink-0 text-primary" />{{ $settings['delivery_info'] }}</p>
-                    <p class="flex gap-2"><x-icon name="shield" class="size-4 shrink-0 text-primary" />Belgeleriniz yalnız baskı için kullanılır ve {{ $print['ordered_days'] }} gün sonra sunucudan silinir.</p>
+                <section class="card space-y-4 p-5 text-sm">
+                    @foreach ([['clock', 'bg-accent-soft text-accent-ink', $print['prep_text']], ['truck', 'bg-info-soft text-info', $settings['delivery_info']], ['shield', 'bg-success-soft text-success', 'Belgeleriniz yalnız baskı için kullanılır ve '.$print['ordered_days'].' gün sonra sunucudan silinir.']] as [$icon, $cls, $text])
+                        @if ($text)
+                            <p class="flex items-center gap-3"><span class="flex size-10 shrink-0 items-center justify-center rounded-xl {{ $cls }}"><x-icon :name="$icon" class="size-5" /></span><span>{{ $text }}</span></p>
+                        @endif
+                    @endforeach
                 </section>
             </aside>
         </div>

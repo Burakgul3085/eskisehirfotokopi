@@ -211,6 +211,30 @@ class PrintTest extends TestCase
         $this->put(route('admin.print.update'), ['bw_enabled' => '0', 'color_enabled' => '0'] + $form)->assertSessionHasErrors('color_enabled');
     }
 
+    public function test_page_texts_are_editable_and_shown_on_storefront(): void
+    {
+        // Varsayılanlar: başlık, adımlar, fiyat listesi
+        $this->get(route('print.index'))->assertOk()
+            ->assertSee('kapına getirelim.')->assertSee('Baskıyı seç')->assertSee('Fiyat listesi')->assertSee('En uygun');
+
+        $this->actingAs(Admin::factory()->create(), 'admin');
+        $this->get(route('admin.print.edit'))->assertOk()->assertSee('Sayfa metinleri');
+        $form = ['enabled' => '1', 'bw_enabled' => '1', 'color_enabled' => '1', 'spiral_price' => '40', 'a3_multiplier' => '2', 'max_mb' => 100,
+            'max_copies' => 50, 'unordered_days' => 5, 'ordered_days' => 20,
+            'tiers' => [['from' => 1, 'bw' => '2', 'color' => '6'], ['from' => 100, 'bw' => '1', 'color' => '4']],
+            'page_title' => '', 'page_title_accent' => 'Hızlı baskı', 'steps' => "printer|Bas|Hemen\r\nbilinmeyen|Gönder|", 'tip_text' => '', 'price_best_label' => 'Fırsat'];
+        $this->put(route('admin.print.update'), $form)->assertSessionHasNoErrors();
+
+        $p = app(PrintSettings::class);
+        $this->assertSame('Belgeni yükle,', $p->text('page_title')); // zorunlu başlık boşsa varsayılan
+        $this->assertSame('', $p->text('tip_text'));                // isteğe bağlı alan boşsa gizlenir
+        $this->assertCount(2, $p->steps());
+
+        $this->get(route('print.index'))->assertOk()
+            ->assertSee('Hızlı baskı')->assertSee('Gönder')->assertSee('Fırsat')
+            ->assertDontSee('kapına getirelim.')->assertDontSee('Baskıyı seç');
+    }
+
     public function test_admin_toggles_color_and_storefront_shows_single_option(): void
     {
         $this->actingAs(Admin::factory()->create(), 'admin');

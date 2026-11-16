@@ -34,7 +34,28 @@ class PrintSettings
         'ordered_days' => 30,
         'intro' => 'PDF, Word, PowerPoint, Excel veya fotoğraf yükleyin; sayfa sayısı otomatik çıkar, fiyatı anında görün. Basıp kapınıza getirelim.',
         'prep_text' => 'Baskılar aynı gün hazırlanır, teslimat gününüzde kapınıza gelir.',
+        // Sayfa metinleri (Yönetim › Fotokopi › Sayfa metinleri); boş bırakılan başlık varsayılana döner, diğerleri gizlenir
+        'page_kicker' => 'Çevrimiçi fotokopi',
+        'page_title' => 'Belgeni yükle,',
+        'page_title_accent' => 'kapına getirelim.',
+        'steps' => "upload|Belgeni yükle|Sayfa sayısı otomatik çıkar.\nsettings|Baskıyı seç|Renk, düzen, cilt ve kopya.\ncart|Sepete ekle|Kitaplarınla aynı siparişte gelsin.",
+        'upload_title' => 'Belgelerini yükle',
+        'upload_subtitle' => 'Birden fazla belge seçebilirsin; her birinin baskı ayarı ayrıdır.',
+        'consent_text' => 'Yüklediğim belgeleri çoğaltma hakkım olduğunu, telif hakkıyla korunan eserlerde yasal sınırlar içinde kaldığımı onaylıyorum.',
+        'consent_hint' => 'Yüklemeye başlamak için yukarıdaki onay kutusunu işaretle.',
+        'drop_title' => 'Dosyaları buraya sürükle',
+        'drop_pick' => 'bilgisayarından seç',
+        'tip_text' => 'İpucu: Sayfa düzeninin aynen korunması için belgeyi mümkünse PDF olarak yükle. Word ve PowerPoint dosyaları PDF’e çevrilerek basılır; yazı tipleri farklı görünebilir.',
+        'price_title' => 'Fiyat listesi',
+        'price_subtitle' => 'Yaprak başı fiyat; çok basana daha ucuz.',
+        'price_badge' => 'yaprak başı, en düşük fiyat',
+        'price_best_label' => 'En uygun',
     ];
+
+    /** Sayfa metni alanları ve en fazla uzunlukları */
+    public const TEXTS = ['page_kicker' => 60, 'page_title' => 80, 'page_title_accent' => 80, 'steps' => 600, 'upload_title' => 80,
+        'upload_subtitle' => 200, 'consent_text' => 300, 'consent_hint' => 200, 'drop_title' => 80, 'drop_pick' => 60, 'tip_text' => 400,
+        'price_title' => 60, 'price_subtitle' => 200, 'price_badge' => 80, 'price_best_label' => 40];
 
     /** İstek boyunca tekrar tekrar çözümlenmesin. */
     private ?array $cache = null;
@@ -49,6 +70,29 @@ class PrintSettings
         $all['tiers'] = array_map(fn (array $t) => ['from' => (int) $t['from'], 'bw' => (string) $t['bw'], 'color' => (string) $t['color']], $all['tiers']);
 
         return $this->cache = $all;
+    }
+
+    /** Sayfa metni; başlıklar boşsa varsayılan, diğerleri boşsa '' (gösterilmez). */
+    public function text(string $key): string
+    {
+        $value = trim((string) ($this->all()[$key] ?? ''));
+        $required = ['page_title', 'upload_title', 'drop_title', 'drop_pick', 'price_title', 'consent_text'];
+
+        return $value === '' && in_array($key, $required, true) ? self::DEFAULTS[$key] : $value;
+    }
+
+    /** Adım şeridi: "simge|Başlık|Açıklama" satırları. @return list<array{icon: string, title: string, text: string}> */
+    public function steps(): array
+    {
+        $out = [];
+        foreach (preg_split('/\R/', $this->text('steps')) as $line) {
+            $parts = array_map('trim', explode('|', $line));
+            if (count($parts) >= 2 && $parts[1] !== '') {
+                $out[] = ['icon' => $parts[0] ?: 'check', 'title' => $parts[1], 'text' => $parts[2] ?? ''];
+            }
+        }
+
+        return array_slice($out, 0, 4);
     }
 
     public function get(string $key): mixed
@@ -175,6 +219,12 @@ class PrintSettings
             'intro' => mb_substr(trim((string) ($input['intro'] ?? '')), 0, 400),
             'prep_text' => mb_substr(trim((string) ($input['prep_text'] ?? '')), 0, 200),
         ];
+        // Sayfa metinleri: formda yoksa mevcut değer korunur
+        foreach (self::TEXTS as $key => $max) {
+            $data[$key] = array_key_exists($key, $input)
+                ? mb_substr(trim(str_replace("\r\n", "\n", (string) $input[$key])), 0, $max)
+                : $this->get($key);
+        }
         if ($errors) {
             throw ValidationException::withMessages($errors);
         }

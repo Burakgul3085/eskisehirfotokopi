@@ -56,6 +56,11 @@ export function printOrder() {
         hasAdded: false,
         cartUrl: '#',
 
+        /** Onay kutusu işaretlenmeden yükleme başlamaz; işaretlenene kadar ipucu gösterilir. */
+        get noConsent() {
+            return !this.consent;
+        },
+
         init() {
             const node = this.$el.querySelector('[data-print-config]');
             config = Object.assign(config, JSON.parse(node.textContent));
@@ -143,7 +148,7 @@ export function printOrder() {
             this.dragging = false;
         },
         dropClass() {
-            return this.dragging ? 'border-primary bg-primary-soft' : 'border-line bg-white';
+            return this.dragging ? 'is-dragging border-primary bg-primary-soft' : 'border-line bg-gradient-to-b from-white to-surface hover:border-primary/50';
         },
 
         addFiles(list) {
