@@ -54,73 +54,89 @@
             </div>
         </section>
 
-        <div class="page-tint relative pb-16">
+        {{-- Alt kısım: renkli ışık lekeli zemin; öne çıkanlar renk şeritli kartlar, tam liste tek beyaz panelde --}}
+        <div class="pub-lower page-tint relative pb-20">
+            <div class="pointer-events-none absolute inset-0 -z-10 overflow-hidden" aria-hidden="true">
+                <div class="pub-blob absolute top-40 -left-32 size-[28rem] rounded-full bg-primary/20"></div>
+                <div class="pub-blob absolute top-[30rem] -right-24 size-[26rem] rounded-full bg-accent/20" style="animation-delay: -6s"></div>
+                <div class="pub-blob absolute bottom-0 left-1/3 size-[22rem] rounded-full bg-sky-400/15" style="animation-delay: -12s"></div>
+            </div>
             <div class="container-page relative z-10">
-                {{-- Öne çıkanlar: 3D eğilen kartlar --}}
+                @php($few = $featured->count() <= 3)
                 @if ($featured->isNotEmpty())
                     <section class="-mt-20" x-show="groupMatches">
-                        <h2 class="pub-heading mb-4 text-xs font-bold tracking-[0.25em] text-white uppercase">{{ Settings::get('publishers_featured', '') }}</h2>
-                        <div class="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
+                        <h2 class="pub-heading mb-4 flex items-center gap-2 text-xs font-bold tracking-[0.25em] text-white uppercase"><x-icon name="heart" class="size-4 text-accent" />{{ Settings::get('publishers_featured', '') }}</h2>
+                        <div class="grid gap-4 {{ $few ? 'sm:grid-cols-2 lg:grid-cols-3' : 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6' }}">
                             @foreach ($featured as $i => $p)
+                                @php($tone = $tones[crc32($p->name) % count($tones)])
                                 <a href="{{ route('publisher.show', $p) }}" data-name="{{ Text::key($p->name) }}" x-show="matches"
-                                   class="pub-card group relative flex flex-col items-center rounded-3xl border border-white/70 bg-white p-5 text-center" style="--i: {{ $i }}">
-                                    <span class="pub-logo relative flex aspect-square w-full max-w-28 items-center justify-center overflow-hidden rounded-2xl {{ $p->logoUrl() ? 'bg-white ring-1 ring-line' : 'bg-gradient-to-br text-white '.$tones[$i % count($tones)] }}">
+                                   class="pub-card group relative flex overflow-hidden rounded-3xl bg-white {{ $few ? 'items-center gap-5 p-5' : 'flex-col items-center p-5 text-center' }}" style="--i: {{ $i }}">
+                                    <span class="absolute inset-x-0 top-0 h-1.5 bg-gradient-to-r {{ $tone }}"></span>
+                                    <span class="absolute -top-16 -right-16 size-40 rounded-full bg-gradient-to-br opacity-0 blur-2xl transition duration-500 group-hover:opacity-40 {{ $tone }}"></span>
+                                    <span class="pub-logo relative flex shrink-0 items-center justify-center overflow-hidden rounded-2xl {{ $few ? 'size-24' : 'aspect-square w-full max-w-24' }} {{ $p->logoUrl() ? 'bg-white ring-1 ring-line' : 'bg-gradient-to-br text-white '.$tone }}">
                                         @if ($p->logoUrl())<img src="{{ $p->logoUrl() }}" alt="{{ $p->name }}" class="max-h-full max-w-full object-contain p-3" loading="lazy">
-                                        @else<span class="font-display text-3xl font-extrabold">{{ $p->initials() }}</span>@endif
+                                        @else<span class="font-display text-3xl font-extrabold drop-shadow">{{ $p->initials() }}</span>@endif
                                     </span>
-                                    <span class="mt-4 line-clamp-2 font-display font-bold text-ink">{{ $p->name }}</span>
-                                    <span class="mt-1 text-xs font-semibold text-muted">{{ $p->products_count }} ürün</span>
-                                    <span class="absolute top-3 right-3 flex size-7 translate-x-1 items-center justify-center rounded-full bg-primary text-white opacity-0 transition group-hover:translate-x-0 group-hover:opacity-100"><x-icon name="arrow-right" class="size-3.5" /></span>
+                                    <span class="relative min-w-0 flex-1 {{ $few ? '' : 'mt-4' }}">
+                                        <span class="block font-display text-lg leading-snug font-bold text-ink">{{ $p->name }}</span>
+                                        <span class="mt-2 inline-flex items-center gap-1.5 rounded-full bg-surface px-2.5 py-1 text-xs font-bold text-muted"><x-icon name="book" class="size-3.5" />{{ $p->products_count }} ürün</span>
+                                        <span class="mt-3 flex items-center gap-1 text-sm font-semibold text-primary {{ $few ? '' : 'justify-center' }}">Ürünleri gör<x-icon name="arrow-right" class="size-4 transition group-hover:translate-x-1" /></span>
+                                    </span>
                                 </a>
                             @endforeach
                         </div>
                     </section>
                 @endif
 
-                {{-- Tam liste --}}
-                <div class="{{ $featured->isNotEmpty() ? 'mt-14' : 'pt-10' }}">
-                    <h2 class="font-display text-2xl font-extrabold">{{ Settings::get('publishers_all', '') }}</h2>
+                {{-- Tam liste: tek beyaz panel --}}
+                <section class="pub-panel {{ $featured->isNotEmpty() ? 'mt-14' : 'mt-10' }} rounded-[2rem] border border-white bg-white/90 p-4 backdrop-blur-xl sm:p-8">
+                    <h2 class="flex flex-wrap items-center gap-3 font-display text-2xl font-extrabold sm:text-3xl">{{ Settings::get('publishers_all', '') }}
+                        <span class="rounded-full bg-primary-soft px-3 py-0.5 text-sm font-bold text-primary-dark">{{ $total }}</span></h2>
                     @if (Settings::get('publishers_all_sub'))<p class="mt-1 text-sm text-muted">{{ Settings::get('publishers_all_sub') }}</p>@endif
-                </div>
 
-                <nav class="pub-letters sticky top-[4.5rem] z-20 mt-5 flex gap-1 overflow-x-auto rounded-2xl border border-white/80 bg-white/80 p-2 shadow-[0_16px_40px_-28px_rgba(15,23,42,0.5)] backdrop-blur-xl lg:flex-wrap lg:justify-between" aria-label="Harf dizini">
-                    @foreach ($groups as $letter => $list)
-                        @if ($list->isNotEmpty())
-                            <a href="#harf-{{ $loop->index }}" class="pub-letter flex size-9 shrink-0 items-center justify-center rounded-xl text-sm font-extrabold text-ink">{{ $letter }}</a>
-                        @else
-                            <span class="flex size-9 shrink-0 items-center justify-center text-sm font-bold text-slate-300">{{ $letter }}</span>
-                        @endif
-                    @endforeach
-                </nav>
+                    <nav class="pub-letters sticky top-[4.5rem] z-20 -mx-4 mt-6 flex gap-1 overflow-x-auto border-y border-line/70 bg-white/95 px-4 py-2.5 backdrop-blur-xl sm:-mx-8 sm:px-8 lg:justify-between" aria-label="Harf dizini">
+                        @foreach ($groups as $letter => $list)
+                            @if ($list->isNotEmpty())
+                                <a href="#harf-{{ $loop->index }}" class="pub-letter flex size-9 shrink-0 lg:size-8 items-center justify-center rounded-xl bg-primary-soft text-sm font-extrabold text-primary-dark">{{ $letter }}</a>
+                            @else
+                                <span class="flex size-9 shrink-0 items-center justify-center text-sm font-semibold text-slate-300 lg:size-8">{{ $letter }}</span>
+                            @endif
+                        @endforeach
+                    </nav>
 
-                <p x-show="noMatch" x-cloak class="mt-8 rounded-2xl bg-white/80 px-5 py-8 text-center text-muted">{{ Settings::get('publishers_no_match', '') }}</p>
+                    <p x-show="noMatch" x-cloak class="mt-8 flex flex-col items-center gap-3 rounded-2xl bg-surface px-5 py-10 text-center text-muted"><x-icon name="search" class="size-8 text-slate-300" />{{ Settings::get('publishers_no_match', '') }}</p>
 
-                <div class="mt-6 space-y-10">
-                    @foreach ($groups as $letter => $list)
-                        @continue($list->isEmpty())
-                        <section id="harf-{{ $loop->index }}" class="scroll-mt-40" x-show="groupMatches">
-                            <div class="mb-4 flex items-center gap-4">
-                                <span class="pub-badge flex size-12 shrink-0 items-center justify-center rounded-2xl font-display text-xl font-extrabold text-white">{{ $letter }}</span>
-                                <span class="h-px flex-1 bg-gradient-to-r from-primary/30 to-transparent"></span>
-                                <span class="text-xs font-semibold text-muted">{{ $list->count() }}</span>
-                            </div>
-                            <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                                @foreach ($list as $p)
-                                    <a href="{{ route('publisher.show', $p) }}" data-name="{{ Text::key($p->name) }}" x-show="matches"
-                                       class="pub-row group flex items-center gap-3 rounded-2xl border border-line/70 bg-white p-3">
-                                        <span class="flex size-12 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-surface ring-1 ring-line">
-                                            @if ($p->logoUrl())<img src="{{ $p->logoUrl() }}" alt="" class="max-h-full max-w-full object-contain p-1" loading="lazy">
-                                            @else<span class="font-display text-sm font-extrabold text-primary">{{ $p->initials() }}</span>@endif
-                                        </span>
-                                        <span class="min-w-0 flex-1 truncate text-sm font-bold">{{ $p->name }}</span>
-                                        <span class="rounded-full bg-primary-soft px-2.5 py-0.5 text-xs font-bold text-primary-dark">{{ $p->products_count }}</span>
-                                        <x-icon name="chevron-right" class="size-4 text-slate-300 transition group-hover:translate-x-0.5 group-hover:text-primary" />
-                                    </a>
-                                @endforeach
-                            </div>
-                        </section>
-                    @endforeach
-                </div>
+                    <div class="mt-8 space-y-10">
+                        @foreach ($groups as $letter => $list)
+                            @continue($list->isEmpty())
+                            <section id="harf-{{ $loop->index }}" class="scroll-mt-44" x-show="groupMatches">
+                                <div class="mb-4 flex items-center gap-4">
+                                    <span class="pub-badge flex size-12 shrink-0 items-center justify-center rounded-2xl font-display text-xl font-extrabold text-white">{{ $letter }}</span>
+                                    <span class="h-0.5 flex-1 rounded-full bg-gradient-to-r from-primary/40 via-accent/30 to-transparent"></span>
+                                    <span class="rounded-full bg-surface px-2.5 py-0.5 text-xs font-bold text-muted">{{ $list->count() }}</span>
+                                </div>
+                                <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                                    @foreach ($list as $p)
+                                        @php($tone = $tones[crc32($p->name) % count($tones)])
+                                        <a href="{{ route('publisher.show', $p) }}" data-name="{{ Text::key($p->name) }}" x-show="matches"
+                                           class="pub-row group relative flex items-center gap-3 overflow-hidden rounded-2xl border border-line/70 bg-white p-3">
+                                            <span class="absolute inset-y-0 left-0 w-1 bg-gradient-to-b opacity-0 transition group-hover:opacity-100 {{ $tone }}"></span>
+                                            <span class="flex size-12 shrink-0 items-center justify-center overflow-hidden rounded-xl {{ $p->logoUrl() ? 'bg-white ring-1 ring-line' : 'bg-gradient-to-br text-white shadow-md '.$tone }}">
+                                                @if ($p->logoUrl())<img src="{{ $p->logoUrl() }}" alt="" class="max-h-full max-w-full object-contain p-1" loading="lazy">
+                                                @else<span class="font-display text-sm font-extrabold">{{ $p->initials() }}</span>@endif
+                                            </span>
+                                            <span class="min-w-0 flex-1">
+                                                <span class="block truncate text-sm font-bold text-ink">{{ $p->name }}</span>
+                                                <span class="text-xs text-muted">{{ $p->products_count }} ürün</span>
+                                            </span>
+                                            <span class="flex size-8 shrink-0 items-center justify-center rounded-full bg-surface text-muted transition group-hover:bg-primary group-hover:text-white"><x-icon name="arrow-right" class="size-4" /></span>
+                                        </a>
+                                    @endforeach
+                                </div>
+                            </section>
+                        @endforeach
+                    </div>
+                </section>
             </div>
         </div>
     </div>

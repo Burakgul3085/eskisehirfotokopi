@@ -628,3 +628,11 @@
     .pub-card { animation: none; }
     .pub-card:hover, .pub-row:hover, .pub-letter:hover { transform: none; }
 }
+/* Yayınevleri alt kısmı: açık, ferah zemin + yavaşça süzülen renkli ışık lekeleri; liste tek beyaz panelde */
+.pub-lower { background: linear-gradient(180deg, color-mix(in oklab, var(--color-primary) 16%, #f8fafc) 0, #f6f8fb 420px, #f8fafc 100%); }
+.pub-blob { filter: blur(80px); animation: pub-blob 18s ease-in-out infinite alternate; }
+@keyframes pub-blob { to { transform: translate3d(60px, -40px, 0) scale(1.15); } }
+.pub-panel { box-shadow: 0 1px 0 rgb(255 255 255) inset, 0 40px 80px -48px color-mix(in oklab, var(--color-primary) 55%, rgb(15 23 42)); }
+.pub-panel .pub-letters { top: 4.5rem; }
+.pub-letter:hover { box-shadow: 0 10px 18px -10px var(--color-primary); }
+@media (prefers-reduced-motion: reduce) { .pub-blob { animation: none; } }
