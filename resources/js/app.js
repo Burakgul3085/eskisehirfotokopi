@@ -32,9 +32,19 @@ if (siteHeader) {
     };
     window.addEventListener('scroll', onScroll, { passive: true });
     onScroll();
+    // Fare ışığı: kare başına en çok bir stil yazımı
+    let headerX = 0;
+    let headerQueued = false;
     siteHeader.addEventListener('pointermove', (e) => {
-        const r = siteHeader.getBoundingClientRect();
-        siteHeader.style.setProperty('--hx', `${e.clientX - r.left}px`);
+        headerX = e.clientX;
+        if (headerQueued) {
+            return;
+        }
+        headerQueued = true;
+        requestAnimationFrame(() => {
+            headerQueued = false;
+            siteHeader.style.setProperty('--hx', `${headerX - siteHeader.getBoundingClientRect().left}px`);
+        });
     }, { passive: true });
     siteHeader.querySelectorAll('[data-cart-count]').forEach((badge) => {
         new MutationObserver(() => {

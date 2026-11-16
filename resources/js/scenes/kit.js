@@ -4,6 +4,8 @@
  *  - Döngü yalnız sahne ekrandayken ve sekme öndeyken çalışır
  *  - "Hareketi azalt" tercihinde tek kare çizilir; WebGL yoksa null döner (sayfa CSS yedeğiyle kalır)
  *  - Fare konumu (-1..1) sahne kökü üzerinden izlenir; sayfa kapanırken GPU kaynakları bırakılır
+ *  - Akıcılık: en çok 60 kare/sn (120–144 Hz ekranda boşa çizim yok); kareler sürekli yavaşsa çözünürlük
+ *    kademeli düşer (sahne aynı kalır, yalnız piksel yoğunluğu azalır)
  */
 import * as THREE from 'three';
 
@@ -209,7 +211,10 @@ export function createStage(root, opts = {}) {
     } catch {
         return null;
     }
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, small ? 1.25 : (opts.maxDpr ?? 1.5)));
+    const maxRatio = Math.min(window.devicePixelRatio || 1, small ? 1.25 : (opts.maxDpr ?? 1.5));
+    const minRatio = Math.min(maxRatio, small ? 0.75 : 0.9);
+    let ratio = maxRatio;
+    renderer.setPixelRatio(ratio);
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
 
@@ -262,6 +267,8 @@ export function createStage(root, opts = {}) {
     let last = performance.now();
     let elapsed = 0;
     let acc = 0;
+    let slow = 0;
+    const fps = opts.fps || 60;
 
     const frame = () => {
         if (!running) {
@@ -274,10 +281,18 @@ export function createStage(root, opts = {}) {
         pointer.lerp(target, 0.06);
         // İsteğe bağlı kare sınırı (geniş arka plan sahnesi için GPU tasarrufu)
         acc += dt;
-        if (!opts.fps || acc >= 1 / opts.fps - 0.004) {
+        if (acc >= 1 / fps - 0.004) {
             frameFn(acc, elapsed);
-            acc = 0;
             render();
+            // Kareler hedefin belirgin altındaysa (yaklaşık 1 sn boyunca) çözünürlüğü bir kademe düşür
+            slow = acc > 1.5 / fps ? slow + acc : Math.max(0, slow - acc * 0.5);
+            if (slow > 0.9 && ratio > minRatio) {
+                ratio = Math.max(minRatio, ratio - 0.15);
+                renderer.setPixelRatio(ratio);
+                resize();
+                slow = 0;
+            }
+            acc = 0;
         }
         raf = requestAnimationFrame(frame);
     };

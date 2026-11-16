@@ -64,7 +64,7 @@
                 <ul class="relative z-10 mt-2 grid grid-cols-3 gap-2 md:absolute md:inset-x-0 md:bottom-1 md:mt-0 md:gap-3 lg:-mr-6 lg:-ml-2">
                     @foreach ($tiles as $i => $tile)
                         <li class="hero-card" style="--depth: {{ $cardDepth[$i] ?? 12 }}">
-                            <div class="hero-card-float flex h-full flex-col gap-2 rounded-2xl border border-white/15 bg-white/[0.08] p-3 shadow-[0_24px_50px_-24px_rgba(0,0,0,0.6)] backdrop-blur-xl sm:p-4 lg:flex-row lg:items-center lg:gap-3" style="--d: {{ $i }}">
+                            <div class="hero-card-float flex h-full flex-col gap-2 rounded-2xl border border-white/15 bg-white/[0.1] p-3 shadow-[0_24px_50px_-24px_rgba(0,0,0,0.6)] backdrop-blur-md sm:p-4 lg:flex-row lg:items-center lg:gap-3" style="--d: {{ $i }}">
                                 <span class="flex size-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-accent to-accent/70 text-ink shadow-[0_8px_20px_-6px_var(--color-accent)] sm:size-10">
                                     <x-icon :name="$tile['icon']" class="size-5" />
                                 </span>

@@ -8,6 +8,8 @@
  *  - Uçan belge arkasında ışık izi bırakır; kitaba ulaşınca kıvılcım patlar ve halka dalgası yayılır.
  *  - Fare sahneyi hafifçe çevirir; sayfa kaydırılınca kamera uzaklaşır ve sahne solar.
  *  - Performans: görünmezken ve sekme arka plandayken çizim durur; telefonda daha az nesne ve düşük çözünürlük.
+ *    En çok 60 kare/sn; kareler sürekli yavaşsa çözünürlük kademeli düşer. Görünmeyen ışık katmanları çizilmez,
+ *    fare yokken ışın testi yapılmaz, fare/CSS güncellemeleri kare başına bire indirilir, gölgelendiriciler önceden derlenir.
  *  - "Hareketi azalt" tercihinde tek kare çizilir (animasyon yok). WebGL yoksa sahne hiç kurulmaz (CSS yedeği kalır).
  *
  * Renkler sitenin tema değişkenlerinden (--color-primary, --color-accent) okunur; yönetimden değişen renge uyar.
@@ -154,7 +156,10 @@ export function mount(root) {
     } catch {
         return;
     }
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, small ? 1.25 : 1.5));
+    const maxRatio = Math.min(window.devicePixelRatio || 1, small ? 1.25 : 1.5);
+    const minRatio = Math.min(maxRatio, small ? 0.75 : 0.9);
+    let ratio = maxRatio;
+    renderer.setPixelRatio(ratio);
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 1.05;
@@ -330,6 +335,7 @@ export function mount(root) {
         const haloMat = keep(new THREE.MeshBasicMaterial({ map: glowTex, color: accent, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false }));
         const halo = new THREE.Mesh(haloGeo, haloMat);
         halo.position.z = -0.25;
+        halo.visible = false;
         g.add(halo);
         g.position.set(pos[0], pos[1], pos[2]);
         const baseRot = new THREE.Euler(((i * 37) % 20 - 10) * 0.012, -pos[0] * 0.09 + ((i * 13) % 10 - 5) * 0.03, ((i * 29) % 16 - 8) * 0.02);
@@ -337,7 +343,7 @@ export function mount(root) {
         g.scale.setScalar(0.0001);
         rig.add(g);
 
-        const obj = { g, mesh, haloMat, base: new THREE.Vector3(...pos), baseRot, phase: i * 1.7, speed: 0.55 + (i % 3) * 0.12, hover: 0, pulse: 0, info, intro: i * 0.09 };
+        const obj = { g, mesh, halo, haloMat, base: new THREE.Vector3(...pos), baseRot, phase: i * 1.7, speed: 0.55 + (i % 3) * 0.12, hover: 0, pulse: 0, info, intro: i * 0.09 };
 
         if (info && info.img) {
             loader.load(info.img, (tex) => {
@@ -428,10 +434,24 @@ export function mount(root) {
     const pointer = new THREE.Vector2(0, 0); // -1..1, sahne dönüşü
     const ndc = new THREE.Vector2(9, 9); // tuval içi, ışın için
     const ray = new THREE.Raycaster();
+    const bookMeshes = bookObjs.map((b) => b.mesh);
+    let lastOpacity = -1;
+    let moveEvent = null;
+    let moveQueued = false;
     let hovered = null;
     let scrollFade = 0;
 
+    // Fare: olay her geldiğinde değil, kare başına bir kez işlenir (stil yazımı ve yerleşim ölçümü azalır)
     const onMove = (e) => {
+        moveEvent = e;
+        if (!moveQueued) {
+            moveQueued = true;
+            requestAnimationFrame(applyMove);
+        }
+    };
+    const applyMove = () => {
+        moveQueued = false;
+        const e = moveEvent;
         const r = section.getBoundingClientRect();
         pointer.set(((e.clientX - r.left) / r.width) * 2 - 1, ((e.clientY - r.top) / r.height) * 2 - 1);
         section.style.setProperty('--hx', pointer.x.toFixed(3));
@@ -489,6 +509,8 @@ export function mount(root) {
     let visible = true;
     let nextSheet = 1.6;
     let raf = 0;
+    let acc = 0;
+    let slow = 0;
 
     function update(dt, t) {
         // Fare: yumuşak dönüş
@@ -496,7 +518,11 @@ export function mount(root) {
         rig.rotation.x = lerp(rig.rotation.x, pointer.y * 0.12, 0.05);
         // Kaydırma: kamera uzaklaşır, tuval solar
         camera.position.z = lerp(camera.position.z, baseZ + scrollFade * 4, 0.12);
-        canvas.style.opacity = String(1 - scrollFade * 0.9);
+        const op = Math.round((1 - scrollFade * 0.9) * 100) / 100;
+        if (op !== lastOpacity) {
+            lastOpacity = op;
+            canvas.style.opacity = String(op);
+        }
 
         printer.position.y = -0.62 + Math.sin(t * 0.8) * 0.04;
         strip.material.emissiveIntensity = lerp(strip.material.emissiveIntensity, 1.2 + Math.sin(t * 2) * 0.25, 0.04);
@@ -511,8 +537,11 @@ export function mount(root) {
         ringA.material.opacity = 0.5 + platformPulse * 0.5;
 
         // Işın: üzerine gelinen kitap
-        ray.setFromCamera(ndc, camera);
-        const hit = ray.intersectObjects(bookObjs.map((b) => b.mesh), false)[0];
+        let hit = null;
+        if (ndc.x !== 9) {
+            ray.setFromCamera(ndc, camera);
+            hit = ray.intersectObjects(bookMeshes, false)[0];
+        }
         const now = hit ? bookObjs.find((b) => b.mesh === hit.object) : null;
         if (now !== hovered) {
             hovered = now;
@@ -525,6 +554,7 @@ export function mount(root) {
 
         bookObjs.forEach((b) => {
             b.haloMat.opacity = b.hover * 0.55 + Math.sin(b.pulse * Math.PI) * 0.75;
+            b.halo.visible = b.haloMat.opacity > 0.01;
             const intro = clamp((t - 0.25 - b.intro) / 0.9, 0, 1);
             b.hover = lerp(b.hover, b === hovered ? 1 : 0, 0.12);
             b.pulse = Math.max(0, b.pulse - dt * 2.2);
@@ -551,6 +581,7 @@ export function mount(root) {
         scanBar.position.x = scanGlow.position.x = lerp(-0.95, 0.75, easeInOut(sp));
         scanMat.opacity = lerp(scanMat.opacity, scanning ? 0.95 : 0, 0.15);
         scanGlowMat.opacity = scanMat.opacity * 0.7;
+        scanBar.visible = scanGlow.visible = scanMat.opacity > 0.01;
         if (nextSheet <= 0 && sheets.length < 3) {
             spawnSheet();
             nextSheet = 2.6 + Math.random() * 1.6;
@@ -616,11 +647,24 @@ export function mount(root) {
             return;
         }
         const now = performance.now();
-        const dt = Math.min((now - last) / 1000, 0.05);
+        acc += Math.min((now - last) / 1000, 0.05);
         last = now;
-        elapsed += dt;
-        update(dt, elapsed);
-        render();
+        // En çok 60 kare/sn: yüksek yenileme hızlı ekranda boşa çizim yapılmaz
+        if (acc >= 1 / 60 - 0.004) {
+            const dt = Math.min(acc, 0.05);
+            elapsed += dt;
+            update(dt, elapsed);
+            render();
+            // Kareler sürekli yavaşsa çözünürlüğü bir kademe düşür (sahne aynı kalır)
+            slow = acc > 1 / 40 ? slow + acc : Math.max(0, slow - acc * 0.5);
+            if (slow > 0.9 && ratio > minRatio) {
+                ratio = Math.max(minRatio, ratio - 0.15);
+                renderer.setPixelRatio(ratio);
+                resize();
+                slow = 0;
+            }
+            acc = 0;
+        }
         raf = requestAnimationFrame(frame);
     }
 
@@ -636,6 +680,20 @@ export function mount(root) {
         running = false;
         cancelAnimationFrame(raf);
     };
+
+    // Gölgelendiricileri önceden derle: ilk belge, kıvılcım ve hale çıktığında takılma olmasın
+    try {
+        const proto = new THREE.Mesh(docGeo, new THREE.MeshStandardMaterial({ map: docMap, roughness: 0.7, side: THREE.DoubleSide, transparent: true }));
+        rig.add(proto);
+        const hidden = [scanBar, scanGlow, ...bookObjs.map((b) => b.halo)];
+        hidden.forEach((o) => (o.visible = true));
+        renderer.compile(scene, camera);
+        hidden.forEach((o) => (o.visible = false));
+        rig.remove(proto);
+        proto.material.dispose();
+    } catch {
+        /* derleme önceden yapılamadı: ilk kullanımda derlenir */
+    }
 
     if (reduced) {
         // Tek kare: kitaplar yerinde, belge yok
