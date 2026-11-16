@@ -41,18 +41,17 @@
             </div>
 
             <div class="relative">
-                <div data-hero-scene class="relative h-[260px] sm:h-[340px] md:h-[400px] lg:h-[430px]">
+                {{-- 3D sahne: biçimler halkaya dalar, basılı kâğıt olarak kaideye iner (resources/js/scenes/print-hero.js) --}}
+                <div data-scene="print-hero" class="relative h-[300px] sm:h-[360px] md:h-[420px] lg:h-[460px]">
                     <div class="hero-fallback pointer-events-none absolute inset-0 flex items-center justify-center transition-opacity duration-1000" aria-hidden="true">
                         <div class="size-56 rounded-full bg-gradient-to-br from-white/25 to-accent/20 blur-2xl md:size-72"></div>
                     </div>
                     <div class="hero-stage absolute inset-0">
-                        <canvas data-hero-canvas class="block size-full" aria-hidden="true"></canvas>
-                        <div data-hero-tip class="pointer-events-none absolute top-0 left-0" role="presentation"></div>
+                        <canvas data-scene-canvas class="block size-full" aria-hidden="true"></canvas>
                     </div>
-                    <script type="application/json" data-hero-books>[]</script>
                 </div>
                 @if ($lowest !== null)
-                    <div class="print-price-chip hero-card absolute top-2 right-0 z-10 sm:right-2 md:top-6" style="--depth: 14">
+                    <div class="print-price-chip hero-card absolute right-0 bottom-0 z-10 hidden sm:block md:right-2 md:bottom-6" style="--depth: 14">
                         <div class="hero-card-float rounded-2xl border border-white/15 bg-white/[0.09] px-5 py-4 shadow-[0_24px_50px_-24px_rgba(0,0,0,0.6)] backdrop-blur-xl" style="--d: 1">
                             <p class="text-xs font-semibold text-white/70">{{ PrintOptions::COLORS[$badgeColor] }}</p>
                             <p class="font-display text-3xl font-extrabold text-white">{{ Money::format($lowest) }}</p>

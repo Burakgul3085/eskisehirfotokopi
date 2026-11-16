@@ -54,6 +54,7 @@ if (heroScene) {
 
 // Diğer 3D sahneler (belge bandı, SSS, alt bilgi): yalnız ekrana yaklaşınca yüklenir; Three.js ortak parçadır.
 const sceneLoaders = {
+    'print-hero': () => import('./scenes/print-hero.js'),
     'print-banner': () => import('./scenes/print-banner.js'),
     faq: () => import('./scenes/faq.js'),
     'footer-wave': () => import('./scenes/footer-wave.js'),
