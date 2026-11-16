@@ -5,7 +5,7 @@
     $gridCols = ['lg:grid-cols-[1.4fr_1fr_1fr]', 'lg:grid-cols-[1.4fr_1fr_1fr_1fr]', 'lg:grid-cols-[1.4fr_1fr_1fr_1fr_1fr]'][count($pageColumns)];
 @endphp
 {{-- Alt bilgi: arkada dalgalanan 3D ışık noktaları (resources/js/scenes/footer-wave.js), üzerine gelince ikonu dönen cam kartlar. --}}
-<footer data-scene="footer-wave" class="footer-3d surface-deep relative isolate mt-16 overflow-hidden text-slate-300">
+<footer data-scene="footer-wave" class="footer-3d surface-deep relative isolate {{ ($flush ?? false) ? '' : 'mt-16' }} overflow-hidden text-slate-300">
     <canvas data-scene-canvas class="scene-canvas footer-wave pointer-events-none absolute inset-0 -z-10 block size-full" aria-hidden="true"></canvas>
     <div class="pointer-events-none absolute inset-x-0 top-0 -z-10 h-px bg-gradient-to-r from-transparent via-primary/60 to-transparent" aria-hidden="true"></div>
     @if ($trust = \App\Support\Settings::trustItems())

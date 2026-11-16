@@ -2,7 +2,7 @@
     use App\Support\Settings;
     $points = Settings::iconLines('track_points');
 @endphp
-<x-layouts.store :title="Settings::get('track_kicker', 'Sipariş takibi')" :description="Settings::get('track_intro')">
+<x-layouts.store :title="Settings::get('track_kicker', 'Sipariş takibi')" :description="Settings::get('track_intro')" :flush="true">
     {{--
         Koyu üst alan: solda başlık + sorgu formu, sağda 3D şehir adası (resources/js/scenes/order-track.js; minibüs dükkândan
         eve döngüyle paket götürür). Bütün yazılar Yönetim › Ayarlar › Genel › Sipariş takibi sayfası'ndan.

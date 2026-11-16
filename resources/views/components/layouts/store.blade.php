@@ -1,4 +1,4 @@
-@props(['title' => null, 'description' => null, 'noindex' => false, 'image' => null])
+@props(['title' => null, 'description' => null, 'noindex' => false, 'image' => null, 'flush' => false])
 @php
     $siteName = $settings['site_name'] ?: 'Eskişehir Fotokopi';
     $pageTitle = $title ? $title.' — '.$siteName : ($settings['meta_title'] ?: $siteName);
@@ -34,7 +34,8 @@
         {{ $slot }}
     </main>
 
-    @include('store.partials.footer')
+    {{-- flush: sayfa koyu bir bölümle bitiyorsa alt bilgiyle arasında açık renkli boşluk kalmaz --}}
+    @include('store.partials.footer', ['flush' => $flush])
 
     @if ($wa = \App\Support\Settings::whatsappUrl())
         <a href="{{ $wa }}" target="_blank" rel="noopener" aria-label="WhatsApp ile yazın"

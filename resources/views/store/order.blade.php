@@ -80,6 +80,7 @@
         <x-flash class="mt-6" />
 
         <div class="mt-6 grid items-start gap-6 lg:grid-cols-[1fr_340px]">
+            <div class="min-w-0 space-y-6">
             <section class="card overflow-hidden">
                 <h2 class="flex items-center gap-3 border-b border-line px-5 py-4 font-bold">
                     <span class="flex size-8 items-center justify-center rounded-xl bg-primary-soft text-primary"><x-icon name="package" class="size-4" /></span>Ürünler
@@ -107,15 +108,6 @@
                 </dl>
             </section>
 
-            <div class="space-y-6">
-                <section class="card space-y-3 p-5 text-sm">
-                    <h2 class="flex items-center gap-3 font-bold"><span class="flex size-8 items-center justify-center rounded-xl bg-accent-soft text-accent-ink"><x-icon name="pin" class="size-4" /></span>Teslimat</h2>
-                    <p><span class="font-semibold">{{ $order->customer_name }}</span><br>{{ \App\Rules\TurkishPhone::format($order->phone) }}</p>
-                    <p class="text-muted">{{ $order->neighborhood }}, {{ $order->address }}<br>{{ $order->district_name }} / Eskişehir</p>
-                    <p class="flex items-center gap-2 rounded-xl bg-surface px-3 py-2"><x-icon name="{{ $order->payment_method === 'card' ? 'card' : 'cash' }}" class="size-4 text-primary" />{{ $order->paymentLabel() }}</p>
-                    @if ($order->note)<p class="rounded-xl bg-surface p-3 text-muted">{{ $order->note }}</p>@endif
-                </section>
-
                 <section class="card p-5 text-sm">
                     <h2 class="flex items-center gap-3 font-bold"><span class="flex size-8 items-center justify-center rounded-xl bg-info-soft text-info"><x-icon name="clock" class="size-4" /></span>Sipariş geçmişi</h2>
                     <ol class="track-history mt-4 space-y-4 border-l-2 border-line pl-5">
@@ -131,6 +123,17 @@
                         @endforeach
                     </ol>
                 </section>
+            </div>
+
+            <div class="space-y-6 lg:sticky lg:top-24">
+                <section class="card space-y-3 p-5 text-sm">
+                    <h2 class="flex items-center gap-3 font-bold"><span class="flex size-8 items-center justify-center rounded-xl bg-accent-soft text-accent-ink"><x-icon name="pin" class="size-4" /></span>Teslimat</h2>
+                    <p><span class="font-semibold">{{ $order->customer_name }}</span><br>{{ \App\Rules\TurkishPhone::format($order->phone) }}</p>
+                    <p class="text-muted">{{ $order->neighborhood }}, {{ $order->address }}<br>{{ $order->district_name }} / Eskişehir</p>
+                    <p class="flex items-center gap-2 rounded-xl bg-surface px-3 py-2"><x-icon name="{{ $order->payment_method === 'card' ? 'card' : 'cash' }}" class="size-4 text-primary" />{{ $order->paymentLabel() }}</p>
+                    @if ($order->note)<p class="rounded-xl bg-surface p-3 text-muted">{{ $order->note }}</p>@endif
+                </section>
+
 
                 @if ($context === 'account' && $order->items->whereNotNull('product_id')->isNotEmpty())
                     <form method="post" action="{{ route('account.orders.reorder', $order) }}">@csrf
