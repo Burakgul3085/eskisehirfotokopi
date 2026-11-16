@@ -10,13 +10,14 @@
     $hasBoth = $type === 'bw' && $hasColor;
     $url = route('product.show', $product);
 @endphp
-<article {{ $attributes->merge(['class' => 'group relative flex h-full flex-col overflow-hidden rounded-2xl border border-line/70 bg-white transition hover:-translate-y-0.5 hover:shadow-lift']) }}>
-    <a href="{{ $url }}" class="relative block aspect-[4/5] overflow-hidden bg-gradient-to-b from-surface to-white" tabindex="-1" aria-hidden="true">
+<article {{ $attributes->merge(['class' => 'product-card group relative flex h-full flex-col overflow-hidden rounded-2xl border border-line/70 bg-white transition duration-300 hover:-translate-y-1 hover:border-primary-line hover:shadow-lift']) }}>
+    {{-- Kapak sahnesi: kapak kırpılmadan bütünüyle, gölgeli kitap gibi görünür; rozetler kapağın üstüne binmez --}}
+    <a href="{{ $url }}" class="product-stage relative block aspect-[4/5] overflow-hidden" tabindex="-1" aria-hidden="true">
         @if ($product->image_key)
-            <img src="{{ $product->imageUrl('md') }}" srcset="{{ $product->imageSrcset() }}" sizes="(min-width: 1280px) 240px, (min-width: 640px) 30vw, 46vw"
+            <img src="{{ $product->imageUrl('md') }}" srcset="{{ $product->imageSrcset() }}" sizes="(min-width: 1536px) 260px, (min-width: 640px) 30vw, 46vw"
                  alt="" width="{{ $product->image_width ?: 640 }}" height="{{ $product->image_height ?: 800 }}"
                  loading="{{ $eager ? 'eager' : 'lazy' }}" decoding="async" @if ($eager) fetchpriority="high" @endif
-                 class="size-full object-contain p-2 transition duration-300 group-hover:scale-[1.03]">
+                 class="product-cover absolute inset-0 m-auto max-h-[calc(100%-2.5rem)] max-w-[calc(100%-2.5rem)] object-contain">
         @else
             <span class="flex size-full flex-col items-center justify-center gap-2 p-4 text-center text-muted">
                 <x-icon name="book" class="size-10 text-slate-300" />
@@ -24,16 +25,14 @@
             </span>
         @endif
         @if ($discount)
-            <span class="absolute top-2.5 left-2.5 rounded-lg bg-danger px-2 py-0.5 text-xs font-bold text-white">%{{ $discount }}</span>
-        @endif
-        @if ($hasColor)
-            <span class="absolute top-2.5 right-2.5 rounded-lg bg-white/90 px-2 py-0.5 text-[11px] font-semibold text-primary-dark ring-1 ring-primary-line">Renkli</span>
+            <span class="absolute top-2 left-2 rounded-lg bg-danger px-2 py-0.5 text-xs font-bold text-white shadow-sm">%{{ $discount }}</span>
         @endif
     </a>
     <div class="flex flex-1 flex-col gap-1 p-3 sm:p-3.5">
-        @if ($product->publisher)
-            <p class="truncate text-xs font-medium text-muted">{{ $product->publisher->name }}</p>
-        @endif
+        <div class="flex items-center gap-2">
+            @if ($product->publisher)<p class="min-w-0 flex-1 truncate text-xs font-medium text-muted">{{ $product->publisher->name }}</p>@endif
+            @if ($hasColor)<span class="ml-auto shrink-0 rounded-md bg-primary-soft px-1.5 py-0.5 text-[10px] font-bold tracking-wide text-primary-dark uppercase">Renkli</span>@endif
+        </div>
         <h3 class="line-clamp-2 min-h-[2.6em] text-sm leading-snug font-semibold text-ink">
             <a href="{{ $url }}" class="after:absolute after:inset-0 hover:text-primary">{{ $product->title }}</a>
         </h3>

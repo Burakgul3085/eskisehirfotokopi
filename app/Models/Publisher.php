@@ -81,6 +81,14 @@ class Publisher extends Model
         return Text::upper(mb_substr($words[0] ?? $this->name, 0, 1).mb_substr($words[1] ?? '', 0, 1));
     }
 
+    /** Logosu olmayan yayınevi rozeti için ada göre sabit renk geçişi (Tailwind sınıfları). */
+    public function tone(): string
+    {
+        $tones = ['from-primary to-primary-dark', 'from-accent to-amber-700', 'from-sky-500 to-blue-800', 'from-pink-500 to-rose-800', 'from-violet-500 to-purple-900', 'from-emerald-500 to-green-800'];
+
+        return $tones[crc32($this->name) % count($tones)];
+    }
+
     public function scopeActive(Builder $q): Builder
     {
         return $q->where('is_active', true);

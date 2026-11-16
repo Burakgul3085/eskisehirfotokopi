@@ -154,7 +154,7 @@
     }
 
     .container-page {
-        @apply mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8;
+        @apply mx-auto w-full max-w-[100rem] px-4 sm:px-6 lg:px-10 2xl:px-14;
     }
 
     /* Yönetim paneli tablosu */
@@ -636,3 +636,40 @@
 .pub-panel .pub-letters { top: 4.5rem; }
 .pub-letter:hover { box-shadow: 0 10px 18px -10px var(--color-primary); }
 @media (prefers-reduced-motion: reduce) { .pub-blob { animation: none; } }
+
+/* Ürün kartı kapak sahnesi: yumuşak ışıklı zemin, kapak kırpılmadan ortada, altında gölge; üzerine gelince kapak hafif yükselir */
+.product-stage {
+    background:
+        radial-gradient(120% 80% at 50% 0%, color-mix(in oklab, var(--color-primary) 9%, white) 0%, transparent 70%),
+        linear-gradient(180deg, var(--color-surface) 0%, white 100%);
+}
+.product-stage::after {
+    content: '';
+    position: absolute;
+    left: 22%;
+    right: 22%;
+    bottom: 0.9rem;
+    height: 0.9rem;
+    border-radius: 100%;
+    background: rgba(15, 23, 42, 0.22);
+    filter: blur(8px);
+    transition: transform 0.35s ease, opacity 0.35s ease;
+}
+.product-cover {
+    border-radius: 0.35rem;
+    box-shadow: 0 14px 26px -14px rgba(15, 23, 42, 0.55), 0 2px 6px rgba(15, 23, 42, 0.08);
+    transition: transform 0.35s ease;
+    z-index: 1;
+}
+.product-card:hover .product-cover {
+    transform: translateY(-6px) scale(1.02);
+}
+.product-card:hover .product-stage::after {
+    transform: scaleX(0.85);
+    opacity: 0.7;
+}
+@media (prefers-reduced-motion: reduce) {
+    .product-card:hover .product-cover {
+        transform: none;
+    }
+}

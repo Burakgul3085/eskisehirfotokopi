@@ -62,7 +62,7 @@ class HomePage
         $model = match ($b->type) {
             'products', 'hero' => Product::query()->visible()->with('publisher:id,name,slug'),
             'categories' => Category::query()->active(),
-            'publishers' => Publisher::query()->active(),
+            'publishers' => Publisher::query()->active()->withCount(['products' => fn ($q) => $q->visible()]),
         };
         $found = $ids ? $model->whereIn('id', $ids)->get()->keyBy('id') : collect();
         $items = collect($ids)->map(fn ($id) => $found[$id] ?? null)->filter()->values();

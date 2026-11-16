@@ -1,5 +1,5 @@
 <section class="container-page py-8 sm:py-10">
-    @if ($block->title)<h2 class="mb-5 text-xl font-extrabold sm:text-2xl">{{ $block->title }}</h2>@endif
+    @if ($block->title)<x-section-head :title="$block->title" :subtitle="$block->subtitle" />@endif
     <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         @foreach ($block->setting('items', []) as $item)
             @continue(empty($item['title']))
