@@ -1,5 +1,5 @@
 {{-- Belge bandı: başlık, metin ve düğme + 3D kopyalama sahnesi (resources/js/scenes/print-banner.js). Metinler blok ayarlarından. --}}
-<section class="container-page py-8 sm:py-10">
+<section class="container-page reveal py-8 sm:py-10">
     <div class="scene-banner surface-deep group/banner relative isolate overflow-hidden rounded-[2rem] text-white shadow-[0_40px_80px_-40px_rgba(2,6,23,0.7)] ring-1 ring-white/5">
         {{-- Arka plan: ışık hareleri, ince ızgara, üst kenarda parlak çizgi --}}
         <div class="pointer-events-none absolute inset-0 -z-10" aria-hidden="true">

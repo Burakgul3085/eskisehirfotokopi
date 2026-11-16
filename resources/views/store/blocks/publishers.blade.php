@@ -1,5 +1,5 @@
 {{-- Yayınevleri: logo ya da renkli harf rozeti, ad, ürün sayısı; az yayınevinde satırı doldurur. --}}
-<section class="container-page py-8 sm:py-10">
+<section class="container-page reveal py-8 sm:py-10">
     <x-section-head :title="$block->title ?: 'Yayınevleri'" :subtitle="$block->subtitle">
         <a href="{{ route('publishers.index') }}" class="group/all inline-flex items-center gap-1 rounded-full bg-primary-soft px-3.5 py-1.5 text-sm font-semibold text-primary-dark transition hover:bg-primary hover:text-white">Tüm yayınevleri<x-icon name="arrow-right" class="size-4 transition group-hover/all:translate-x-0.5" /></a>
     </x-section-head>
