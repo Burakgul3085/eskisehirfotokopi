@@ -10,7 +10,7 @@
     $lowest = $tiers->min(fn ($t) => (float) $t[$badgeColor]);
     $formats = [['PDF', 'bg-danger-soft text-danger'], ['Word', 'bg-info-soft text-info'], ['PowerPoint', 'bg-accent-soft text-accent-ink'], ['Excel', 'bg-success-soft text-success'], ['JPG · PNG', 'bg-primary-soft text-primary-dark']];
 @endphp
-<x-layouts.store title="Fotokopi ve belge baskısı" :description="$print['intro']">
+<x-layouts.store title="Fotokopi ve belge baskısı" :description="$print['intro']" :flush="true">
     {{--
         Üst alan: koyu zemin + ana sayfadaki 3D fotokopi makinesi sahnesi (resources/js/hero-scene.js, WebGL yoksa parlayan
         yedek görünür); altında yüzen adım şeridi. Bütün yazılar Yönetim › Fotokopi › Sayfa metinleri'nden.
@@ -63,7 +63,8 @@
         </div>
     </section>
 
-    <div class="container-page relative z-10 pb-10" x-data="printOrder">
+    <div class="page-tint relative pb-16">
+    <div class="container-page relative z-10" x-data="printOrder">
         <script type="application/json" data-print-config>@json($config)</script>
 
         @if ($steps)
@@ -268,5 +269,6 @@
                 </section>
             </aside>
         </div>
+    </div>
     </div>
 </x-layouts.store>

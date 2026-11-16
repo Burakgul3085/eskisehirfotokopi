@@ -574,3 +574,23 @@
     .track-fill, .track-step, .track-history > li { animation: none; }
     .track-step[data-state='now'] .track-dot::after { animation: none; opacity: 0; }
 }
+
+/* Koyu üst bantlı sayfaların alt zemini: bandın renginden açılan tonlu geçiş, ışık lekeleri ve yukarıda belirgin nokta dokusu */
+.page-tint {
+    isolation: isolate;
+    background:
+        radial-gradient(900px 420px at 12% 0%, color-mix(in oklab, var(--color-primary) 18%, transparent), transparent 70%),
+        radial-gradient(720px 420px at 92% 35%, color-mix(in oklab, var(--color-accent) 13%, transparent), transparent 70%),
+        radial-gradient(800px 500px at 30% 100%, color-mix(in oklab, var(--color-primary) 12%, transparent), transparent 70%),
+        linear-gradient(180deg,
+            color-mix(in oklab, var(--color-primary) 20%, var(--color-surface)) 0%,
+            color-mix(in oklab, var(--color-primary) 8%, var(--color-surface)) 40%,
+            color-mix(in oklab, var(--color-primary) 13%, var(--color-surface)) 100%);
+}
+.page-tint::before {
+    content: ''; position: absolute; inset: 0; z-index: -1; pointer-events: none;
+    background-image: radial-gradient(color-mix(in oklab, var(--color-primary) 22%, transparent) 1px, transparent 1.2px);
+    background-size: 22px 22px;
+    mask-image: linear-gradient(180deg, #000, transparent 55%);
+}
+.page-tint .card { box-shadow: 0 1px 0 rgb(255 255 255 / 0.8) inset, 0 24px 48px -32px color-mix(in oklab, var(--color-primary) 55%, rgb(15 23 42)); border-color: color-mix(in oklab, var(--color-primary) 10%, var(--color-line)); }

@@ -9,7 +9,7 @@
     $reached = $order->history->groupBy('status')->map(fn ($g) => $g->min('created_at'));
     $fill = $current === null ? 0 : $current / (count($steps) - 1) * 100;
 @endphp
-<x-layouts.store :title="'Sipariş '.$order->number" :noindex="true">
+<x-layouts.store :title="'Sipariş '.$order->number" :noindex="true" :flush="true">
     {{-- Koyu üst bant: sipariş no, durum ve siparişin adımına göre konumlanan 3D sahne (resources/js/scenes/order-track.js) --}}
     <section class="hero-3d surface-deep relative isolate overflow-hidden text-white">
         <div class="pointer-events-none absolute inset-0 -z-10" aria-hidden="true">
@@ -49,7 +49,9 @@
         </div>
     </section>
 
-    <div class="container-page relative z-10 max-w-5xl pb-10">
+    {{-- Alt zemin: üst bandın renginden açılan tonlu geçiş (düz beyaz yerine), kartlar üstünde beyaz --}}
+    <div class="page-tint relative pb-16">
+    <div class="container-page relative z-10 max-w-5xl">
         {{-- Adım çizelgesi: üst bandın alt kenarına biner; dolgu çizgisi açılışta adıma kadar akar --}}
         <div class="-mt-16 rounded-3xl border border-line/70 bg-white p-5 shadow-[0_30px_60px_-30px_rgba(15,23,42,0.35)] sm:p-7">
             @if ($current === null)
@@ -142,5 +144,6 @@
                 @endif
             </div>
         </div>
+    </div>
     </div>
 </x-layouts.store>
