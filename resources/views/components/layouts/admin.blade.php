@@ -15,6 +15,7 @@
         'Müşteri' => [
             ['Mesajlar', 'chat', 'admin.messages.index', 'admin.messages.*'],
             ['Müşteriler', 'users', 'admin.customers.index', 'admin.customers.*'],
+            ['E-bülten', 'send', 'admin.newsletter.index', 'admin.newsletter.*'],
             ['E-posta kayıtları', 'mail', 'admin.mail-logs', 'admin.mail-logs'],
         ],
         'Katalog' => [

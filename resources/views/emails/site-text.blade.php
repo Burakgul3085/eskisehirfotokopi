@@ -25,3 +25,8 @@ Toplam: {{ \App\Support\Money::format($order->total) }}
 
 --
 {{ $siteName }} · {{ route('home') }}
+@if ($unsubscribeUrl)
+
+{{ $site['newsletter_mail_footer'] }}
+{{ $site['newsletter_unsub_link'] }}: {{ $unsubscribeUrl }}
+@endif

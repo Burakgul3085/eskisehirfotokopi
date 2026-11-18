@@ -11,6 +11,7 @@ use App\Http\Controllers\Admin\HomeBlockController;
 use App\Http\Controllers\Admin\ImportController;
 use App\Http\Controllers\Admin\MailLogController;
 use App\Http\Controllers\Admin\MessageController;
+use App\Http\Controllers\Admin\NewsletterController;
 use App\Http\Controllers\Admin\OrderController;
 use App\Http\Controllers\Admin\PageController;
 use App\Http\Controllers\Admin\PrintController;
@@ -96,6 +97,11 @@ Route::prefix('yonetim')->name('admin.')->group(function () {
         });
 
         // Vitrin
+        Route::get('/bulten', [NewsletterController::class, 'index'])->name('newsletter.index');
+        Route::get('/bulten/aboneler.csv', [NewsletterController::class, 'export'])->name('newsletter.export');
+        Route::post('/bulten/abone', [NewsletterController::class, 'storeSubscriber'])->name('newsletter.subscribers.store');
+        Route::delete('/bulten/abone/{subscriber}', [NewsletterController::class, 'destroySubscriber'])->name('newsletter.subscribers.destroy');
+        Route::post('/bulten/gonder', [NewsletterController::class, 'send'])->name('newsletter.send');
         Route::get('/arama', [SearchController::class, 'index'])->name('search.index');
         Route::post('/arama/yonlendirme', [SearchController::class, 'store'])->name('search.store');
         Route::delete('/arama/yonlendirme/{redirect}', [SearchController::class, 'destroy'])->name('search.destroy');

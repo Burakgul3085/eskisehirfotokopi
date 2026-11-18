@@ -83,6 +83,46 @@
             <x-field name="footer_title_help" label="Alt bilgi: Yardım sütun başlığı" :value="$s['footer_title_help']" />
         </div>
         <x-field name="back_to_top_label" label="Yukarı çık butonu" :value="$s['back_to_top_label']" help="Sayfa aşağı kaydırılınca sol altta çıkan yuvarlak buton (ekran okuyucu ve ipucu metni). Boşsa buton gösterilmez." />
+        <fieldset id="bulten-ayarlari" class="scroll-mt-24 space-y-3 rounded-xl border border-line p-4">
+            <legend class="px-1 text-sm font-semibold">Alt bilgi: sütunlar, harita ve çalışma saatleri</legend>
+            <p class="field-help">Harita ve yol tarifi Ayarlar › İletişim’deki Google Haritalar bağlantısından, saatler oradaki “Çalışma saatleri” alanından gelir (her satır: Gün 09:00–20:00 ya da Gün | Kapalı). Boş bırakılan başlığın kartı/sütunu gösterilmez.</p>
+            <div class="grid gap-3 sm:grid-cols-2">
+                <x-field name="footer_title_account" label="Üyelik sütunu başlığı" :value="$s['footer_title_account']" />
+                <x-field name="footer_title_shop" label="Alışveriş sütunu başlığı" :value="$s['footer_title_shop']" />
+                <x-field name="footer_map_title" label="Harita kartı başlığı" :value="$s['footer_map_title']" />
+                <x-field name="footer_directions" label="Yol tarifi bağlantısı" :value="$s['footer_directions']" />
+                <x-field name="footer_hours_title" label="Çalışma saatleri başlığı" :value="$s['footer_hours_title']" />
+                <x-field name="footer_contact_link" label="İletişim bağlantısı yazısı" :value="$s['footer_contact_link']" />
+            </div>
+        </fieldset>
+        <fieldset class="space-y-3 rounded-xl border border-line p-4">
+            <legend class="px-1 text-sm font-semibold">E-bülten</legend>
+            <div class="flex flex-wrap gap-3">
+                @foreach (['1' => 'Alt bilgide abonelik formu göster', '0' => 'Gizle'] as $v => $l)
+                    <label class="flex items-center gap-2 rounded-xl border border-line px-4 py-2.5 text-sm has-checked:border-primary has-checked:bg-primary-soft">
+                        <input type="radio" name="newsletter_enabled" value="{{ $v }}" @checked(old('newsletter_enabled', $s['newsletter_enabled']) === (string) $v) class="accent-primary"> {{ $l }}
+                    </label>
+                @endforeach
+            </div>
+            <p class="field-help">Aboneler ve toplu e-posta gönderimi: Müşteri › E-bülten.</p>
+            <div class="grid gap-3 sm:grid-cols-2">
+                <x-field name="newsletter_kicker" label="Üst küçük yazı" :value="$s['newsletter_kicker']" />
+                <x-field name="newsletter_title" label="Başlık" :value="$s['newsletter_title']" />
+                <x-field name="newsletter_placeholder" label="E-posta kutusu yazısı" :value="$s['newsletter_placeholder']" />
+                <x-field name="newsletter_button" label="Buton yazısı" :value="$s['newsletter_button']" />
+            </div>
+                <x-field name="newsletter_text" label="Açıklama" :value="$s['newsletter_text']" />
+                <x-field name="newsletter_consent" type="textarea" rows="2" label="Onay kutusu metni" :value="$s['newsletter_consent']" help="Ticari elektronik ileti onayı. Yanına KVKK Aydınlatma Metni bağlantısı eklenir." />
+                <x-field name="newsletter_thanks" label="Kayıt sonrası teşekkür mesajı" :value="$s['newsletter_thanks']" />
+                <x-field name="newsletter_mail_footer" label="E-posta alt bilgisi" :value="$s['newsletter_mail_footer']" help="Toplu e-postaların en altında, abonelikten çıkış bağlantısının üstünde yazar." />
+            <div class="grid gap-3 sm:grid-cols-2">
+                <x-field name="newsletter_unsub_link" label="Abonelikten çık bağlantısı" :value="$s['newsletter_unsub_link']" />
+                <x-field name="newsletter_unsub_title" label="Çıkış sayfası başlığı" :value="$s['newsletter_unsub_title']" />
+                <x-field name="newsletter_unsub_button" label="Çıkış sayfası butonu" :value="$s['newsletter_unsub_button']" />
+            </div>
+                <x-field name="newsletter_unsub_text" type="textarea" rows="2" label="Çıkış sayfası sorusu" :value="$s['newsletter_unsub_text']" help=":email yerine abonenin adresi yazılır." />
+                <x-field name="newsletter_unsub_done" type="textarea" rows="2" label="Çıkış sonrası mesaj" :value="$s['newsletter_unsub_done']" />
+        </fieldset>
         <x-field name="cookie_notice" label="Çerez bildirimi" :value="$s['cookie_notice']" help="İlk ziyarette altta gösterilir; Çerez Politikası sayfasına bağlanır. Boşsa gösterilmez." />
         <x-field name="checkout_consent" label="Sipariş onay kutusu metni" :value="$s['checkout_consent']" help="Altında Mesafeli Satış Sözleşmesi, KVKK ve Teslimat sayfalarının bağlantıları görünür." />
         <x-field name="register_consent" label="Üyelik onay kutusu metni" :value="$s['register_consent']" help="Altında Üyelik Koşulları ve KVKK sayfalarının bağlantıları görünür." />

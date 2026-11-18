@@ -17,6 +17,7 @@ class MailLog extends Model
         'message.reply' => 'Mesaj yanıtı',
         'account.welcome' => 'Hoş geldiniz',
         'account.reset' => 'Parola sıfırlama',
+        'newsletter' => 'E-bülten',
         'test' => 'Deneme e-postası',
     ];
 

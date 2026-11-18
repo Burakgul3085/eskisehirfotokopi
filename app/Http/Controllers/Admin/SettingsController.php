@@ -20,6 +20,13 @@ use Throwable;
 /** Site ayarları, gruplar halinde (genel, iletişim, görünüm, SEO, e-posta). */
 class SettingsController extends Controller
 {
+    /** Boş kaydedilemeyen vitrin metinleri (e-bülten formu, çıkış sayfası, alt bilgi saat kartı) */
+    private const REQUIRED_TEXTS = [
+        'newsletter_title', 'newsletter_placeholder', 'newsletter_button', 'newsletter_consent', 'newsletter_thanks',
+        'newsletter_mail_footer', 'newsletter_unsub_link', 'newsletter_unsub_title', 'newsletter_unsub_button',
+        'newsletter_unsub_done', 'footer_hours_title',
+    ];
+
     public const GROUPS = [
         'genel' => 'Genel',
         'teslimat' => 'Teslimat ve sipariş',
@@ -81,6 +88,26 @@ class SettingsController extends Controller
                 'footer_title_help' => ['nullable', 'string', 'max:40'],
                 'cookie_notice' => ['nullable', 'string', 'max:300'],
                 'back_to_top_label' => ['nullable', 'string', 'max:40'],
+                'footer_title_account' => ['nullable', 'string', 'max:60'],
+                'footer_title_shop' => ['nullable', 'string', 'max:60'],
+                'footer_map_title' => ['nullable', 'string', 'max:60'],
+                'footer_directions' => ['nullable', 'string', 'max:40'],
+                'footer_hours_title' => ['nullable', 'string', 'max:60'],
+                'footer_contact_link' => ['nullable', 'string', 'max:60'],
+                'newsletter_kicker' => ['nullable', 'string', 'max:40'],
+                'newsletter_title' => ['nullable', 'string', 'max:120'],
+                'newsletter_text' => ['nullable', 'string', 'max:300'],
+                'newsletter_placeholder' => ['nullable', 'string', 'max:60'],
+                'newsletter_button' => ['nullable', 'string', 'max:30'],
+                'newsletter_consent' => ['nullable', 'string', 'max:300'],
+                'newsletter_thanks' => ['nullable', 'string', 'max:200'],
+                'newsletter_mail_footer' => ['nullable', 'string', 'max:200'],
+                'newsletter_unsub_link' => ['nullable', 'string', 'max:60'],
+                'newsletter_unsub_title' => ['nullable', 'string', 'max:80'],
+                'newsletter_unsub_text' => ['nullable', 'string', 'max:300'],
+                'newsletter_unsub_button' => ['nullable', 'string', 'max:60'],
+                'newsletter_unsub_done' => ['nullable', 'string', 'max:300'],
+                'newsletter_enabled' => ['nullable', 'in:0,1'],
                 'checkout_consent' => ['nullable', 'string', 'max:300'],
                 'register_consent' => ['nullable', 'string', 'max:300'],
                 'search_placeholder' => ['nullable', 'string', 'max:80'],
@@ -127,6 +154,13 @@ class SettingsController extends Controller
             ]),
             'eposta' => $this->mail($request),
         };
+
+        // Boş bırakılınca formu bozacak metinler varsayılanına döner
+        foreach (self::REQUIRED_TEXTS as $key) {
+            if (array_key_exists($key, $values) && blank($values[$key])) {
+                $values[$key] = Settings::DEFAULTS[$key];
+            }
+        }
 
         Settings::put($values);
         Activity::log('settings.updated', null, ['group' => $group, 'keys' => array_keys($values)]);

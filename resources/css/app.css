@@ -1155,3 +1155,39 @@
         transition: none;
     }
 }
+
+/* Alt bilgi: sütun başlıkları, bağlantılar, cam kartlar ve e-bülten kutusu */
+.footer-heading {
+    font-size: 0.75rem;
+    font-weight: 800;
+    letter-spacing: 0.28em;
+    text-transform: uppercase;
+    color: var(--color-accent);
+}
+.footer-link {
+    display: inline-block;
+    color: rgb(203 213 225);
+    transition: color 0.2s ease, transform 0.2s ease;
+}
+.footer-link:hover {
+    color: #fff;
+    transform: translateX(3px);
+}
+.footer-card {
+    border-radius: 1.5rem;
+    border: 1px solid rgb(255 255 255 / 0.08);
+    background: rgb(255 255 255 / 0.04);
+    backdrop-filter: blur(6px);
+}
+.footer-newsletter {
+    border: 1px solid rgb(255 255 255 / 0.08);
+    background:
+        radial-gradient(120% 140% at 0% 0%, color-mix(in oklab, var(--color-accent) 16%, transparent), transparent 55%),
+        rgb(255 255 255 / 0.04);
+}
+.footer-newsletter-field:focus-within {
+    box-shadow: 0 0 0 3px color-mix(in oklab, var(--color-accent) 45%, transparent);
+}
+@media (prefers-reduced-motion: reduce) {
+    .footer-link, .footer-link:hover { transition: none; transform: none; }
+}

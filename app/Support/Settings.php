@@ -124,6 +124,28 @@ printer|Belge baskısı|Belgeni yükle, biz basalım', // simge|Başlık|Açıkl
         'copyright' => null,             // boşsa "© {yıl} {site adı}"
         'footer_title_corporate' => 'Kurumsal', // sayfa sütunları (Yönetim › Sayfalar)
         'footer_title_help' => 'Yardım',
+        // Alt bilgi: sütun başlıkları, harita ve çalışma saatleri kartları
+        'footer_title_account' => 'Üyelik',
+        'footer_title_shop' => 'Alışveriş',
+        'footer_map_title' => 'Mağazamız',
+        'footer_directions' => 'Yol tarifi',
+        'footer_hours_title' => 'Çalışma saatleri',
+        'footer_contact_link' => 'İletişim sayfası',
+        // E-bülten (alt bilgideki form, abonelikten çıkış sayfası, e-posta alt bilgisi)
+        'newsletter_enabled' => '1',
+        'newsletter_kicker' => 'E-bülten',
+        'newsletter_title' => 'Kampanyalardan ilk siz haberdar olun',
+        'newsletter_text' => 'Yeni ürünler, indirimler ve size özel fırsatlar e-postanıza gelsin.',
+        'newsletter_placeholder' => 'E-posta adresiniz',
+        'newsletter_button' => 'Abone ol',
+        'newsletter_consent' => 'Kampanya ve duyurular için ticari elektronik ileti almayı kabul ediyorum.',
+        'newsletter_thanks' => 'Teşekkürler! E-bülten listemize eklendiniz.',
+        'newsletter_mail_footer' => 'Bu e-postayı e-bültenimize abone olduğunuz için aldınız.',
+        'newsletter_unsub_link' => 'Abonelikten çık',
+        'newsletter_unsub_title' => 'E-bülten aboneliği',
+        'newsletter_unsub_text' => ':email adresine kampanya ve duyuru e-postası gönderilmesini durdurmak istiyor musunuz?',
+        'newsletter_unsub_button' => 'Aboneliğimi sonlandır',
+        'newsletter_unsub_done' => 'Aboneliğiniz sonlandırıldı. Artık kampanya e-postası almayacaksınız.',
         'back_to_top_label' => 'Yukarı çık', // sayfa kaydırılınca altta çıkan buton; boşsa buton gösterilmez
         'cookie_notice' => 'Sitemiz yalnız çalışması için zorunlu çerezleri (oturum ve sepet) kullanır.', // boşsa gösterilmez
 
@@ -269,6 +291,33 @@ printer|Belge baskısı|Belgeni yükle, biz basalım', // simge|Başlık|Açıkl
         $path = self::get($key);
 
         return $path ? Storage::disk('public')->url($path) : null;
+    }
+
+    /**
+     * Çalışma saatleri satırlarını gün / saat olarak ayırır ("Pzt–Cuma 08:00–20:00", "Cumartesi: 09:00-20:00",
+     * "Pazar | Kapalı"). Saat bulunamayan satır olduğu gibi gün sütununda kalır.
+     *
+     * @return list<array{day: string, time: string}>
+     */
+    public static function workingHours(): array
+    {
+        $out = [];
+        foreach (preg_split('/\R/u', (string) self::get('working_hours')) as $line) {
+            $line = trim($line);
+            if ($line === '') {
+                continue;
+            }
+            if (str_contains($line, '|')) {
+                [$day, $time] = array_map('trim', explode('|', $line, 2));
+            } elseif (preg_match('/^(.*?)[\s:]+(\d{1,2}[:.]\d{2}\s*[-–—]\s*\d{1,2}[:.]\d{2}|kapal[ıi]|24\s*saat)$/iu', $line, $m)) {
+                [$day, $time] = [rtrim($m[1], " :\t"), $m[2]];
+            } else {
+                [$day, $time] = [$line, ''];
+            }
+            $out[] = ['day' => $day, 'time' => preg_replace('/\s*[-–—]\s*/u', ' – ', $time)];
+        }
+
+        return $out;
     }
 
     public static function siteName(): string

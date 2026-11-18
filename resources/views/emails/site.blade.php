@@ -32,7 +32,7 @@
                     <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td style="padding:28px 28px 8px;">
                         <h1 style="margin:0 0 12px;font-size:22px;line-height:1.3;font-weight:800;color:#0f172a;">{{ $heading }}</h1>
                         @foreach ($lines as $line)
-                            <p style="margin:0 0 12px;font-size:15px;line-height:1.6;color:#334155;">{{ $line }}</p>
+                            <p style="margin:0 0 12px;font-size:15px;line-height:1.6;color:#334155;white-space:pre-line;">{{ $line }}</p>
                         @endforeach
 
                         @if ($showProgress && $current !== null)
@@ -92,6 +92,9 @@
                     @if ($site['email'])<a href="mailto:{{ $site['email'] }}" style="color:#64748b;">{{ $site['email'] }}</a>@endif
                     @if ($site['address'])<br>{{ $site['address'] }}@endif
                     <br><a href="{{ route('home') }}" style="color:{{ $primary }};text-decoration:none;">{{ preg_replace('#^https?://#', '', rtrim(route('home'), '/')) }}</a>
+                    @if ($unsubscribeUrl)
+                        <br><br>{{ $site['newsletter_mail_footer'] }}<br><a href="{{ $unsubscribeUrl }}" style="color:#64748b;">{{ $site['newsletter_unsub_link'] }}</a>
+                    @endif
                 </td></tr>
             </table>
         </td></tr>

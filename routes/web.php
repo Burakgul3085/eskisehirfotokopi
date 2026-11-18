@@ -11,6 +11,7 @@ use App\Http\Controllers\Store\CartController;
 use App\Http\Controllers\Store\CatalogController;
 use App\Http\Controllers\Store\CheckoutController;
 use App\Http\Controllers\Store\ContactController;
+use App\Http\Controllers\Store\NewsletterController;
 use App\Http\Controllers\Store\OrderTrackingController;
 use App\Http\Controllers\Store\PageController;
 use App\Http\Controllers\Store\PrintController;
@@ -65,6 +66,10 @@ Route::middleware('store.open')->group(function () {
     // İletişim ve mesajlar (konuya e-postadaki gizli bağlantıyla dönülür)
     Route::get('/iletisim', [ContactController::class, 'show'])->name('contact');
     Route::post('/iletisim', [ContactController::class, 'store'])->middleware('throttle:contact')->name('contact.store');
+    // E-bülten: alt bilgideki form ve e-postadaki abonelikten çıkış bağlantısı
+    Route::post('/bulten', [NewsletterController::class, 'subscribe'])->middleware('throttle:newsletter')->name('newsletter.subscribe');
+    Route::get('/bulten/ayril/{token}', [NewsletterController::class, 'show'])->name('newsletter.unsubscribe');
+    Route::post('/bulten/ayril/{token}', [NewsletterController::class, 'unsubscribe'])->middleware('throttle:search')->name('newsletter.unsubscribe.confirm');
     Route::get('/mesaj/{thread}/{token}', [ContactController::class, 'thread'])->name('messages.show');
     Route::post('/mesaj/{thread}/{token}', [ContactController::class, 'reply'])->middleware('throttle:contact')->name('messages.reply');
 

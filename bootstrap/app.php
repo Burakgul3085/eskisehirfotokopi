@@ -33,6 +33,8 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->redirectGuestsTo(fn (Request $request) => $request->is('yonetim', 'yonetim/*') ? route('admin.login') : route('login'));
         $middleware->redirectUsersTo(fn (Request $request) => $request->is('yonetim', 'yonetim/*') ? route('admin.dashboard') : route('account.index'));
         $middleware->trustProxies(at: '*');
+        // E-posta istemcilerinin tek tıkla abonelikten çıkış isteği (RFC 8058) CSRF belirteci taşıyamaz
+        $middleware->validateCsrfTokens(except: ['bulten/ayril/*']);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(

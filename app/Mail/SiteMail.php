@@ -6,6 +6,8 @@ use App\Domain\Delivery\DeliveryRules;
 use App\Models\MailLog;
 use App\Models\Message;
 use App\Models\MessageThread;
+use App\Models\NewsletterCampaign;
+use App\Models\NewsletterSubscriber;
 use App\Models\Order;
 use App\Models\OrderStatusHistory;
 use App\Models\User;
@@ -20,6 +22,7 @@ use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Address;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
+use Illuminate\Mail\Mailables\Headers;
 use Illuminate\Queue\SerializesModels;
 use Throwable;
 
@@ -57,6 +60,9 @@ class SiteMail extends Mailable implements ShouldQueue
     public ?string $replyToName = null;
 
     public ?Model $about = null;
+
+    /** E-bülten: kişiye özel abonelikten çıkış bağlantısı (alt bilgide ve List-Unsubscribe başlığında) */
+    public ?string $unsubscribeUrl = null;
 
     public function __construct(public string $type, public string $subjectLine, public string $heading) {}
 
@@ -183,6 +189,21 @@ class SiteMail extends Mailable implements ShouldQueue
         return $mail;
     }
 
+    /** Abonelere: yönetimden gönderilen e-bülten. Her alıcıya kendi çıkış bağlantısıyla ayrı e-posta gider. */
+    public static function newsletter(NewsletterCampaign $campaign, ?NewsletterSubscriber $subscriber = null): self
+    {
+        $mail = new self('newsletter', $campaign->subject, $campaign->heading);
+        $mail->about = $campaign;
+        $mail->lines = $campaign->paragraphs();
+        if ($campaign->button_text && $campaign->button_url) {
+            $mail->buttonText = $campaign->button_text;
+            $mail->buttonUrl = $campaign->button_url;
+        }
+        $mail->unsubscribeUrl = $subscriber?->unsubscribeUrl();
+
+        return $mail;
+    }
+
     public static function test(): self
     {
         $mail = new self('test', 'Deneme e-postası — '.Settings::siteName(), 'E-posta ayarları çalışıyor');
@@ -225,6 +246,15 @@ class SiteMail extends Mailable implements ShouldQueue
             replyTo: $this->replyToAddress ? [new Address($this->replyToAddress, $this->replyToName)] : [],
             tags: [$this->type],
         );
+    }
+
+    /** E-bültende tek tıkla abonelikten çıkış (RFC 8058; Gmail/Outlook "Aboneliği iptal et" düğmesi). */
+    public function headers(): Headers
+    {
+        return new Headers(text: $this->unsubscribeUrl ? [
+            'List-Unsubscribe' => '<'.$this->unsubscribeUrl.'>',
+            'List-Unsubscribe-Post' => 'List-Unsubscribe=One-Click',
+        ] : []);
     }
 
     public function content(): Content
