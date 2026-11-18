@@ -67,8 +67,7 @@ Sipariş Takibi|/siparis-takip
         'topbar_items' => 'truck|Eskişehir içi|KAPIYA TESLİM
 cash|Ödeme kapıda|NAKİT VEYA KART
 printer|Belgeni yükle|BİZ BASALIM
-book|Binlerce kitap|TEK ADRESTE
-whatsapp|WhatsApp ile|HIZLI DESTEK',
+book|Binlerce kitap|TEK ADRESTE',
         'header_welcome' => 'Hoş geldiniz',
         'header_support_label' => 'Hızlı destek',
 
