@@ -75,7 +75,7 @@ class AppServiceProvider extends ServiceProvider
         RateLimiter::for('customer-register', fn (Request $r) => Limit::perHour(10)->by('ip:'.$r->ip()));
         RateLimiter::for('password-email', fn (Request $r) => [Limit::perMinute(3)->by('ip:'.$r->ip()), Limit::perHour(5)->by('email:'.mb_strtolower((string) $r->input('email')))]);
 
-        View::composer(['components.layouts.*', 'components.account-layout', 'errors.*', 'errors::*', 'store.*', 'admin.*', 'auth.*', 'account.*'], function ($view) {
+        View::composer(['components.layouts.*', 'components.account-layout', 'components.info.*', 'errors.*', 'errors::*', 'store.*', 'admin.*', 'auth.*', 'account.*'], function ($view) {
             $view->with('settings', Settings::all());
         });
     }

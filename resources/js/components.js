@@ -776,6 +776,15 @@ export function mobileCategories() {
 }
 
 /** Metin kopyalama düğmesi: data-copy değerini panoya yazar, kısa süre data-done yazısını gösterir. */
+/** Yasal metin sayfası: "Yazdır / PDF olarak kaydet" butonu. */
+export function printPage() {
+    return {
+        print() {
+            window.print();
+        },
+    };
+}
+
 export function copyText() {
     return {
         copied: false,

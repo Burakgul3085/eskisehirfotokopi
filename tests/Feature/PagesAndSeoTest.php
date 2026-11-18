@@ -21,7 +21,7 @@ class PagesAndSeoTest extends TestCase
         $page->update(['body' => "## Taraflar\n\nSatıcı: {site_adi} — {telefon}\n\n<script>alert(1)</script>\n\n[kötü](javascript:alert(1))"]);
 
         $response = $this->get($page->url())->assertOk();
-        $response->assertSee('<h2>Taraflar</h2>', false)->assertSee('Satıcı: Örnek Kırtasiye — 0222 111 22 33');
+        $response->assertSee('<h2 id="bolum-1">Taraflar</h2>', false)->assertSee('Satıcı: Örnek Kırtasiye — 0222 111 22 33');
         $response->assertDontSee('<script>alert(1)</script>', false)->assertDontSee('javascript:alert', false);
     }
 

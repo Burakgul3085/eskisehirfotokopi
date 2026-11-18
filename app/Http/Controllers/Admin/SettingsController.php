@@ -29,6 +29,7 @@ class SettingsController extends Controller
 
     public const GROUPS = [
         'genel' => 'Genel',
+        'kurumsal' => 'Kurumsal sayfalar',
         'teslimat' => 'Teslimat ve sipariş',
         'iletisim' => 'İletişim ve sosyal medya',
         'gorunum' => 'Görünüm',
@@ -144,6 +145,7 @@ class SettingsController extends Controller
             'iletisim' => $this->contact($request),
             'teslimat' => $this->delivery($request),
             'gorunum' => $this->appearance($request),
+            'kurumsal' => $this->corporate($request),
             'urun-bilgileri' => ['hidden_specs' => implode(',', array_values(array_intersect(
                 array_keys(Product::SPECS),
                 array_keys(array_filter((array) $request->validate(['show' => ['nullable', 'array']])['show'] ?? [], fn ($v) => $v !== '1'))
@@ -276,6 +278,43 @@ class SettingsController extends Controller
         }
 
         return $values;
+    }
+
+    /** Hakkımızda sayfası ve bilgi sayfalarının ortak metinleri (görsel yüklemeli). */
+    private function corporate(Request $request): array
+    {
+        $text = fn (int $max) => ['nullable', 'string', 'max:'.$max];
+        $data = $request->validate([
+            'about_title' => $text(120), 'about_lead' => $text(400), 'about_badge' => $text(60),
+            'about_founded' => ['nullable', 'integer', 'min:1900', 'max:'.now()->year],
+            'about_primary_button' => $text(40), 'about_secondary_button' => $text(40),
+            'about_stat_products' => $text(40), 'about_stat_publishers' => $text(40), 'about_stat_districts' => $text(40), 'about_stat_years' => $text(40),
+            'about_story_kicker' => $text(40), 'about_story_title' => $text(80),
+            'about_values_kicker' => $text(40), 'about_values_title' => $text(80), 'about_values' => $text(1500),
+            'about_features_kicker' => $text(40), 'about_features_title' => $text(80), 'about_features' => $text(1500),
+            'about_milestones_kicker' => $text(40), 'about_milestones_title' => $text(80), 'about_milestones' => $text(2000),
+            'about_cta_title' => $text(120), 'about_cta_text' => $text(300),
+            'pages_updated' => $text(40), 'pages_toc_title' => $text(40), 'pages_legal_title' => $text(40), 'pages_help_nav_title' => $text(40),
+            'pages_help_title' => $text(80), 'pages_help_text' => $text(200), 'pages_contact_link' => $text(40), 'pages_print' => $text(60),
+            'faq_search_placeholder' => $text(60), 'faq_empty' => $text(120), 'faq_more_title' => $text(80), 'faq_more_text' => $text(200),
+            'delivery_card_home' => $text(60), 'delivery_card_home_text' => $text(200), 'delivery_card_pay' => $text(60), 'delivery_card_pay_text' => $text(200),
+            'about_image' => ['nullable', 'image', 'mimes:png,jpg,jpeg,webp', 'max:4096'],
+            'remove_about_image' => ['nullable', 'boolean'],
+        ]);
+        unset($data['about_image'], $data['remove_about_image']);
+        $data['about_founded'] = isset($data['about_founded']) ? (string) $data['about_founded'] : null;
+
+        $old = Settings::get('about_image_path');
+        if ($request->hasFile('about_image')) {
+            $data['about_image_path'] = $request->file('about_image')->store('site', 'public');
+        } elseif ($request->boolean('remove_about_image')) {
+            $data['about_image_path'] = null;
+        }
+        if (array_key_exists('about_image_path', $data) && $old) {
+            Storage::disk('public')->delete($old);
+        }
+
+        return $data;
     }
 
     private function mail(Request $request): array

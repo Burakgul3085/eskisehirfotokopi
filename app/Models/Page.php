@@ -57,9 +57,100 @@ class Page extends Model
     /** Markdown → güvenli HTML; {site_adi} gibi yer tutucular ayarlardan doldurulur. */
     public function html(): HtmlString
     {
-        $body = strtr((string) $this->body, array_map(fn ($v) => $v ?: '—', self::placeholders()));
+        return new HtmlString(self::markdown((string) $this->body));
+    }
 
-        return new HtmlString(Str::markdown($body, ['html_input' => 'escape', 'allow_unsafe_links' => false]));
+    private static function markdown(string $text): string
+    {
+        $text = strtr($text, array_map(fn ($v) => $v ?: '—', self::placeholders()));
+
+        return Str::markdown($text, ['html_input' => 'escape', 'allow_unsafe_links' => false]);
+    }
+
+    /**
+     * Vitrindeki görünüm: Hakkımızda tanıtım sayfası, SSS akordeonu, yardım sayfası (alt bilgide Yardım sütunu) veya
+     * içindekiler listeli yasal metin (diğerleri).
+     */
+    public function layout(): string
+    {
+        return match (true) {
+            $this->key === 'about' => 'about',
+            $this->key === 'faq' => 'faq',
+            $this->footer_column === 'help' => 'help',
+            default => 'legal',
+        };
+    }
+
+    public function icon(): string
+    {
+        return match ($this->key) {
+            'about' => 'home', 'faq' => 'help', 'delivery' => 'truck', 'kvkk' => 'shield', 'membership' => 'users',
+            'cookies' => 'cookie', 'sales' => 'file', default => $this->footer_column === 'help' ? 'help' : 'file',
+        };
+    }
+
+    /**
+     * Yasal metin: ## başlıklarına bağlantı kimliği eklenmiş HTML ve içindekiler listesi.
+     *
+     * @return array{html: HtmlString, toc: list<array{id: string, title: string}>}
+     */
+    public function document(): array
+    {
+        $toc = [];
+        $html = preg_replace_callback('#<h2>(.*?)</h2>#s', function ($m) use (&$toc) {
+            $id = 'bolum-'.(count($toc) + 1);
+            $toc[] = ['id' => $id, 'title' => html_entity_decode(strip_tags($m[1]), ENT_QUOTES)];
+
+            return '<h2 id="'.$id.'">'.$m[1].'</h2>';
+        }, self::markdown((string) $this->body));
+
+        return ['html' => new HtmlString($html), 'toc' => $toc];
+    }
+
+    /**
+     * SSS sayfası içeriği: "# Grup" satırları grupları, "## Soru" satırları soruları başlatır; altındaki metin cevaptır.
+     * Grup başlığı hiç yoksa tek, adsız grup döner.
+     *
+     * @return list<array{id: string, title: ?string, items: list<array{q: string, a: HtmlString, plain: string}>}>
+     */
+    public function faqGroups(): array
+    {
+        $groups = [];
+        $current = null;
+        $question = null;
+        $answer = [];
+        $flush = function () use (&$groups, &$current, &$question, &$answer) {
+            if ($question !== null) {
+                if ($current === null) {
+                    $groups[] = ['title' => null, 'items' => []];
+                    $current = array_key_last($groups);
+                }
+                $text = trim(implode("\n", $answer));
+                $groups[$current]['items'][] = ['q' => $question, 'a' => new HtmlString(self::markdown($text)), 'plain' => trim(strip_tags(self::markdown($text)))];
+            }
+            $question = null;
+            $answer = [];
+        };
+        foreach (preg_split('/\R/u', (string) $this->body) as $line) {
+            if (preg_match('/^#\s+(.+)$/u', $line, $m)) {
+                $flush();
+                $groups[] = ['title' => trim($m[1]), 'items' => []];
+                $current = array_key_last($groups);
+            } elseif (preg_match('/^##\s+(.+)$/u', $line, $m)) {
+                $flush();
+                $question = strtr(trim($m[1]), array_map(fn ($v) => $v ?: '—', self::placeholders()));
+            } elseif ($question !== null) {
+                $answer[] = $line;
+            }
+        }
+        $flush();
+
+        $groups = array_values(array_filter($groups, fn ($g) => $g['items'] !== []));
+        foreach ($groups as $i => &$g) {
+            $g['id'] = $g['title'] ? Str::slug($g['title']) ?: 'grup-'.($i + 1) : 'sorular';
+        }
+
+        return $groups;
     }
 
     /** Yer tutucu → ayardaki değer (boşsa null). @return array<string, ?string> */
