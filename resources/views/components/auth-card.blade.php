@@ -5,7 +5,7 @@
     $points = Settings::iconLines('auth_panel_points');
     $tab = request()->routeIs('register') ? 'register' : 'login';
 @endphp
-<x-layouts.store :title="$title">
+<x-layouts.store :title="$title" :flush="true">
     {{--
         İki bölmeli kart: solda koyu panel (başlık, küçük 3D kilit sahnesi — resources/js/scenes/auth.js — ve avantajlar),
         sağda form. Telefonda panel kısa bir üst banda dönüşür; avantaj listesi gizlenir.
