@@ -134,6 +134,9 @@ printer|Belge baskısı|Belgeni yükle, biz basalım', // simge|Başlık|Açıkl
         'cart_trust' => "shield|Güvenli alışveriş|Bilgileriniz korunur\ntruck|Kapıya teslim|Eskişehir içi hızlı teslimat\ncash|Kapıda ödeme|Nakit veya kartla ödeyin",
         'cart_empty_title' => 'Sepetiniz şu an boş',
         'cart_suggest_title' => 'Bunlar da ilginizi çekebilir',
+        'cart_print_title' => 'Belge de bastırmak ister misiniz?',
+        'cart_print_text' => 'PDF veya Word dosyanızı yükleyin, fiyatı görün, siparişinize ekleyelim.',
+        'cart_payment_title' => 'Ödeme seçenekleri',
 
         // Giriş / üye ol sayfalarının sol paneli (avantajlar: simge|Başlık|Açıklama, her satır bir madde)
         'auth_panel_kicker' => 'Hesabınız',

@@ -87,7 +87,7 @@
 
         <div class="mt-8 grid items-start gap-6 lg:grid-cols-[1fr_360px]">
             <div class="min-w-0 space-y-6">
-                <section id="yukle" class="card scroll-mt-28 p-5 sm:p-8">
+                <section id="yukle" class="print-upload card scroll-mt-48 p-5 sm:p-8">
                     <h2 class="font-display text-2xl font-extrabold">{{ $p->text('upload_title') }}</h2>
                     @if ($p->text('upload_subtitle'))<p class="mt-1 text-muted">{{ $p->text('upload_subtitle') }}</p>@endif
 

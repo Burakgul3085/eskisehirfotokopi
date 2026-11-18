@@ -906,3 +906,84 @@
 @media (prefers-reduced-motion: reduce) {
     .cart-free-bar, .cart-empty-ring, .cart-empty-chip { animation: none; }
 }
+
+/* Sepet: belge ekleme kartı */
+.cart-print {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    background: linear-gradient(120deg, color-mix(in oklab, var(--color-accent) 14%, white), white 55%);
+    box-shadow: inset 0 0 0 1.5px color-mix(in oklab, var(--color-accent) 35%, transparent), 0 14px 30px -24px rgb(15 23 42 / 0.5);
+    transition: transform 0.25s, box-shadow 0.25s;
+}
+.cart-print:hover { transform: translateY(-2px); box-shadow: inset 0 0 0 1.5px var(--color-accent), 0 20px 36px -22px rgb(15 23 42 / 0.5); }
+.cart-print-icon {
+    background: linear-gradient(140deg, var(--color-accent), color-mix(in oklab, var(--color-accent) 60%, var(--color-primary)));
+    box-shadow: 0 10px 20px -10px var(--color-accent);
+    animation: hero-float 4s ease-in-out infinite;
+}
+
+/* Sepet: ödeme yöntemi kutucukları (dönen kenar ışığı, parıltı, simge nabzı) */
+.pay-chip {
+    --pay: var(--color-primary);
+    position: relative;
+    isolation: isolate;
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    overflow: hidden;
+    border-radius: 0.95rem;
+    padding: 0.7rem 0.75rem;
+    background: color-mix(in oklab, var(--pay) 7%, white);
+    transition: transform 0.25s;
+}
+.pay-chip-card { --pay: var(--color-accent); }
+.pay-chip::before {
+    content: '';
+    position: absolute;
+    inset: -60%;
+    z-index: -2;
+    background: conic-gradient(from 0deg, transparent 0 55%, var(--pay) 75%, transparent 90%);
+    animation: pay-spin 4s linear infinite;
+    animation-delay: calc(var(--d, 0) * -2s);
+}
+.pay-chip::after {
+    content: '';
+    position: absolute;
+    inset: 1.5px;
+    z-index: -1;
+    border-radius: calc(0.95rem - 1.5px);
+    background:
+        linear-gradient(105deg, transparent 35%, rgb(255 255 255 / 0.85) 50%, transparent 65%) -150% 0 / 250% 100% no-repeat,
+        color-mix(in oklab, var(--pay) 8%, white);
+    animation: pay-shine 3.6s ease-in-out infinite;
+    animation-delay: calc(var(--d, 0) * 0.9s);
+}
+.pay-chip:hover { transform: translateY(-2px); }
+.pay-icon {
+    display: flex;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    width: 2.25rem;
+    height: 2.25rem;
+    border-radius: 0.75rem;
+    color: white;
+    background: linear-gradient(140deg, var(--pay), color-mix(in oklab, var(--pay) 65%, black));
+    box-shadow: 0 8px 16px -8px var(--pay);
+    animation: pay-pulse 2.4s ease-in-out infinite;
+    animation-delay: calc(var(--d, 0) * 0.6s);
+}
+@keyframes pay-spin { to { transform: rotate(360deg); } }
+@keyframes pay-shine { 0%, 55% { background-position: -150% 0, 0 0; } 100% { background-position: 150% 0, 0 0; } }
+@keyframes pay-pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.08) rotate(-4deg); } }
+
+/* Fotokopi: sepetten #yukle ile gelince yükleme kartı kısa süre parlar */
+.print-upload:target { animation: upload-flash 1.8s ease-out 0.3s 2; }
+@keyframes upload-flash {
+    0% { box-shadow: 0 0 0 0 color-mix(in oklab, var(--color-primary) 45%, transparent); }
+    100% { box-shadow: 0 0 0 18px transparent; }
+}
+@media (prefers-reduced-motion: reduce) {
+    .cart-print-icon, .pay-chip::before, .pay-chip::after, .pay-icon, .print-upload:target { animation: none; }
+}

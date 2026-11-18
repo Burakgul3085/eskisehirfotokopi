@@ -50,7 +50,7 @@
                     <p class="mx-auto mt-2 max-w-md text-sm leading-relaxed text-muted">{{ $settings['delivery_info'] }}</p>
                     <div class="mt-7 flex flex-wrap justify-center gap-3">
                         <a href="{{ route('products.index') }}" class="btn-primary px-6 py-3"><x-icon name="book" class="size-4" />Ürünlere göz at</a>
-                        @if (Route::has('print.index'))<a href="{{ route('print.index') }}" class="btn-ghost px-6 py-3"><x-icon name="printer" class="size-4" />Belge yazdır</a>@endif
+                        @if (Route::has('print.index'))<a href="{{ route('print.index') }}#yukle" class="btn-ghost px-6 py-3"><x-icon name="upload" class="size-4" />Belge yazdır</a>@endif
                     </div>
                     @if ($trust)
                         <ul class="mx-auto mt-10 grid max-w-3xl gap-3 border-t border-dashed border-line pt-8 text-left sm:grid-cols-{{ min(3, count($trust)) }}">
@@ -126,9 +126,21 @@
                             </ul>
                             <div class="flex flex-wrap items-center justify-between gap-3 border-t border-line bg-surface/60 px-5 py-3.5">
                                 <a href="{{ route('products.index') }}" class="inline-flex items-center gap-1.5 text-sm font-semibold text-primary hover:underline"><x-icon name="chevron-right" class="size-4 rotate-180" />Alışverişe devam et</a>
-                                @if (Route::has('print.index'))<a href="{{ route('print.index') }}" class="inline-flex items-center gap-1.5 text-sm font-semibold text-muted hover:text-primary"><x-icon name="printer" class="size-4" />Belge ekle</a>@endif
                             </div>
                         </div>
+
+                        @if (Route::has('print.index'))
+                            {{-- Belge ekleme: fotokopi sayfasının yükleme alanına gider; baskı sepete ayrı satır olarak eklenir --}}
+                            <a href="{{ route('print.index') }}#yukle" class="cart-print group flex items-center gap-4 rounded-[1.25rem] p-4 sm:p-5">
+                                <span class="cart-print-icon flex size-12 shrink-0 items-center justify-center rounded-2xl text-white"><x-icon name="upload" class="size-6" /></span>
+                                <span class="min-w-0 flex-1">
+                                    <span class="block font-bold">{{ Settings::get('cart_print_title', 'Belge de bastırmak ister misiniz?') }}</span>
+                                    <span class="block text-sm text-muted">{{ Settings::get('cart_print_text', 'PDF veya Word dosyanızı yükleyin, fiyatı görün, siparişinize ekleyelim.') }}</span>
+                                </span>
+                                <span class="hidden shrink-0 items-center gap-1.5 rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-white shadow-[0_10px_20px_-10px_var(--color-primary)] transition group-hover:-translate-y-0.5 sm:inline-flex"><x-icon name="printer" class="size-4" />Belge ekle</span>
+                                <x-icon name="chevron-right" class="size-5 shrink-0 text-primary sm:hidden" />
+                            </a>
+                        @endif
                     </div>
 
                     {{-- Sipariş özeti --}}
@@ -153,10 +165,17 @@
                                 @endif
                                 <a href="{{ route('checkout.show') }}" class="cart-checkout btn-primary w-full py-3.5 text-base">Siparişi tamamla <x-icon name="arrow-right" class="size-4" /></a>
                                 @if ($payments->isNotEmpty())
-                                    <div class="flex flex-wrap items-center justify-center gap-2">
-                                        @foreach ($payments as $p)
-                                            <span class="inline-flex items-center gap-1.5 rounded-lg border border-line bg-surface px-2.5 py-1 text-xs font-semibold text-muted"><x-icon :name="str_contains(mb_strtolower($p), 'kart') ? 'card' : 'cash'" class="size-3.5" />{{ $p }}</span>
-                                        @endforeach
+                                    <div>
+                                        <p class="mb-2 text-center text-[11px] font-bold tracking-[0.18em] text-muted uppercase">{{ Settings::get('cart_payment_title', 'Ödeme seçenekleri') }}</p>
+                                        <ul class="grid gap-2.5 {{ $payments->count() > 1 ? 'grid-cols-2' : '' }}">
+                                            @foreach ($payments as $p)
+                                                @php($isCard = str_contains(mb_strtolower($p), 'kart'))
+                                                <li class="pay-chip {{ $isCard ? 'pay-chip-card' : 'pay-chip-cash' }}" style="--d: {{ $loop->index }}">
+                                                    <span class="pay-icon"><x-icon :name="$isCard ? 'card' : 'cash'" class="size-5" /></span>
+                                                    <span class="text-[13px] leading-tight font-bold text-ink">{{ $p }}</span>
+                                                </li>
+                                            @endforeach
+                                        </ul>
                                     </div>
                                 @endif
                             </div>

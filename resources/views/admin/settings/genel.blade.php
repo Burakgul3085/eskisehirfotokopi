@@ -90,6 +90,9 @@
             <div class="grid gap-5 sm:grid-cols-2">
                 <x-field name="cart_empty_title" label="Boş sepet başlığı" :value="$s['cart_empty_title']" />
                 <x-field name="cart_suggest_title" label="Öneri satırı başlığı" :value="$s['cart_suggest_title']" help="Sepetin altındaki ürün önerileri." />
+                <x-field name="cart_print_title" label="Belge ekleme kartı başlığı" :value="$s['cart_print_title']" />
+                <x-field name="cart_print_text" label="Belge ekleme kartı açıklaması" :value="$s['cart_print_text']" />
+                <x-field name="cart_payment_title" label="Ödeme seçenekleri başlığı" :value="$s['cart_payment_title']" />
             </div>
             <div class="grid gap-5 sm:grid-cols-2">
                 <x-field name="cart_steps" type="textarea" rows="3" label="Sipariş adımları" :value="$s['cart_steps']" help="Başlığın yanındaki adım göstergesi; her satır bir adım. Boşsa gizlenir." />
