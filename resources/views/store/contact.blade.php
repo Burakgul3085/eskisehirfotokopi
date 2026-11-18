@@ -153,11 +153,7 @@
                                 @endif
                             </div>
                             @if ($social)
-                                <div class="mt-5 flex flex-wrap gap-2 border-t border-dashed border-line pt-5">
-                                    @foreach ($social as $s)
-                                        <a href="{{ $s['url'] }}" target="_blank" rel="noopener" class="rounded-full bg-surface px-3.5 py-1.5 text-xs font-bold text-ink transition hover:bg-primary hover:text-white">{{ $s['label'] }}</a>
-                                    @endforeach
-                                </div>
+                                <x-social-links :links="$social" class="mt-5 border-t border-dashed border-line pt-5" />
                             @endif
                         </div>
                     @endif

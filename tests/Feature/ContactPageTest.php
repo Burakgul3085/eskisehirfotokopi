@@ -73,4 +73,14 @@ class ContactPageTest extends TestCase
         Settings::put(['address' => null, 'maps_url' => null, 'maps_embed' => null]);
         $this->get('/iletisim')->assertOk()->assertDontSee('contact-map', false);
     }
+
+    public function test_social_links_render_as_brand_logo_buttons(): void
+    {
+        Settings::put(['instagram' => 'https://instagram.com/eskisehirfotokopi', 'youtube' => 'https://youtube.com/@ef', 'facebook' => null]);
+        $page = $this->get('/iletisim')->assertOk();
+        $page->assertSee('social-btn social-instagram', false)->assertSee('social-btn social-youtube', false)
+            ->assertSee('aria-label="Instagram"', false)->assertSee('https://instagram.com/eskisehirfotokopi', false)
+            ->assertDontSee('social-facebook', false);
+        $this->get('/')->assertOk()->assertSee('social-btn social-instagram', false);
+    }
 }

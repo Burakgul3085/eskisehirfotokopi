@@ -32,13 +32,7 @@
             @if ($settings['footer_about'])
                 <p class="mt-3 max-w-md text-sm leading-relaxed text-slate-400">{{ $settings['footer_about'] }}</p>
             @endif
-            @if ($social)
-                <div class="mt-5 flex flex-wrap gap-2">
-                    @foreach ($social as $link)
-                        <a href="{{ $link['url'] }}" target="_blank" rel="noopener" class="rounded-lg bg-white/5 px-3 py-1.5 text-xs font-semibold text-slate-200 hover:bg-white/10">{{ $link['label'] }}</a>
-                    @endforeach
-                </div>
-            @endif
+            <x-social-links :links="$social" class="mt-5" />
         </div>
 
         @foreach (['corporate', 'help'] as $col)
