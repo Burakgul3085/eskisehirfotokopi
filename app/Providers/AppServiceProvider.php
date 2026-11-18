@@ -68,6 +68,8 @@ class AppServiceProvider extends ServiceProvider
         RateLimiter::for('import-upload', fn (Request $r) => Limit::perMinute(1200)->by('admin:'.($r->user('admin')?->id ?? $r->ip())));
         RateLimiter::for('checkout', fn (Request $r) => [Limit::perMinute(6)->by('ip:'.$r->ip()), Limit::perHour(30)->by('ip:'.$r->ip())]);
         RateLimiter::for('newsletter', fn (Request $r) => [Limit::perMinute(5)->by('ip:'.$r->ip()), Limit::perHour(30)->by('ip:'.$r->ip())]);
+        RateLimiter::for('product-question', fn (Request $r) => Limit::perMinute(6)->by('ip:'.$r->ip()));
+        RateLimiter::for('review', fn (Request $r) => [Limit::perMinute(4)->by('user:'.($r->user('web')?->id ?? $r->ip())), Limit::perHour(30)->by('ip:'.$r->ip())]);
         RateLimiter::for('contact', fn (Request $r) => [Limit::perMinute(3)->by('ip:'.$r->ip()), Limit::perHour(20)->by('ip:'.$r->ip())]);
         RateLimiter::for('print-start', fn (Request $r) => [Limit::perMinute(30)->by('ip:'.$r->ip()), Limit::perHour(200)->by('ip:'.$r->ip())]);
         RateLimiter::for('print-api', fn (Request $r) => Limit::perMinute(600)->by('ip:'.$r->ip()));

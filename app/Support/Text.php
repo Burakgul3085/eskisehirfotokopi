@@ -21,6 +21,18 @@ class Text
         return mb_strtoupper(str_replace(self::LOWER, self::UPPER, $s), 'UTF-8');
     }
 
+    /** Vitrinde kişi adı gizliliği: "ayşe nur kaya" → "Ayşe K.", tek kelimede "Ayşe". Boşsa "Müşteri". */
+    public static function maskName(?string $name): string
+    {
+        $words = preg_split('/\s+/u', trim((string) $name), -1, PREG_SPLIT_NO_EMPTY) ?: [];
+        if (! $words) {
+            return 'Müşteri';
+        }
+        $first = self::upper(mb_substr($words[0], 0, 1)).self::lower(mb_substr($words[0], 1));
+
+        return count($words) > 1 ? $first.' '.self::upper(mb_substr(end($words), 0, 1)).'.' : $first;
+    }
+
     /** "BOĞAZİÇİ ÜNİVERSİTESİ" → "Boğaziçi Üniversitesi" (bağlaçlar küçük kalır). */
     public static function title(string $s): string
     {

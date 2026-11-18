@@ -59,6 +59,22 @@
                             </table>
                         @endif
 
+                        @if ($links)
+                            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:4px 0 16px;font-size:14px;border-top:1px solid #e2e8f0;">
+                                @foreach ($links as [$linkTitle, $linkText, $linkUrl])
+                                    <tr>
+                                        <td style="padding:10px 0;border-bottom:1px solid #f1f5f9;">
+                                            <div style="font-weight:600;color:#0f172a;">{{ $linkTitle }}</div>
+                                            @if ($linkText)<div style="font-size:12px;color:#64748b;">{{ $linkText }}</div>@endif
+                                        </td>
+                                        <td style="padding:10px 0 10px 12px;border-bottom:1px solid #f1f5f9;text-align:right;white-space:nowrap;">
+                                            <a href="{{ $linkUrl }}" style="color:{{ $primary }};font-weight:700;text-decoration:none;">{{ $site['reviews_rate_cta'] }} &rarr;</a>
+                                        </td>
+                                    </tr>
+                                @endforeach
+                            </table>
+                        @endif
+
                         @if ($order && $items->isNotEmpty())
                             <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:4px 0 16px;font-size:14px;border-top:1px solid #e2e8f0;">
                                 @foreach ($items as $item)

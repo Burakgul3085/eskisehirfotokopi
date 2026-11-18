@@ -12,6 +12,7 @@ use App\Support\Text;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Facades\Storage;
 
 /**
@@ -56,7 +57,7 @@ class Product extends Model
     {
         return [
             'price_bw' => 'decimal:2', 'price_color' => 'decimal:2', 'price_bw_2up' => 'decimal:2', 'price_color_2up' => 'decimal:2', 'compare_bw' => 'decimal:2', 'compare_color' => 'decimal:2',
-            'is_featured' => 'boolean', 'published_at' => 'datetime', 'spec_visibility' => 'array', 'extra_specs' => 'array', 'topics' => 'array',
+            'is_featured' => 'boolean', 'rating_avg' => 'float', 'published_at' => 'datetime', 'spec_visibility' => 'array', 'extra_specs' => 'array', 'topics' => 'array',
         ];
     }
 
@@ -91,6 +92,17 @@ class Product extends Model
     public function author(): BelongsTo
     {
         return $this->belongsTo(Author::class);
+    }
+
+    /** Ürün değerlendirmeleri (yayında olanlar için published() kapsamı). */
+    public function reviews(): HasMany
+    {
+        return $this->hasMany(ProductReview::class);
+    }
+
+    public function questions(): HasMany
+    {
+        return $this->hasMany(ProductQuestion::class);
     }
 
     public function category(): BelongsTo

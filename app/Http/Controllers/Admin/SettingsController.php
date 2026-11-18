@@ -34,6 +34,7 @@ class SettingsController extends Controller
         'iletisim' => 'İletişim ve sosyal medya',
         'gorunum' => 'Görünüm',
         'urun-bilgileri' => 'Ürün bilgileri',
+        'degerlendirme' => 'Değerlendirme ve sorular',
         'seo' => 'SEO',
         'eposta' => 'E-posta',
     ];
@@ -155,6 +156,7 @@ class SettingsController extends Controller
                 'meta_description' => ['nullable', 'string', 'max:170'],
             ]),
             'eposta' => $this->mail($request),
+            'degerlendirme' => $this->reviews($request),
         };
 
         // Boş bırakılınca formu bozacak metinler varsayılanına döner
@@ -322,6 +324,33 @@ class SettingsController extends Controller
         }
         if (array_key_exists('about_image_path', $data) && $old) {
             Storage::disk('public')->delete($old);
+        }
+
+        return $data;
+    }
+
+    /**
+     * Değerlendirme ve soru ayarları: açık/kapalı seçenekler, ürün sayfası metinleri ve e-posta şablonları. Boş
+     * bırakılan metin varsayılanına döner (form ve e-postalar boş başlıkla çıkmasın).
+     */
+    private function reviews(Request $request): array
+    {
+        $flags = ['reviews_enabled', 'questions_enabled', 'reviews_auto_publish', 'reviews_photos'];
+        $keys = array_values(array_filter(array_keys(Settings::DEFAULTS), fn ($k) => str_starts_with($k, 'reviews_') || str_starts_with($k, 'questions_')
+            || str_starts_with($k, 'account_reviews_') || str_starts_with($k, 'mailtpl_')));
+        $rules = [];
+        foreach ($keys as $key) {
+            $rules[$key] = in_array($key, $flags, true) || str_ends_with($key, '_on')
+                ? ['nullable', 'in:0,1']
+                : ['nullable', 'string', 'max:'.(str_ends_with($key, '_body') || str_ends_with($key, '_note') ? 1200 : 300)];
+        }
+        $data = $request->validate($rules);
+        foreach ($keys as $key) {
+            if (in_array($key, $flags, true) || str_ends_with($key, '_on')) {
+                $data[$key] = ($data[$key] ?? '0') === '1' ? '1' : '0';
+            } elseif (blank($data[$key] ?? null)) {
+                $data[$key] = Settings::DEFAULTS[$key];
+            }
         }
 
         return $data;

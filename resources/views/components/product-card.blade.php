@@ -36,6 +36,9 @@
         <h3 class="line-clamp-2 min-h-[2.6em] font-display text-[15px] leading-snug font-bold text-ink">
             <a href="{{ $url }}" class="after:absolute after:inset-0 group-hover:text-primary-dark">{{ $product->title }}</a>
         </h3>
+        @if ($product->rating_count && \App\Support\Settings::flag('reviews_enabled'))
+            <p class="-mt-0.5 flex items-center gap-1.5 text-xs text-muted"><x-stars :value="$product->rating_avg" size="size-3.5" /><span class="font-semibold text-ink">{{ number_format($product->rating_avg, 1, ',', '') }}</span>({{ $product->rating_count }})</p>
+        @endif
         <div class="mt-auto flex items-end justify-between gap-2 border-t border-dashed border-line/80 pt-3">
             <div class="min-w-0">
                 @if ($price !== null)

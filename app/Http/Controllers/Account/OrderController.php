@@ -40,7 +40,7 @@ class OrderController extends Controller
     {
         abort_unless($order->user_id === $request->user()->id, 404);
 
-        return view('store.order', ['order' => $order->load('items', 'history'), 'context' => 'account']);
+        return view('store.order', ['order' => $order->load('items.product:id,slug,status', 'history'), 'context' => 'account']);
     }
 
     /** Siparişteki katalog ürünlerini güncel fiyatlarıyla yeniden sepete ekler. */

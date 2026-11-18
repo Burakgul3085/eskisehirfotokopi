@@ -4,6 +4,7 @@ use App\Http\Controllers\Account\AddressController;
 use App\Http\Controllers\Account\FavoriteController;
 use App\Http\Controllers\Account\MessageController as AccountMessageController;
 use App\Http\Controllers\Account\OrderController as AccountOrderController;
+use App\Http\Controllers\Account\ReviewController as AccountReviewController;
 use App\Http\Controllers\AccountController;
 use App\Http\Controllers\Auth\CustomerAuthController;
 use App\Http\Controllers\HomeController;
@@ -16,6 +17,8 @@ use App\Http\Controllers\Store\OrderTrackingController;
 use App\Http\Controllers\Store\PageController;
 use App\Http\Controllers\Store\PrintController;
 use App\Http\Controllers\Store\ProductController;
+use App\Http\Controllers\Store\QuestionController;
+use App\Http\Controllers\Store\ReviewController;
 use App\Http\Controllers\Store\SitemapController;
 use Illuminate\Support\Facades\Route;
 
@@ -33,6 +36,8 @@ Route::middleware('store.open')->group(function () {
     Route::get('/yayinevleri', [CatalogController::class, 'publishers'])->name('publishers.index');
     Route::get('/yayinevi/{publisher:slug}', [CatalogController::class, 'publisher'])->name('publisher.show');
     Route::get('/urun/{product:slug}', [ProductController::class, 'show'])->name('product.show');
+    // Ürün soruları: herkes sorabilir (kişi ve e-posta başına sınır denetleyicide)
+    Route::post('/urun/{product:slug}/soru', [QuestionController::class, 'store'])->middleware('throttle:product-question')->name('product.questions.store');
     Route::get('/urunler', [CatalogController::class, 'search'])->name('products.index');
     Route::get('/ara', [CatalogController::class, 'search'])->name('search');
     Route::get('/ara/oneri', [CatalogController::class, 'suggest'])->middleware('throttle:search')->name('search.suggest');
@@ -97,6 +102,10 @@ Route::middleware('store.open')->group(function () {
         Route::get('/hesabim/mesajlar', AccountMessageController::class)->name('account.messages');
         Route::get('/hesabim/favoriler', [FavoriteController::class, 'index'])->name('account.favorites');
         Route::post('/favori/{product}', [FavoriteController::class, 'toggle'])->name('favorites.toggle');
+        Route::get('/hesabim/degerlendirmeler', [AccountReviewController::class, 'index'])->name('account.reviews');
+        // Değerlendirme: yalnız ürünü teslim almış üye (denetleyicide)
+        Route::post('/urun/{product:slug}/degerlendirme', [ReviewController::class, 'store'])->middleware('throttle:review')->name('product.reviews.store');
+        Route::delete('/urun/{product:slug}/degerlendirme', [ReviewController::class, 'destroy'])->name('product.reviews.destroy');
     });
 });
 

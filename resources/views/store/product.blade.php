@@ -15,7 +15,14 @@
         'brand' => $product->publisher && $product->specVisible('publisher') ? ['@type' => 'Brand', 'name' => $product->publisher->name] : null,
         'offers' => $types ? ['@type' => 'AggregateOffer', 'priceCurrency' => 'TRY', 'lowPrice' => min(array_map(fn ($t) => (float) $product->price($t), $types)),
             'highPrice' => max(array_map(fn ($t) => (float) $product->price($t), $types)), 'offerCount' => count($types), 'availability' => 'https://schema.org/InStock'] : null,
+        // Yalnız yayında değerlendirme varsa (boş puan bildirilmez)
+        'aggregateRating' => ($reviewData['total'] ?? 0) > 0 ? ['@type' => 'AggregateRating', 'ratingValue' => $reviewData['average'], 'reviewCount' => $reviewData['total'], 'bestRating' => 5, 'worstRating' => 1] : null,
+        'review' => ($reviewData['total'] ?? 0) > 0 ? $reviewData['list']->take(5)->map(fn ($rv) => [
+            '@type' => 'Review', 'author' => ['@type' => 'Person', 'name' => $rv->authorName()], 'datePublished' => $rv->published_at->toDateString(),
+            'reviewRating' => ['@type' => 'Rating', 'ratingValue' => $rv->published_rating, 'bestRating' => 5], 'reviewBody' => \Illuminate\Support\Str::limit($rv->published_body, 500),
+        ])->values()->all() : null,
     ]);
+    $questionTotal = $questionData ? $questionData['list']->total() : 0;
 @endphp
 <x-layouts.store :title="$product->meta_title ?: $product->title" :description="$product->meta_description ?: \Illuminate\Support\Str::limit(trim($product->title.'. '.collect($specs)->only(['Yazar', 'Yayınevi', 'Sayfa sayısı'])->map(fn ($v, $k) => $k.': '.$v)->implode(', ')), 160)"
                  :image="$product->imageAbsoluteUrl('lg')" :noindex="$preview">
@@ -55,6 +62,20 @@
                 <h1 class="mt-2 text-2xl leading-tight font-extrabold sm:text-3xl">{{ $product->title }}</h1>
                 @if ($product->subtitle)<p class="mt-1 text-lg font-medium text-slate-600">{{ $product->subtitle }}</p>@endif
                 @if ($product->author && $product->specVisible('author'))<p class="mt-2 text-muted">{{ $product->author->name }}</p>@endif
+                @if ($reviewData || $questionData)
+                    <div class="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
+                        @if ($reviewData)
+                            <a href="#degerlendirmeler" class="inline-flex items-center gap-2 font-semibold hover:text-primary">
+                                <x-stars :value="$reviewData['average']" size="size-4" />
+                                @if ($reviewData['total'])<span>{{ number_format($reviewData['average'], 1, ',', '') }}</span><span class="font-normal text-muted underline-offset-2 hover:underline">{{ str_replace(':n', $reviewData['total'], $settings['reviews_count']) }}</span>
+                                @else<span class="font-normal text-muted underline-offset-2 hover:underline">{{ $settings['reviews_empty'] }}</span>@endif
+                            </a>
+                        @endif
+                        @if ($questionData)
+                            <a href="#sorular" class="inline-flex items-center gap-1.5 text-muted underline-offset-2 hover:text-primary hover:underline"><x-icon name="chat" class="size-4" />{{ $questionTotal ? str_replace(':n', $questionTotal, $settings['questions_count']) : $settings['questions_form_title'] }}</a>
+                        @endif
+                    </div>
+                @endif
 
                 <div class="mt-6 rounded-2xl border border-line/70 bg-white p-5">
                     @if ($types)
@@ -147,6 +168,10 @@
             </div>
         </div>
     </div>
+
+    @if (($reviewData || $questionData) && ! $preview)
+        @include('store.partials.product-feedback')
+    @endif
 
     @if ($similar->isNotEmpty())
         <x-product-row title="Benzer ürünler" :products="$similar" :url="$product->category ? route('category.show', $product->category) : null" />

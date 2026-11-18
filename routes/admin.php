@@ -17,6 +17,8 @@ use App\Http\Controllers\Admin\PageController;
 use App\Http\Controllers\Admin\PrintController;
 use App\Http\Controllers\Admin\ProductController;
 use App\Http\Controllers\Admin\PublisherController;
+use App\Http\Controllers\Admin\QuestionController;
+use App\Http\Controllers\Admin\ReviewController;
 use App\Http\Controllers\Admin\SearchController;
 use App\Http\Controllers\Admin\SettingsController;
 use Illuminate\Support\Facades\Route;
@@ -56,6 +58,23 @@ Route::prefix('yonetim')->name('admin.')->group(function () {
         Route::put('/mesajlar/{thread}/durum', [MessageController::class, 'status'])->name('messages.status');
         Route::delete('/mesajlar/{thread}', [MessageController::class, 'destroy'])->name('messages.destroy');
         Route::get('/e-posta-kayitlari', MailLogController::class)->name('mail-logs');
+        // Ürün değerlendirmeleri ve soruları
+        Route::prefix('degerlendirmeler')->name('reviews.')->controller(ReviewController::class)->group(function () {
+            Route::get('/', 'index')->name('index');
+            Route::get('/{review}', 'show')->name('show');
+            Route::post('/{review}/onayla', 'approve')->name('approve');
+            Route::post('/{review}/reddet', 'reject')->name('reject');
+            Route::put('/{review}/cevap', 'reply')->name('reply');
+            Route::delete('/{review}/fotograf/{photo}', 'destroyPhoto')->name('photos.destroy');
+            Route::delete('/{review}', 'destroy')->name('destroy');
+        });
+        Route::prefix('sorular')->name('questions.')->controller(QuestionController::class)->group(function () {
+            Route::get('/', 'index')->name('index');
+            Route::get('/{question}', 'show')->name('show');
+            Route::put('/{question}/cevap', 'answer')->name('answer');
+            Route::put('/{question}/yayin', 'visibility')->name('visibility');
+            Route::delete('/{question}', 'destroy')->name('destroy');
+        });
         Route::post('/ayarlar/eposta/deneme', [SettingsController::class, 'testMail'])->name('settings.test-mail');
 
         // Katalog

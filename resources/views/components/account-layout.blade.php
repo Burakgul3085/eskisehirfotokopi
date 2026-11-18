@@ -14,6 +14,7 @@
         ['Siparişlerim', 'account.orders', 'account.orders*', 'package', $openOrders ?: null],
         ['Adreslerim', 'account.addresses.index', 'account.addresses.*', 'pin', null],
         ['Favorilerim', 'account.favorites', 'account.favorites', 'heart', $favoriteCount ?: null],
+        [$settings['account_reviews_title'], 'account.reviews', 'account.reviews', 'star', null],
         ['Mesajlarım', 'account.messages', 'account.messages', 'chat', null],
         ['Bilgilerim ve parola', 'account.settings', 'account.settings', 'lock', null],
     ];

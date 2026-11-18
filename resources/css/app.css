@@ -1705,8 +1705,78 @@
 .info-letterhead { align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 9mm; padding-bottom: 4mm; border-bottom: 1.5pt solid #0f172a; font-size: 8.5pt; line-height: 1.45; color: #475569; }
 .info-print-note { margin-top: 10mm; padding-top: 3mm; border-top: 0.75pt solid #94a3b8; font-size: 8pt; line-height: 1.5; color: #475569; }
 
+/* ---- Yıldızlar (salt okunur): taban gri, üstteki dolu katman genişliğe göre kırpılır ---- */
+.stars { position: relative; display: inline-flex; vertical-align: middle; line-height: 0; }
+.stars-row { display: inline-flex; gap: 0.1em; }
+.stars-row svg { flex-shrink: 0; }
+.stars-base svg { fill: #d7dde5; }
+.stars-fill { position: absolute; inset: 0 auto 0 0; overflow: hidden; white-space: nowrap; }
+.stars-fill svg { fill: var(--color-accent); }
+.admin-stars { display: inline-flex; gap: 2px; color: #cbd5e1; }
+.admin-stars .is-on { color: var(--color-accent); fill: var(--color-accent); }
+
+/* ---- Ürün sayfası: değerlendirmeler ve soru-cevap ---- */
+.product-feedback { scroll-margin-top: 8rem; }
+.product-feedback [id] { scroll-margin-top: 9rem; }
+.pf-tabs { display: flex; gap: 0.25rem; margin-bottom: 1.75rem; padding: 0.3rem; border-radius: 1.1rem; background: #fff; border: 1px solid color-mix(in oklab, var(--color-line) 70%, transparent); width: fit-content; max-width: 100%; overflow-x: auto; }
+.pf-tab { display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.7rem 1.15rem; border-radius: 0.85rem; font-weight: 700; font-size: 0.95rem; color: var(--color-muted); white-space: nowrap; transition: background-color 0.2s, color 0.2s, box-shadow 0.2s; }
+.pf-tab:hover { color: var(--color-ink); background: var(--color-surface); }
+.pf-tab[aria-selected="true"] { background: var(--color-ink); color: #fff; box-shadow: 0 10px 24px -14px rgb(15 23 42 / 0.7); }
+.pf-tab-count { min-width: 1.6rem; padding: 0.05rem 0.45rem; border-radius: 999px; font-size: 0.75rem; background: color-mix(in oklab, currentColor 14%, transparent); text-align: center; }
+.pf-tab[aria-selected="true"] .pf-tab-count { background: var(--color-accent); color: var(--color-ink); }
+@media (max-width: 639px) {
+    .pf-tabs { width: 100%; }
+    .pf-tab { flex: 1; justify-content: center; gap: 0.35rem; padding: 0.65rem 0.5rem; font-size: 0.85rem; }
+}
+.pf-heading { margin-bottom: 1.25rem; font-family: var(--font-display); font-size: 1.5rem; font-weight: 800; }
+.pf-notice { display: flex; align-items: flex-start; gap: 0.6rem; margin-bottom: 1.25rem; padding: 0.8rem 1rem; border-radius: 0.9rem; font-size: 0.9rem; font-weight: 600; }
+.pf-notice-success { background: var(--color-success-soft); color: var(--color-success); }
+.pf-notice-danger { background: var(--color-danger-soft); color: var(--color-danger); }
+.pf-summary { padding: 1.5rem; border-radius: 1.5rem; background: #fff; border: 1px solid color-mix(in oklab, var(--color-line) 70%, transparent); box-shadow: 0 18px 40px -32px rgb(15 23 42 / 0.45); }
+.pf-bar { position: relative; flex: 1; height: 0.5rem; overflow: hidden; border-radius: 999px; background: var(--color-surface); }
+.pf-bar-fill { position: absolute; inset: 0 auto 0 0; border-radius: inherit; background: linear-gradient(90deg, var(--color-accent), color-mix(in oklab, var(--color-accent) 70%, #fde68a)); }
+.pf-chip { display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.45rem 0.85rem; border-radius: 999px; border: 1px solid var(--color-line); background: #fff; font-size: 0.85rem; font-weight: 600; color: var(--color-muted); transition: border-color 0.2s, color 0.2s, background-color 0.2s; }
+.pf-chip span { font-size: 0.75rem; opacity: 0.7; }
+.pf-chip:hover { color: var(--color-ink); border-color: var(--color-primary-line); }
+.pf-chip[aria-current="true"] { border-color: var(--color-primary); background: var(--color-primary-soft); color: var(--color-primary-dark); }
+.pf-sort { padding: 0.4rem 0.75rem; border-radius: 0.65rem; font-weight: 600; color: var(--color-muted); white-space: nowrap; }
+.pf-sort:hover { color: var(--color-ink); }
+.pf-sort[aria-current="true"] { background: #fff; color: var(--color-ink); box-shadow: 0 1px 3px rgb(15 23 42 / 0.12); }
+.pf-review, .pf-qa { padding: 1.25rem 1.35rem; border-radius: 1.35rem; background: #fff; border: 1px solid color-mix(in oklab, var(--color-line) 70%, transparent); }
+.pf-review:target, .pf-qa:target { border-color: var(--color-accent); box-shadow: 0 0 0 4px color-mix(in oklab, var(--color-accent) 22%, transparent); }
+.pf-avatar { display: flex; width: 2.6rem; height: 2.6rem; flex-shrink: 0; align-items: center; justify-content: center; border-radius: 0.95rem; background: linear-gradient(135deg, var(--color-primary-soft), var(--color-accent-soft)); font-family: var(--font-display); font-weight: 800; color: var(--color-primary-dark); }
+.pf-verified { display: inline-flex; align-items: center; gap: 0.25rem; padding: 0.1rem 0.5rem; border-radius: 999px; background: var(--color-success-soft); font-size: 0.7rem; font-weight: 700; color: var(--color-success); }
+.pf-thumb { display: block; overflow: hidden; border-radius: 0.9rem; border: 1px solid var(--color-line); cursor: zoom-in; transition: transform 0.2s, box-shadow 0.2s; }
+.pf-thumb:hover { transform: translateY(-2px); box-shadow: 0 10px 20px -12px rgb(15 23 42 / 0.5); }
+.pf-reply { margin-top: 1rem; padding: 0.85rem 1rem; border-left: 3px solid var(--color-primary); border-radius: 0 0.9rem 0.9rem 0; background: var(--color-primary-soft); }
+.pf-empty { padding: 2rem 1.25rem; border: 1px dashed var(--color-line); border-radius: 1.35rem; text-align: center; color: var(--color-muted); }
+.pf-lightbox { position: fixed; inset: 0; z-index: 80; display: flex; align-items: center; justify-content: center; background: rgb(15 23 42 / 0.86); backdrop-filter: blur(6px); cursor: zoom-out; }
+.pf-lightbox-close { position: absolute; top: 1rem; right: 1rem; display: flex; padding: 0.6rem; border-radius: 999px; background: rgb(255 255 255 / 0.12); color: #fff; }
+.pf-form { border-radius: 1.35rem; background: #fff; border: 1px solid color-mix(in oklab, var(--color-line) 70%, transparent); overflow: hidden; }
+.pf-form[open] { border-color: var(--color-primary-line); box-shadow: 0 18px 40px -30px rgb(15 23 42 / 0.5); }
+.pf-form-summary { display: flex; align-items: center; gap: 0.9rem; padding: 1rem 1.25rem; cursor: pointer; list-style: none; }
+.pf-form-summary::-webkit-details-marker { display: none; }
+.pf-form-chevron { transition: transform 0.2s; }
+.pf-form[open] .pf-form-chevron { transform: rotate(180deg); }
+.pf-dropzone { display: flex; align-items: center; justify-content: center; gap: 0.6rem; padding: 1rem; border: 1.5px dashed var(--color-primary-line); border-radius: 1rem; background: var(--color-primary-soft); color: var(--color-primary-dark); cursor: pointer; transition: border-color 0.2s; }
+.pf-dropzone:hover, .pf-dropzone:focus-within { border-color: var(--color-primary); }
+.pf-photo-edit { display: flex; flex-direction: column; align-items: center; gap: 0.3rem; color: var(--color-muted); }
+.pf-ask { padding: 1.5rem; border-radius: 1.5rem; background: #fff; border: 1px solid color-mix(in oklab, var(--color-line) 70%, transparent); box-shadow: 0 18px 40px -32px rgb(15 23 42 / 0.45); }
+.pf-qa-badge { display: flex; width: 2rem; height: 2rem; flex-shrink: 0; align-items: center; justify-content: center; border-radius: 0.7rem; font-family: var(--font-display); font-size: 0.85rem; font-weight: 800; }
+.pf-qa-q { background: var(--color-accent-soft); color: var(--color-accent-ink); }
+.pf-qa-a { background: var(--color-primary); color: #fff; }
+
+/* Puan verme: DOM'da 5→1, görünümde 1→5; seçilen ve solundakiler dolar, üzerine gelince önizlenir */
+.rating-input { display: inline-flex; flex-direction: row-reverse; gap: 0.2rem; }
+.rating-input input { position: absolute; width: 1px; height: 1px; opacity: 0; }
+.rating-input label { cursor: pointer; border-radius: 0.5rem; transition: transform 0.15s; }
+.rating-input label svg { fill: #e2e8f0; transition: fill 0.15s; }
+.rating-input label:hover { transform: scale(1.12); }
+.rating-input input:checked ~ label svg, .rating-input label:hover svg, .rating-input label:hover ~ label svg { fill: var(--color-accent); }
+.rating-input input:focus-visible + label { outline: 2px solid var(--color-primary); outline-offset: 2px; }
+
 @media print {
-    .header-ticker, .site-header, header, footer, .back-to-top, [aria-label="WhatsApp ile yazın"], [x-cloak] { display: none !important; }
+    .header-ticker, .site-header, header, footer, .back-to-top, .product-feedback, [aria-label="WhatsApp ile yazın"], [x-cloak] { display: none !important; }
     html, body { background: #fff !important; }
     body { color: #0f172a; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
     main { padding: 0 !important; }

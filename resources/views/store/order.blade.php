@@ -8,6 +8,8 @@
     // Her adımın ilk geçildiği an (geçmişten)
     $reached = $order->history->groupBy('status')->map(fn ($g) => $g->min('created_at'));
     $fill = $current === null ? 0 : $current / (count($steps) - 1) * 100;
+    // Hesabım'da teslim edilmiş siparişin ürünleri değerlendirilebilir
+    $canReview = $context === 'account' && $order->status === 'delivered' && \App\Support\Settings::flag('reviews_enabled');
 @endphp
 <x-layouts.store :title="'Sipariş '.$order->number" :noindex="true" :flush="true">
     {{-- Koyu üst bant: sipariş no, durum ve siparişin adımına göre konumlanan 3D sahne (resources/js/scenes/order-track.js) --}}
@@ -99,7 +101,12 @@
                                 <span class="block font-semibold">{{ $item->title }}</span>
                                 <span class="text-xs text-muted">{{ collect([$item->meta['publisher'] ?? null, $item->meta['summary'] ?? $item->printTypeLabel(), $item->quantity.' × '.Money::format($item->unit_price)])->filter()->implode(' · ') }}</span>
                             </span>
-                            <span class="font-semibold whitespace-nowrap">{{ Money::format($item->line_total) }}</span>
+                            <span class="flex shrink-0 flex-col items-end gap-2">
+                                <span class="font-semibold whitespace-nowrap">{{ Money::format($item->line_total) }}</span>
+                                @if ($canReview && $item->kind === 'product' && $item->product?->status === 'active')
+                                    <a href="{{ route('product.show', $item->product) }}#degerlendirme-yaz" class="inline-flex items-center gap-1 rounded-lg bg-accent-soft px-2.5 py-1 text-xs font-bold text-accent-ink hover:bg-accent hover:text-ink"><x-icon name="star" class="size-3.5" />{{ $settings['reviews_rate_cta'] }}</a>
+                                @endif
+                            </span>
                         </li>
                     @endforeach
                 </ul>

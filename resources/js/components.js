@@ -808,3 +808,122 @@ export function copyText() {
         },
     };
 }
+
+/**
+ * Ürün sayfası alt sekmeleri (Değerlendirmeler / Soru & Cevap). Başlangıç sekmesi data-tab'dan; adres çubuğundaki
+ * #soru… ve #degerlendirme… bağlantıları ilgili sekmeyi açar, #degerlendirme-yaz formu da açar.
+ */
+export function productTabs() {
+    return {
+        tab: 'reviews',
+        init() {
+            this.tab = this.$el.dataset.tab || 'reviews';
+            this.fromHash();
+            window.addEventListener('hashchange', () => this.fromHash());
+        },
+        fromHash() {
+            const hash = window.location.hash;
+            if (hash.startsWith('#soru')) {
+                this.tab = 'questions';
+            } else if (hash.startsWith('#degerlendirme')) {
+                this.tab = 'reviews';
+                const form = document.getElementById('degerlendirme-yaz');
+                if (hash === '#degerlendirme-yaz' && form && form.tagName === 'DETAILS') {
+                    form.open = true;
+                }
+            } else {
+                return;
+            }
+            this.$nextTick(() => document.getElementById(hash.slice(1))?.scrollIntoView({ block: 'start' }));
+        },
+        showReviews() {
+            this.tab = 'reviews';
+        },
+        showQuestions() {
+            this.tab = 'questions';
+        },
+        isReviews() {
+            return this.tab === 'reviews';
+        },
+        isQuestions() {
+            return this.tab === 'questions';
+        },
+        reviewsSelected() {
+            return this.tab === 'reviews' ? 'true' : 'false';
+        },
+        questionsSelected() {
+            return this.tab === 'questions' ? 'true' : 'false';
+        },
+    };
+}
+
+/** Yıldızla puan verme: seçilen yıldızın anlamı ("İyi") yanında yazar. Etiketler data-labels'ta "|" ile. */
+export function ratingInput() {
+    return {
+        value: 0,
+        labels: [],
+        init() {
+            this.labels = (this.$el.dataset.labels || '').split('|');
+            this.value = Number(this.$el.dataset.value || 0);
+        },
+        pick(event) {
+            this.value = Number(event.target.value || 0);
+        },
+        text() {
+            return this.value ? this.labels[this.value - 1] || '' : '';
+        },
+    };
+}
+
+/**
+ * Değerlendirme fotoğrafları: seçilenlerin önizlemesi; sınırı aşan dosyalar seçimden çıkarılır ve uyarı gösterilir.
+ * Sınır = data-max + "Kaldır" işaretlenen mevcut fotoğraf sayısı.
+ */
+export function photoPicker() {
+    let urls = [];
+    return {
+        previews: [],
+        warning: '',
+        pick(event) {
+            const input = event.target;
+            const room = Number(this.$el.dataset.max || 0) + this.$el.querySelectorAll('input[name="remove_photos[]"]:checked').length;
+            let files = Array.from(input.files || []);
+            this.warning = '';
+            if (files.length > room) {
+                files = files.slice(0, Math.max(0, room));
+                const keep = new DataTransfer();
+                files.forEach((f) => keep.items.add(f));
+                input.files = keep.files;
+                this.warning = this.$el.dataset.warn || '';
+            }
+            urls.forEach((u) => URL.revokeObjectURL(u));
+            urls = files.map((f) => URL.createObjectURL(f));
+            this.previews = urls;
+        },
+        hasPreviews() {
+            return this.previews.length > 0;
+        },
+        hasWarning() {
+            return this.warning !== '';
+        },
+    };
+}
+
+/** Fotoğrafı sayfa üstünde büyütme (bağlantı JS'siz yeni sekmede açılır). Esc veya tıklama kapatır. */
+export function lightbox() {
+    return {
+        src: '',
+        open(event) {
+            event.preventDefault();
+            this.src = event.currentTarget.getAttribute('href') || '';
+            document.documentElement.classList.add('overflow-hidden');
+        },
+        close() {
+            this.src = '';
+            document.documentElement.classList.remove('overflow-hidden');
+        },
+        isOpen() {
+            return this.src !== '';
+        },
+    };
+}

@@ -2,12 +2,13 @@
 
 namespace App\Listeners;
 
+use App\Domain\Reviews\Reviews;
 use App\Events\OrderPlaced;
 use App\Events\OrderStatusChanged;
 use App\Mail\SiteMail;
 use Illuminate\Support\Facades\Mail;
 
-/** Sipariş e-postaları (§7; olay keşfiyle bağlanır): yeni siparişte müşteriye özet ve yöneticiye bildirim; her durum değişikliğinde müşteriye. */
+/** Sipariş e-postaları (§7; olay keşfiyle bağlanır): yeni siparişte müşteriye özet ve yöneticiye bildirim; her durum değişikliğinde müşteriye; teslimde değerlendirme daveti. */
 class SendOrderMails
 {
     public function handlePlaced(OrderPlaced $event): void
@@ -25,6 +26,10 @@ class SendOrderMails
     {
         if ($event->notify && $event->order->email && $event->entry->status !== 'received') {
             Mail::to($event->order->email, $event->order->customer_name)->send(SiteMail::orderStatus($event->order, $event->entry));
+        }
+        // Teslim edilen üye siparişinde bir kez: ürünleri değerlendirme daveti
+        if ($event->notify && $event->entry->status === 'delivered') {
+            app(Reviews::class)->invite($event->order);
         }
     }
 }

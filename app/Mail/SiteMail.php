@@ -3,6 +3,7 @@
 namespace App\Mail;
 
 use App\Domain\Delivery\DeliveryRules;
+use App\Domain\Reviews\NoticeTemplates;
 use App\Models\MailLog;
 use App\Models\Message;
 use App\Models\MessageThread;
@@ -50,6 +51,9 @@ class SiteMail extends Mailable implements ShouldQueue
     public ?string $buttonUrl = null;
 
     public ?string $quote = null;
+
+    /** @var list<array{0: string, 1: string, 2: string}> bağlantılı liste: [başlık, açıklama, adres] (ör. değerlendirme daveti) */
+    public array $links = [];
 
     public ?Order $order = null;
 
@@ -200,6 +204,31 @@ class SiteMail extends Mailable implements ShouldQueue
             $mail->buttonUrl = $campaign->button_url;
         }
         $mail->unsubscribeUrl = $subscriber?->unsubscribeUrl();
+
+        return $mail;
+    }
+
+    /**
+     * Ayarlardan yönetilen bildirim şablonu (değerlendirme ve soru e-postaları; App\Domain\Reviews\NoticeTemplates).
+     * Şablon kapalıysa null döner. Metindeki :ad, :urun, :puan, :siparis yer tutucuları $vars ile doldurulur.
+     *
+     * @param  array<string, string|int|null>  $vars
+     */
+    public static function notice(string $template, array $vars, ?Model $about = null): ?self
+    {
+        [, , $type] = NoticeTemplates::LIST[$template];
+        $get = fn (string $field) => (string) Settings::get(NoticeTemplates::key($template, $field));
+        if ($get('on') !== '1') {
+            return null;
+        }
+        $vars += ['site' => Settings::siteName()];
+        // Uzun anahtar önce (":urun" ile ":u..." çakışmasın)
+        $pairs = collect($vars)->sortKeysDesc()->mapWithKeys(fn ($v, $k) => [':'.$k => (string) $v])->all();
+        $fill = fn (string $text) => trim(strtr($text, $pairs));
+        $mail = new self($type, $fill($get('subject')) ?: Settings::siteName(), $fill($get('heading')));
+        $mail->about = $about;
+        $mail->lines = array_values(array_filter(array_map($fill, preg_split('/\R{2,}/', $get('body')) ?: []), fn ($l) => $l !== ''));
+        $mail->buttonText = $fill($get('button')) ?: null;
 
         return $mail;
     }

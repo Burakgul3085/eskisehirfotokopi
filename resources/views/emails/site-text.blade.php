@@ -11,6 +11,9 @@
 @foreach ($facts as [$label, $value])
 {{ $label }}: {{ $value }}
 @endforeach
+@foreach ($links as [$linkTitle, $linkText, $linkUrl])
+- {{ $linkTitle }}: {{ $linkUrl }}
+@endforeach
 @if ($order && $items->isNotEmpty())
 
 @foreach ($items as $item)

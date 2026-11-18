@@ -2,15 +2,20 @@
 
 namespace App\Http\Controllers\Store;
 
+use App\Domain\Reviews\Reviews;
 use App\Http\Controllers\Controller;
 use App\Models\Product;
+use App\Models\ProductQuestion;
+use App\Models\ProductReview;
+use App\Support\Settings;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
 class ProductController extends Controller
 {
-    public function show(Product $product): View
+    public function show(Request $request, Product $product, Reviews $reviews): View
     {
         // Taslak/pasif ürün yalnız yöneticiye önizleme olarak görünür.
         $preview = $product->status !== 'active';
@@ -41,6 +46,48 @@ class ProductController extends Controller
             'preview' => $preview,
             'similar' => $pick($related['similar']),
             'samePublisher' => $pick($related['publisher']),
+            'reviewData' => Settings::flag('reviews_enabled') ? $this->reviewData($request, $product, $reviews) : null,
+            'questionData' => Settings::flag('questions_enabled') ? $this->questionData($request, $product) : null,
         ]);
+    }
+
+    /** Değerlendirme sekmesi: özet (ortalama, yıldız dağılımı), süzgeçli liste ve oturumdaki üyenin durumu. */
+    private function reviewData(Request $request, Product $product, Reviews $reviews): array
+    {
+        $base = fn () => ProductReview::published()->where('product_id', $product->id);
+        $distribution = $base()->selectRaw('published_rating as r, count(*) as c')->groupBy('published_rating')->pluck('c', 'r');
+        $total = (int) $distribution->sum();
+        $photoFilter = $request->boolean('fotografli');
+        $sort = in_array($request->query('siralama'), ['yuksek', 'dusuk'], true) ? $request->query('siralama') : 'yeni';
+        $withPhotos = fn ($q) => $q->whereHas('photos', fn ($p) => $p->where('is_approved', true));
+
+        $list = $base()->with(['user:id,name', 'photos' => fn ($q) => $q->where('is_approved', true)])
+            ->when($photoFilter, $withPhotos)
+            ->when($sort === 'yuksek', fn ($q) => $q->orderByDesc('published_rating'))
+            ->when($sort === 'dusuk', fn ($q) => $q->orderBy('published_rating'))
+            ->orderByDesc('published_at')
+            ->paginate(8, ['*'], 'yorumlar')->withQueryString()->fragment('degerlendirmeler');
+
+        return [
+            'total' => $total,
+            'average' => $total ? round($distribution->reduce(fn ($sum, $c, $r) => $sum + $r * $c, 0) / $total, 1) : 0.0,
+            'distribution' => collect(range(5, 1))->mapWithKeys(fn ($r) => [$r => (int) ($distribution[$r] ?? 0)])->all(),
+            'photoCount' => $total ? $withPhotos($base())->count() : 0,
+            'list' => $list,
+            'photoFilter' => $photoFilter,
+            'sort' => $sort,
+            'eligibility' => $reviews->eligibility($request->user('web'), $product),
+            'labels' => array_values(array_filter(array_map('trim', preg_split('/\R/', (string) Settings::get('reviews_rating_labels')) ?: []))),
+        ];
+    }
+
+    /** Soru-cevap sekmesi: yayındaki cevaplanmış sorular. */
+    private function questionData(Request $request, Product $product): array
+    {
+        return [
+            'list' => ProductQuestion::visible()->where('product_id', $product->id)->latest('answered_at')
+                ->paginate(6, ['*'], 'sorular')->withQueryString()->fragment('sorular'),
+            'user' => $request->user('web'),
+        ];
     }
 }
