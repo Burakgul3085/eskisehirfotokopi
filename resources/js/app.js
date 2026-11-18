@@ -133,6 +133,33 @@ if (sceneRoots.length && 'IntersectionObserver' in window) {
     sceneRoots.forEach((el) => sceneObserver.observe(el));
 }
 
+// Yukarı çık butonu: 400px'ten sonra görünür; halka kaydırma ilerlemesini gösterir
+const backToTop = document.querySelector('[data-back-to-top]');
+if (backToTop) {
+    const ring = backToTop.querySelector('[data-back-to-top-progress]');
+    let ticking = false;
+    const update = () => {
+        ticking = false;
+        const max = document.documentElement.scrollHeight - window.innerHeight;
+        const ratio = max > 0 ? Math.min(1, window.scrollY / max) : 0;
+        backToTop.classList.toggle('is-visible', window.scrollY > 400);
+        ring?.style.setProperty('stroke-dashoffset', String(100 - ratio * 100));
+    };
+    window.addEventListener('scroll', () => {
+        if (!ticking) {
+            ticking = true;
+            requestAnimationFrame(update);
+        }
+    }, { passive: true });
+    window.addEventListener('resize', update, { passive: true });
+    backToTop.addEventListener('click', () => {
+        const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        window.scrollTo({ top: 0, behavior: reduced ? 'auto' : 'smooth' });
+        document.getElementById('icerik')?.focus({ preventScroll: true });
+    });
+    update();
+}
+
 // SSS sorusu bağlantısı (#sss-3, ör. aramadan): ilgili soru açılır ve ekrana kaydırılır
 const openFaqFromHash = () => {
     const el = /^#sss-\d+$/.test(location.hash) ? document.querySelector(location.hash) : null;

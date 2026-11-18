@@ -80,6 +80,7 @@ class SettingsController extends Controller
                 'footer_title_corporate' => ['nullable', 'string', 'max:40'],
                 'footer_title_help' => ['nullable', 'string', 'max:40'],
                 'cookie_notice' => ['nullable', 'string', 'max:300'],
+                'back_to_top_label' => ['nullable', 'string', 'max:40'],
                 'checkout_consent' => ['nullable', 'string', 'max:300'],
                 'register_consent' => ['nullable', 'string', 'max:300'],
                 'search_placeholder' => ['nullable', 'string', 'max:80'],

@@ -37,6 +37,17 @@
     {{-- flush: sayfa koyu bir bölümle bitiyorsa alt bilgiyle arasında açık renkli boşluk kalmaz --}}
     @include('store.partials.footer', ['flush' => $flush])
 
+    {{-- Yukarı çık: kaydırınca görünür, halka sayfanın ne kadarının okunduğunu gösterir (resources/js/app.js) --}}
+    @if ($topLabel = \App\Support\Settings::get('back_to_top_label'))
+        <button type="button" data-back-to-top aria-label="{{ $topLabel }}" title="{{ $topLabel }}" class="back-to-top">
+            <svg viewBox="0 0 48 48" class="back-to-top-ring" aria-hidden="true">
+                <circle cx="24" cy="24" r="21" class="back-to-top-track" />
+                <circle cx="24" cy="24" r="21" pathLength="100" class="back-to-top-progress" data-back-to-top-progress />
+            </svg>
+            <x-icon name="chevron-up" class="relative size-5" />
+        </button>
+    @endif
+
     @if ($wa = \App\Support\Settings::whatsappUrl())
         <a href="{{ $wa }}" target="_blank" rel="noopener" aria-label="WhatsApp ile yazın"
            class="fixed right-4 bottom-4 z-40 flex size-13 items-center justify-center rounded-full bg-[#25d366] text-white shadow-lift transition hover:scale-105 sm:right-6 sm:bottom-6">

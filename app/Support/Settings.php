@@ -124,6 +124,7 @@ printer|Belge baskısı|Belgeni yükle, biz basalım', // simge|Başlık|Açıkl
         'copyright' => null,             // boşsa "© {yıl} {site adı}"
         'footer_title_corporate' => 'Kurumsal', // sayfa sütunları (Yönetim › Sayfalar)
         'footer_title_help' => 'Yardım',
+        'back_to_top_label' => 'Yukarı çık', // sayfa kaydırılınca altta çıkan buton; boşsa buton gösterilmez
         'cookie_notice' => 'Sitemiz yalnız çalışması için zorunlu çerezleri (oturum ve sepet) kullanır.', // boşsa gösterilmez
 
         // Onay metinleri (altında ilgili sözleşme sayfalarının bağlantıları listelenir)
