@@ -1016,3 +1016,17 @@
     .done-check path { animation: none; stroke-dashoffset: 0; }
     .done-confetti { display: none; }
 }
+
+/* ---- Site geneli arama ---- */
+.search-hit { transition: background-color 0.18s ease; }
+.search-hit:hover, .search-hit:focus { background: var(--color-surface); outline: none; }
+.search-quick { transition: background-color 0.18s ease, color 0.18s ease; }
+.search-quick:hover, .search-quick:focus { background: var(--color-primary-soft); color: var(--color-primary-dark); outline: none; }
+.search-quick:hover .search-quick-dot, .search-quick:focus .search-quick-dot { background: var(--color-primary); color: white; }
+.search-loading span { animation: search-load 0.9s ease-in-out infinite; }
+@keyframes search-load { from { transform: translateX(-100%); } to { transform: translateX(300%); } }
+.search-panel { animation: search-in 0.18s ease-out; }
+@keyframes search-in { from { opacity: 0; transform: translateY(-4px); } }
+@media (prefers-reduced-motion: reduce) {
+    .search-loading span, .search-panel { animation: none; }
+}

@@ -85,6 +85,7 @@
         <x-field name="cookie_notice" label="Çerez bildirimi" :value="$s['cookie_notice']" help="İlk ziyarette altta gösterilir; Çerez Politikası sayfasına bağlanır. Boşsa gösterilmez." />
         <x-field name="checkout_consent" label="Sipariş onay kutusu metni" :value="$s['checkout_consent']" help="Altında Mesafeli Satış Sözleşmesi, KVKK ve Teslimat sayfalarının bağlantıları görünür." />
         <x-field name="register_consent" label="Üyelik onay kutusu metni" :value="$s['register_consent']" help="Altında Üyelik Koşulları ve KVKK sayfalarının bağlantıları görünür." />
+        <x-field name="search_placeholder" label="Arama kutusu yazısı" :value="$s['search_placeholder']" help="Header'daki ve ana sayfadaki arama kutusu. Arama ürün, kategori, yayınevi, yazar, bilgi sayfaları, SSS ve site bölümlerini kapsar." />
         <fieldset class="space-y-3 rounded-xl border border-line p-4">
             <legend class="px-1 text-sm font-semibold">Sepet sayfası</legend>
             <div class="grid gap-5 sm:grid-cols-2">

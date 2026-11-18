@@ -82,6 +82,7 @@ class SettingsController extends Controller
                 'cookie_notice' => ['nullable', 'string', 'max:300'],
                 'checkout_consent' => ['nullable', 'string', 'max:300'],
                 'register_consent' => ['nullable', 'string', 'max:300'],
+                'search_placeholder' => ['nullable', 'string', 'max:80'],
                 'cart_steps' => ['nullable', 'string', 'max:300'],
                 'cart_trust' => ['nullable', 'string', 'max:1000'],
                 'cart_empty_title' => ['nullable', 'string', 'max:80'],

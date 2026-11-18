@@ -202,13 +202,16 @@ export function liveSearch() {
     let controller = null;
     let root = null; // form öğesi ($el, ifadenin bağlı olduğu alt öğeyi gösterebilir)
     const cache = new Map();
+    const blank = { products: [], categories: [], publishers: [], authors: [], pages: [], faq: [], total: 0, mode: 'none', used: '', quick: null, all_url: '' };
+    // Ürün dışı gruplar (sağ sütun) ve başlıkları
+    const groups = [['pages', 'Sayfalar ve bölümler'], ['categories', 'Kategoriler'], ['publishers', 'Yayınevleri'], ['authors', 'Yazarlar'], ['faq', 'Sıkça sorulan sorular']];
 
     return {
         q: '',
         open: false,
         loading: false,
         active: -1,
-        results: { products: [], publishers: [], categories: [], total: 0, all_url: '' },
+        results: { ...blank },
         init() {
             root = this.$el;
             this.q = this.$refs.input.value;
@@ -217,10 +220,11 @@ export function liveSearch() {
             clearTimeout(timer);
             const q = this.q.trim();
             if (q.length < 2) {
-                this.open = false;
+                // Kutu boşaldı: hızlı erişime dön
+                timer = setTimeout(() => this.fetch(''), 80);
                 return;
             }
-            timer = setTimeout(() => this.fetch(q), 180);
+            timer = setTimeout(() => this.fetch(q), 160);
         },
         async fetch(q) {
             if (cache.has(q)) {
@@ -230,13 +234,15 @@ export function liveSearch() {
             controller?.abort();
             controller = new AbortController();
             this.loading = true;
+            this.open = true;
             try {
                 const url = root.dataset.url + '?q=' + encodeURIComponent(q);
                 const res = await fetch(url, { headers: { Accept: 'application/json' }, signal: controller.signal });
                 if (res.ok) {
-                    const data = await res.json();
+                    const data = { ...blank, ...(await res.json()) };
                     cache.set(q, data);
-                    if (this.q.trim() === q) {
+                    const now = this.q.trim();
+                    if ((now.length < 2 ? '' : now) === q) {
                         this.show(data);
                     }
                 }
@@ -249,15 +255,14 @@ export function liveSearch() {
             this.open = true;
         },
         onFocus() {
-            if (this.q.trim().length >= 2 && this.results.all_url) {
-                this.open = true;
-            }
+            const q = this.q.trim();
+            this.fetch(q.length < 2 ? '' : q);
         },
         close() {
             this.open = false;
         },
         links() {
-            return [...root.querySelectorAll('[data-suggest]')];
+            return [...root.querySelectorAll('[data-suggest]')].filter((a) => a.offsetParent !== null);
         },
         down(e) {
             if (!this.open) {
@@ -287,20 +292,48 @@ export function liveSearch() {
         isLoading() {
             return this.loading;
         },
+        hasQuery() {
+            return this.results.quick === null && this.results.all_url !== '';
+        },
+        hasQuick() {
+            return this.results.quick !== null && this.results.quick !== undefined;
+        },
+        quickSections() {
+            return this.results.quick?.sections || [];
+        },
+        quickCategories() {
+            return this.results.quick?.categories || [];
+        },
+        hasQuickCategories() {
+            return this.quickCategories().length > 0;
+        },
         hasProducts() {
             return this.results.products.length > 0;
         },
-        hasPublishers() {
-            return this.results.publishers.length > 0;
+        otherGroups() {
+            return groups.filter(([key]) => (this.results[key] || []).length > 0)
+                .map(([key, label]) => ({ key, label, items: this.results[key] }));
         },
-        hasCategories() {
-            return this.results.categories.length > 0;
+        hasOthers() {
+            return this.otherGroups().length > 0;
+        },
+        gridClass() {
+            return this.hasProducts() && this.hasOthers() ? 'md:grid-cols-[1.35fr_1fr]' : '';
+        },
+        sideClass() {
+            return this.hasProducts() ? 'md:border-l md:border-line md:pl-2' : '';
+        },
+        isCorrected() {
+            return this.results.mode === 'corrected';
+        },
+        correctionLabel() {
+            return this.isCorrected() ? '“' + this.q.trim() + '” bulunamadı · “' + this.results.used + '” için sonuçlar' : '';
         },
         isEmpty() {
-            return this.results.total === 0 && this.results.publishers.length === 0 && this.results.categories.length === 0;
+            return !this.hasProducts() && !this.hasOthers();
         },
         totalLabel() {
-            return this.results.total > 0 ? 'Tüm sonuçları gör (' + this.results.total.toLocaleString('tr-TR') + ')' : '';
+            return this.results.total > 0 ? 'Tüm sonuçları gör (' + this.results.total.toLocaleString('tr-TR') + ')' : 'Tüm sonuçları ve önerileri gör';
         },
     };
 }

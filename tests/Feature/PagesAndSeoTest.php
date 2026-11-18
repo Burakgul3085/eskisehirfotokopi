@@ -37,7 +37,7 @@ class PagesAndSeoTest extends TestCase
         $about = Page::where('key', 'about')->firstOrFail();
         $about->update(['is_active' => false]);
         $this->get(route('home'))->assertDontSee('Hakkımızda');
-        $this->get($about->url())->assertNotFound();
+        $this->get($about->url())->assertRedirect(); // gizli sayfa: hata yerine arama
 
         Settings::put(['cookie_notice' => null]);
         $this->get(route('home'))->assertDontSee('x-data="cookieNotice"', false);

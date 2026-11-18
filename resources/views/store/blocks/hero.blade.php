@@ -31,11 +31,16 @@
             @if ($block->setting('text'))
                 <p class="hero-reveal mt-5 max-w-lg text-base leading-relaxed text-white/75 sm:text-lg" style="--d: 2">{{ $block->setting('text') }}</p>
             @endif
-            <form action="{{ route('search') }}" method="get" role="search" class="hero-reveal group mt-8 flex max-w-lg gap-2 rounded-2xl bg-white/95 p-1.5 shadow-[0_24px_60px_-20px_rgba(0,0,0,0.55)] ring-1 ring-white/40 transition focus-within:ring-4 focus-within:ring-accent/40" style="--d: 3">
+            {{-- Header'daki aramayla aynı site geneli anlık arama --}}
+            <form action="{{ route('search') }}" method="get" role="search" x-data="liveSearch" data-url="{{ route('search.suggest') }}"
+                  x-on:click.outside="close" x-on:keydown.escape="close" x-on:keydown.down="down" x-on:keydown.up="up"
+                  class="hero-reveal group relative z-20 mt-8 flex max-w-lg gap-2 rounded-2xl bg-white/95 p-1.5 shadow-[0_24px_60px_-20px_rgba(0,0,0,0.55)] ring-1 ring-white/40 transition focus-within:ring-4 focus-within:ring-accent/40" style="--d: 3">
                 <span class="flex items-center pl-3 text-slate-400"><x-icon name="search" class="size-5" /></span>
-                <input name="q" type="search" placeholder="Kitap adı, yayınevi, yazar veya ISBN" aria-label="Ara"
+                <input name="q" type="search" x-ref="input" x-model="q" x-on:input="onInput" x-on:focus="onFocus" autocomplete="off"
+                       placeholder="{{ \App\Domain\Search\SiteSearch::placeholder() }}" aria-label="Ara"
                        class="min-w-0 flex-1 rounded-xl px-2 text-[15px] text-ink placeholder:text-slate-400 focus:outline-none">
                 <button class="btn-accent px-6">Ara</button>
+                @include('store.partials.search-dropdown', ['max' => 'max-h-[26rem]'])
             </form>
             @if ($block->setting('button_label') && $block->setting('button_url'))
                 <a href="{{ $block->setting('button_url') }}" class="hero-reveal group/link mt-5 inline-flex items-center gap-2.5 rounded-full bg-white/10 py-2 pr-4 pl-2 text-sm font-semibold text-white ring-1 ring-white/15 backdrop-blur transition hover:bg-white/15" style="--d: 4">

@@ -103,8 +103,8 @@ class StorefrontTest extends TestCase
 
         Category::where('slug', 'yks')->update(['is_active' => false]);
         app(CategoryTree::class)->flush();
-        $this->get('/kategori/yks')->assertNotFound();
-        $this->get('/kategori/tyt')->assertNotFound(); // üstü gizli
+        $this->get('/kategori/yks')->assertRedirect(route('search', ['q' => 'yks'])); // gizli: hata yerine arama
+        $this->get('/kategori/tyt')->assertRedirect(route('search', ['q' => 'tyt'])); // üstü gizli
     }
 
     public function test_product_page_and_draft_preview(): void
@@ -117,7 +117,7 @@ class StorefrontTest extends TestCase
         $this->assertSame(1, $p->fresh()->view_count);
 
         $draft = Product::where('title', 'Taslak Kitap')->first();
-        $this->get('/urun/'.$draft->slug)->assertNotFound();
+        $this->get('/urun/'.$draft->slug)->assertRedirect(route('search', ['q' => 'taslak kitap']));
         $this->actingAs(Admin::factory()->create(), 'admin')->get('/urun/'.$draft->slug)->assertOk()->assertSee('Önizleme');
     }
 
@@ -137,6 +137,28 @@ class StorefrontTest extends TestCase
         $this->getJson('/ara/oneri?q=a')->assertOk()->assertJsonPath('total', 0);
     }
 
+    public function test_site_search_covers_everything_and_never_dead_ends(): void
+    {
+        // Yazım hatası düzeltilir
+        $this->get('/ara?q=matemtik')->assertOk()->assertSee('TYT Matematik Soru Bankası')->assertSee('“matematik”', false);
+        $this->getJson('/ara/oneri?q=matemtik')->assertOk()->assertJsonPath('mode', 'corrected')->assertJsonPath('used', 'matematik');
+        // Kelimelerden biri tutarsa kısmi sonuç
+        $this->get('/ara?q=kpss+zzqx')->assertOk()->assertSee('KPSS Tarih Denemeleri')->assertSee('en az birini');
+        // Site bölümleri ve SSS de aranır; ürün yoksa çok satanlar gösterilir
+        $this->get('/ara?q=kargo')->assertOk()->assertSee('Sipariş takibi')->assertSee('En çok tercih edilenler')->assertSee('TYT Matematik Soru Bankası');
+        $this->get('/ara?q=asdfgh')->assertOk()->assertSee('En çok tercih edilenler');
+        // Boş kutu: hızlı erişim
+        $this->getJson('/ara/oneri?q=')->assertOk()->assertJsonStructure(['quick' => ['sections', 'categories']]);
+        $this->getJson('/ara/oneri?q=iletişim')->assertOk()->assertJsonPath('pages.0.url', route('contact'));
+
+        // Bulunamayan kayıt ve bilinmeyen adres hata yerine aramaya yönlenir
+        $this->get('/urun/tyt-matematk')->assertRedirect(route('search', ['q' => 'tyt matematk']));
+        $this->get('/kategori/yok-boyle')->assertRedirect(route('search', ['q' => 'yok boyle']));
+        $this->get('/boyle-bir-sayfa/kimya-kitabi')->assertRedirect(route('search', ['q' => 'kimya kitabi']));
+        $this->get('/yonetim/olmayan')->assertNotFound();
+        $this->get('/olmayan.pdf')->assertNotFound();
+    }
+
     public function test_publishers_index_and_page(): void
     {
         $this->get('/yayinevleri')->assertOk()->assertSee('Palme Yayınları')->assertSee('Hız Yayınları')->assertSee('harf-', false)
@@ -147,7 +169,7 @@ class StorefrontTest extends TestCase
         $this->get('/yayinevi/hiz')->assertOk()->assertSee('KPSS Tarih Denemeleri')->assertSee('TYT Geometri')->assertDontSee('TYT Matematik Soru');
 
         $this->hiz->update(['is_active' => false]);
-        $this->get('/yayinevi/hiz')->assertNotFound();
+        $this->get('/yayinevi/hiz')->assertRedirect(route('search', ['q' => 'hiz']));
     }
 
     public function test_menu_links_and_trust_items_come_from_settings(): void

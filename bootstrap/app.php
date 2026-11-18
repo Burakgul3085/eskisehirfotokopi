@@ -10,6 +10,7 @@ use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -37,4 +38,18 @@ return Application::configure(basePath: dirname(__DIR__))
         $exceptions->shouldRenderJsonWhen(
             fn (Request $request) => $request->is('api/*') || $request->expectsJson(),
         );
+
+        // "Sayfa bulunamadı" yerine arama: bilinmeyen adres veya bulunamayan/gizli ürün, kategori, yayınevi, sayfa
+        // adresteki kelimelerle aranır (ör. /urun/tyt-matematk → /ara?q=tyt matematk). Yönetim, dosya ve JSON hariç.
+        $exceptions->render(function (NotFoundHttpException $e, Request $request) {
+            $route = $request->route()?->getName();
+            if (! $request->isMethod('GET') || $request->expectsJson() || $request->is('yonetim', 'yonetim/*')
+                || str_contains(basename($request->path()), '.')
+                || ($route !== null && ! in_array($route, ['category.show', 'publisher.show', 'product.show', 'page.show'], true))) {
+                return null;
+            }
+            $words = trim(preg_replace('/[^\pL\pN]+/u', ' ', urldecode((string) collect($request->segments())->last())));
+
+            return redirect()->route('search', $words !== '' ? ['q' => mb_substr($words, 0, 100)] : []);
+        });
     })->create();

@@ -1,6 +1,6 @@
 {{-- SSS: solda 3D soru işareti (resources/js/scenes/faq.js), sağda 3D açılan kartlar. Sorular blok ayarlarından. --}}
 @php($items = collect($block->setting('items', []))->filter(fn ($i) => ! empty($i['q']) && ! empty($i['a']))->values())
-<section class="container-page reveal py-10 sm:py-14">
+<section id="sss" class="container-page reveal scroll-mt-40 py-10 sm:py-14">
     <div class="grid items-center gap-6 lg:grid-cols-[0.9fr_1.4fr] lg:gap-12">
         <div class="relative text-center lg:sticky lg:top-24 lg:text-left">
             <div data-scene="faq" class="relative mx-auto h-48 max-w-xs sm:h-56 lg:mx-0 lg:h-72 lg:max-w-none">

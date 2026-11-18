@@ -25,12 +25,17 @@
             @endisset
             <div class="min-w-0 flex-1">
                 <h1 class="text-2xl font-extrabold sm:text-3xl">{{ $heading }}</h1>
-                @if ($products)
+                @if ($products && ($searchMode ?? null) !== 'none')
                     <p class="mt-1 text-sm text-muted">{{ number_format($products->total(), 0, ',', '.') }} ürün</p>
                 @endif
                 @if ($description)<p class="mt-3 max-w-3xl text-[15px] text-muted">{{ $description }}</p>@endif
             </div>
         </div>
+
+        {{-- Site geneli arama: düzeltme notu ve sayfa/kategori/yayınevi/yazar/SSS sonuçları --}}
+        @isset($searchOthers)
+            @include('store.catalog.search-results')
+        @endisset
 
         @php($chipList = $children->isNotEmpty() ? $children : ($chips ?? collect()))
         @if ($chipList->isNotEmpty())

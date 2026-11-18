@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Store;
 
 use App\Domain\Catalog\CategoryTree;
 use App\Domain\Catalog\ProductListing;
+use App\Domain\Search\SiteSearch;
 use App\Http\Controllers\Controller;
 use App\Models\Category;
 use App\Models\Product;
@@ -20,7 +21,7 @@ class CatalogController extends Controller
 {
     public const LETTERS = ['A', 'B', 'C', 'Ç', 'D', 'E', 'F', 'G', 'H', 'I', 'İ', 'J', 'K', 'L', 'M', 'N', 'O', 'Ö', 'P', 'R', 'S', 'Ş', 'T', 'U', 'Ü', 'V', 'Y', 'Z', '#'];
 
-    public function __construct(private ProductListing $listing, private CategoryTree $tree) {}
+    public function __construct(private ProductListing $listing, private CategoryTree $tree, private SiteSearch $site) {}
 
     public function category(Request $request, Category $category): View
     {
@@ -108,9 +109,12 @@ class CatalogController extends Controller
     public function search(Request $request): View
     {
         $q = trim(mb_substr((string) $request->query('q'), 0, 100));
-        $base = $this->listing->base(null, null, $q);
-        $products = $this->listing->paginate($this->listing->sort($this->listing->filter(clone $base, $request), $request->query('sirala'), $q));
         $isSearch = ProductListing::terms($q) !== [];
+        // Site geneli arama: tam eşleşme → yazım düzeltmesi → herhangi bir kelime → çok satanlar (asla boş sayfa yok)
+        $found = $this->site->products($q);
+        $base = $found['query'];
+        $sort = $found['mode'] === 'none' && ! $request->filled('sirala') ? 'cok-satan' : $request->query('sirala');
+        $products = $this->listing->paginate($this->listing->sort($this->listing->filter(clone $base, $request), $sort, $found['used']));
 
         return view('store.catalog.listing', [
             'heading' => $isSearch ? '“'.$q.'” için sonuçlar' : 'Tüm ürünler',
@@ -123,42 +127,38 @@ class CatalogController extends Controller
             'metaTitle' => $isSearch ? $q.' araması' : 'Tüm ürünler',
             'metaDescription' => null,
             'noindex' => $isSearch,
+            'searchMode' => $isSearch ? $found['mode'] : null,
+            'searchUsed' => $found['used'],
+            'searchOthers' => $isSearch ? $this->site->others($q, 8) : null,
         ]);
     }
 
-    /** Anlık arama paneli (header). Sonuçlar 5 dakika önbellekte. */
     public function suggest(Request $request): JsonResponse
     {
         $q = trim(mb_substr((string) $request->query('q'), 0, 100));
         $terms = ProductListing::terms($q);
+        $empty = ['products' => [], 'categories' => [], 'publishers' => [], 'authors' => [], 'pages' => [], 'faq' => [], 'total' => 0, 'mode' => 'none', 'used' => ''];
         if ($terms === []) {
-            return response()->json(['products' => [], 'publishers' => [], 'categories' => [], 'total' => 0, 'all_url' => route('search')]);
+            // Kutu boşken: hızlı erişim (site bölümleri ve popüler kategoriler)
+            return response()->json($empty + ['quick' => $this->site->quick(), 'all_url' => route('search')]);
         }
 
-        $data = Cache::remember('search.suggest.'.md5(implode(' ', $terms)), 300, function () use ($q, $terms) {
-            $query = $this->listing->base(null, null, $q);
-            $total = (clone $query)->count();
-            $products = $this->listing->sort($query, 'onerilen', $q)->with('publisher:id,name')->limit(6)->get()->map(fn ($p) => [
-                'title' => $p->title,
-                'url' => route('product.show', $p),
-                'image' => $p->imageUrl('sm'),
-                'meta' => $p->publisher?->name,
-                'price' => ($t = $p->defaultPrintType()) ? Money::format($p->price($t)) : null,
-            ])->all();
-            $like = fn (string $col) => function ($w) use ($col, $terms) {
-                foreach ($terms as $t) {
-                    $w->where($col, 'like', '%'.$t.'%');
-                }
-            };
-            $publishers = Publisher::active()->where($like('match_key'))->orderBy('name')->limit(4)->get()
-                ->map(fn ($p) => ['title' => $p->name, 'url' => route('publisher.show', $p), 'image' => $p->logoUrl()])->all();
-            $categories = Category::active()->whereIn('id', $this->tree->visibleIds())->where($like('normalized_name'))->orderBy('depth')->limit(4)->get()
-                ->map(fn ($c) => ['title' => $c->fullName(), 'url' => route('category.show', $c)])->all();
+        $data = Cache::remember('search.suggest2.'.md5(implode(' ', $terms)), 300, function () use ($q) {
+            $found = $this->site->products($q);
+            $total = $found['mode'] === 'none' ? 0 : (clone $found['query'])->count();
+            $products = $found['mode'] === 'none' ? [] : $this->listing->sort($found['query'], 'onerilen', $found['used'])
+                ->with('publisher:id,name')->limit(6)->get()->map(fn ($p) => [
+                    'title' => $p->title,
+                    'url' => route('product.show', $p),
+                    'image' => $p->imageUrl('sm'),
+                    'meta' => $p->publisher?->name,
+                    'price' => ($t = $p->defaultPrintType()) ? Money::format($p->price($t)) : null,
+                ])->all();
 
-            return ['products' => $products, 'publishers' => $publishers, 'categories' => $categories, 'total' => $total];
+            return ['products' => $products, 'total' => $total, 'mode' => $found['mode'], 'used' => $found['used']] + $this->site->others($q, 4);
         });
 
-        return response()->json($data + ['all_url' => route('search', ['q' => $q])]);
+        return response()->json($data + ['quick' => null, 'all_url' => route('search', ['q' => $q])]);
     }
 
     private static function initial(string $name): string

@@ -75,6 +75,7 @@ whatsapp|WhatsApp ile|HIZLI DESTEK',
         // Kategori menüsü (header'daki "Tüm kategoriler" paneli; içinde yayında ürün olmayan kategori gösterilmez)
         'menu_all_label' => 'Tüm kategoriler',
         'menu_search_placeholder' => 'Kategori ara…',
+        'search_placeholder' => 'Kitap, yayınevi, yazar, kategori veya sayfa ara…', // header ve ana sayfa arama kutusu
         'menu_see_all' => 'Tümünü gör',
         'menu_no_match' => 'Eşleşen kategori yok.',
         'category_empty' => 'Bu kategoride henüz ürün yok.',
