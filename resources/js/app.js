@@ -171,6 +171,37 @@ const openFaqFromHash = () => {
 openFaqFromHash();
 window.addEventListener('hashchange', openFaqFromHash);
 
+// Yasal metin içindekiler: bulunulan bölüm vurgulanır, okunan oran çubukta ve yüzde olarak gösterilir
+const toc = document.querySelector('[data-toc]');
+const tocContent = document.querySelector('[data-toc-content]');
+if (toc && tocContent) {
+    const links = [...toc.querySelectorAll('[data-toc-link]')];
+    const heads = links.map((a) => document.getElementById(a.hash.slice(1))).filter(Boolean);
+    const bar = toc.querySelector('[data-toc-bar]');
+    const percent = toc.querySelector('[data-toc-percent]');
+    let ticking = false;
+    const update = () => {
+        ticking = false;
+        const offset = 160;
+        let active = 0;
+        heads.forEach((h, i) => {
+            if (h.getBoundingClientRect().top - offset <= 0) active = i;
+        });
+        links.forEach((a, i) => a.classList.toggle('is-active', i === active));
+        const box = tocContent.getBoundingClientRect();
+        const ratio = Math.min(1, Math.max(0, (offset - box.top) / Math.max(1, box.height - window.innerHeight + offset)));
+        if (bar) bar.style.width = `${Math.round(ratio * 100)}%`;
+        if (percent) percent.textContent = `${Math.round(ratio * 100)}%`;
+    };
+    window.addEventListener('scroll', () => {
+        if (!ticking) {
+            ticking = true;
+            requestAnimationFrame(update);
+        }
+    }, { passive: true });
+    update();
+}
+
 // Yazdırmada tüm açılır bölümler (SSS cevapları) açık çıkar; çıktıdan sonra eski hâline döner
 let printOpened = [];
 window.addEventListener('beforeprint', () => {

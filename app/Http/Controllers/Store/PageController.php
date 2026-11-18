@@ -39,9 +39,10 @@ class PageController extends Controller
 
         // Teslimat sayfası: güncel kurallardan özet kartlar
         if ($page->key === 'delivery') {
-            $districts = DeliveryDistrict::where('is_active', true)->get(['fee']);
+            $districts = DeliveryDistrict::where('is_active', true)->orderBy('name')->get(['name', 'fee']);
             $data['delivery'] = [
                 'districts' => $districts->count(),
+                'district_names' => $districts->pluck('name')->all(),
                 'fee_min' => $districts->min('fee'),
                 'fee_max' => $districts->max('fee'),
                 'min_order' => $rules->minOrder(),

@@ -102,10 +102,16 @@ class Page extends Model
             $id = 'bolum-'.(count($toc) + 1);
             $toc[] = ['id' => $id, 'title' => html_entity_decode(strip_tags($m[1]), ENT_QUOTES)];
 
-            return '<h2 id="'.$id.'">'.$m[1].'</h2>';
-        }, self::markdown((string) $this->body));
+            // "1. Taraflar" → numara rozeti ve başlık ayrı (görünüm için); numarasız başlık olduğu gibi
+            $inner = preg_match('/^(\d+)[.)]\s*(.+)$/su', $m[1], $n)
+                ? '<span class="legal-h2-num">'.$n[1].'</span><span class="legal-h2-text">'.$n[2].'</span>'
+                : $m[1];
 
-        return ['html' => new HtmlString($html), 'toc' => $toc];
+            return '<h2 id="'.$id.'">'.$inner.'</h2>';
+        }, self::markdown((string) $this->body));
+        $words = count(preg_split('/\s+/u', trim(strip_tags($html)), -1, PREG_SPLIT_NO_EMPTY));
+
+        return ['html' => new HtmlString($html), 'toc' => $toc, 'minutes' => max(1, (int) round($words / 200))];
     }
 
     /**

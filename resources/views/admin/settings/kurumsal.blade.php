@@ -109,6 +109,25 @@
                 <x-field name="delivery_card_pay" label="Teslimat sayfası: ödeme kartı" :value="$s['delivery_card_pay']" />
                 <x-field name="delivery_card_pay_text" label="Ödeme kartı açıklaması" :value="$s['delivery_card_pay_text']" />
             </div>
+            <div class="grid gap-4 sm:grid-cols-3">
+                <x-field name="pages_doc_kicker" label="Yasal belge üst yazısı" :value="$s['pages_doc_kicker']" />
+                <x-field name="pages_meta_sections" label="Bölüm sayısı (:n)" :value="$s['pages_meta_sections']" />
+                <x-field name="pages_meta_reading" label="Okuma süresi (:n)" :value="$s['pages_meta_reading']" />
+                <x-field name="pages_prev" label="Önceki belge" :value="$s['pages_prev']" />
+                <x-field name="pages_next" label="Sonraki belge" :value="$s['pages_next']" />
+                <x-field name="help_kicker" label="Yardım sayfası üst yazısı" :value="$s['help_kicker']" />
+                <x-field name="faq_kicker" label="SSS üst yazısı" :value="$s['faq_kicker']" />
+                <x-field name="faq_meta_questions" label="SSS soru sayısı (:n)" :value="$s['faq_meta_questions']" />
+                <x-field name="faq_meta_groups" label="SSS konu sayısı (:n)" :value="$s['faq_meta_groups']" />
+            </div>
+            <x-field name="faq_lead" label="SSS kısa açıklama (başlık altında)" :value="$s['faq_lead']" />
+            <x-field name="delivery_lead" label="Teslimat ve İade kısa açıklama (başlık altında)" :value="$s['delivery_lead']" />
+            <div class="grid gap-4 sm:grid-cols-2">
+                <x-field name="delivery_card_slots" label="Teslimat saatleri kartı" :value="$s['delivery_card_slots']" />
+                <x-field name="delivery_card_slots_text" label="Teslimat saatleri kartı açıklaması" :value="$s['delivery_card_slots_text']" />
+            </div>
+            <x-field name="delivery_highlights" type="textarea" rows="4" label="Teslimat ve İade: öne çıkanlar" :value="$s['delivery_highlights']" help="Her satır: simge|Başlık|Açıklama. Boşsa şerit gösterilmez." />
+            <p class="field-help">Bölüm sayısı, okuma süresi ve soru sayısı metinden hesaplanır; “:n” yerine sayı yazılır. Boş bırakılan bilgi gösterilmez.</p>
             <p class="field-help">SSS sayfasında “# Grup adı” satırı soru grubu, “## Soru” satırı soru başlatır; altına cevap yazılır.</p>
         </fieldset>
 

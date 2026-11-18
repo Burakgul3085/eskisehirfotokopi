@@ -1363,6 +1363,217 @@
 }
 
 /* Yazdırma: yalnız sayfa içeriği */
+.info-hero-grid {
+    background-image: radial-gradient(rgb(255 255 255 / 0.07) 1px, transparent 1px);
+    background-size: 22px 22px;
+    mask-image: linear-gradient(100deg, transparent 20%, #000 75%);
+}
+.info-hero-icon {
+    display: flex;
+    width: 3.75rem;
+    height: 3.75rem;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    border-radius: 1.25rem;
+    background: linear-gradient(145deg, rgb(255 255 255 / 0.14), rgb(255 255 255 / 0.04));
+    color: var(--color-accent);
+    box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.16), 0 18px 40px -18px rgb(0 0 0 / 0.6);
+}
+.info-hero-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    border-radius: 9999px;
+    background: rgb(255 255 255 / 0.08);
+    padding: 0.375rem 0.8rem;
+    color: rgb(255 255 255 / 0.85);
+    box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.13);
+}
+.info-hero-action {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    border-radius: 0.9rem;
+    background: rgb(255 255 255 / 0.08);
+    padding: 0.7rem 1.05rem;
+    font-size: 0.875rem;
+    font-weight: 700;
+    color: #fff;
+    box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.16);
+    backdrop-filter: blur(8px);
+    transition: background-color 0.15s ease, color 0.15s ease;
+}
+@media (max-width: 639px) { .info-hero-icon { display: none; } }
+.info-hero-action:hover { background: var(--color-accent); color: var(--color-ink); }
+
+/* Yasal belge kartı ve tipografisi */
+.legal-doc {
+    position: relative;
+    border-radius: 1.75rem;
+    border: 1px solid var(--color-line);
+    background: #fff;
+    padding: 1.5rem;
+    box-shadow: 0 30px 60px -45px rgb(15 23 42 / 0.35);
+}
+@media (min-width: 640px) { .legal-doc { padding: 2.75rem 3.25rem; } }
+.legal-doc::before {
+    content: "";
+    position: absolute;
+    inset: 0 2rem auto;
+    height: 3px;
+    border-radius: 0 0 3px 3px;
+    background: linear-gradient(90deg, var(--color-primary), var(--color-accent));
+}
+.prose-legal h2 { display: flex; align-items: center; gap: 0.75rem; }
+.legal-h2-num {
+    display: inline-flex;
+    min-width: 2rem;
+    height: 2rem;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    border-radius: 0.7rem;
+    background: var(--color-primary-soft);
+    padding: 0 0.4rem;
+    font-size: 0.875rem;
+    font-weight: 800;
+    color: var(--color-primary-dark);
+}
+.prose-legal p > strong:first-child { color: var(--color-primary-dark); font-variant-numeric: tabular-nums; }
+.prose-legal a { color: var(--color-primary); font-weight: 600; text-decoration: underline; text-decoration-color: color-mix(in oklab, var(--color-primary) 35%, transparent); text-underline-offset: 3px; }
+.prose-legal a:hover { text-decoration-color: currentColor; }
+.prose-legal tbody tr:nth-child(even) { background: color-mix(in oklab, var(--color-surface) 60%, #fff); }
+
+/* Yardım metni: numaralı adımlar zaman çizelgesi */
+.prose-help ol { list-style: none; padding-left: 0; counter-reset: step; }
+.prose-help ol > li { position: relative; counter-increment: step; margin: 0; min-height: 3.75rem; padding: 0.3rem 0 1.25rem 3.25rem; }
+.prose-help ol > li::before {
+    content: counter(step);
+    position: absolute;
+    left: 0;
+    top: 0.1rem;
+    display: flex;
+    width: 2.25rem;
+    height: 2.25rem;
+    align-items: center;
+    justify-content: center;
+    border-radius: 9999px;
+    background: var(--color-primary);
+    font-weight: 800;
+    font-size: 0.875rem;
+    color: #fff;
+    box-shadow: 0 0 0 5px var(--color-primary-soft);
+}
+.prose-help ol > li:not(:last-child)::after {
+    content: "";
+    position: absolute;
+    left: 1.075rem;
+    top: 2.65rem;
+    bottom: 0.15rem;
+    width: 2px;
+    border-radius: 2px;
+    background: color-mix(in oklab, var(--color-primary) 30%, transparent);
+}
+
+/* İçindekiler: okuma ilerlemesi ve bulunulan bölüm */
+.info-toc { border-radius: 1.5rem; border: 1px solid var(--color-line); background: #fff; padding: 1.25rem; }
+.info-toc-progress { margin-top: 0.75rem; height: 4px; overflow: hidden; border-radius: 9999px; background: var(--color-surface); }
+.info-toc-progress > span { display: block; height: 100%; width: 0; border-radius: inherit; background: linear-gradient(90deg, var(--color-primary), var(--color-accent)); transition: width 0.15s linear; }
+.info-toc-list { max-height: calc(100vh - 26rem); overflow-y: auto; scrollbar-width: thin; }
+.info-toc-link.is-active { background: var(--color-primary-soft); color: var(--color-primary-dark); font-weight: 600; }
+.info-toc-link.is-active .info-toc-num { background: var(--color-primary); color: #fff; }
+
+/* Önceki / sonraki belge */
+.legal-pager {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    border-radius: 1.25rem;
+    border: 1px solid var(--color-line);
+    background: #fff;
+    padding: 1rem 1.25rem;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
+}
+.legal-pager:hover { border-color: color-mix(in oklab, var(--color-primary) 40%, transparent); box-shadow: 0 18px 40px -28px rgb(15 23 42 / 0.45); transform: translateY(-2px); }
+.legal-pager-icon {
+    display: flex;
+    width: 2.5rem;
+    height: 2.5rem;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    border-radius: 9999px;
+    background: var(--color-surface);
+    color: var(--color-primary);
+    transition: background-color 0.15s ease, color 0.15s ease;
+}
+.legal-pager:hover .legal-pager-icon { background: var(--color-primary); color: #fff; }
+
+/* SSS: büyük arama, çipler, konu başlıkları, soru kartları */
+.faq-search { position: relative; display: block; max-width: 40rem; }
+.faq-search-input {
+    width: 100%;
+    border: 0;
+    border-radius: 1.25rem;
+    background: #fff;
+    padding: 1.05rem 1.25rem 1.05rem 3.4rem;
+    font-size: 1rem;
+    color: var(--color-ink);
+    box-shadow: 0 25px 50px -25px rgb(0 0 0 / 0.65), 0 0 0 4px rgb(255 255 255 / 0.1);
+    outline: none;
+}
+.faq-search-input:focus { box-shadow: 0 25px 50px -25px rgb(0 0 0 / 0.65), 0 0 0 4px color-mix(in oklab, var(--color-accent) 55%, transparent); }
+.faq-chips { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 2rem; }
+.faq-chip-count { border-radius: 9999px; background: #fff; padding: 0 0.45rem; font-size: 0.7rem; font-weight: 700; color: var(--color-muted); }
+.faq-group-icon {
+    display: flex;
+    width: 2.5rem;
+    height: 2.5rem;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    border-radius: 0.9rem;
+    background: var(--color-primary-soft);
+    color: var(--color-primary);
+}
+.faq-group-line { height: 1px; flex: 1; background: var(--color-line); }
+.info-faq {
+    overflow: hidden;
+    border-radius: 1.25rem;
+    border: 1px solid var(--color-line);
+    background: #fff;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+.info-faq:hover { border-color: color-mix(in oklab, var(--color-primary) 30%, transparent); }
+.info-faq[open] { border-color: color-mix(in oklab, var(--color-primary) 35%, transparent); box-shadow: 0 22px 45px -32px rgb(15 23 42 / 0.45), inset 3px 0 0 var(--color-primary); }
+.info-faq-answer { padding: 0 1.5rem 1.35rem 4.6rem; color: color-mix(in oklab, var(--color-ink) 80%, transparent); line-height: 1.75; }
+@media (max-width: 639px) { .info-faq-answer { padding: 0 1.25rem 1.25rem; } }
+
+/* Teslimat: saat aralıkları ve öne çıkanlar şeridi */
+.delivery-slot { display: flex; align-items: center; gap: 0.75rem; border-radius: 0.85rem; border: 1px dashed var(--color-line); padding: 0.6rem 0.85rem; font-size: 0.9rem; font-weight: 700; }
+.delivery-highlights {
+    display: grid;
+    gap: 1rem;
+    border-radius: 1.5rem;
+    padding: 1.25rem;
+    background: linear-gradient(135deg, color-mix(in oklab, var(--color-primary) 30%, #04121a), #04121a);
+}
+@media (min-width: 640px) { .delivery-highlights { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (min-width: 1280px) { .delivery-highlights { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+.delivery-highlights > li { display: flex; align-items: center; gap: 0.85rem; }
+.delivery-highlight-icon {
+    display: flex;
+    width: 2.75rem;
+    height: 2.75rem;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    border-radius: 0.9rem;
+    background: var(--color-accent);
+    color: var(--color-ink);
+}
+
 .info-letterhead { align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 9mm; padding-bottom: 4mm; border-bottom: 1.5pt solid #0f172a; font-size: 8.5pt; line-height: 1.45; color: #475569; }
 .info-print-note { margin-top: 10mm; padding-top: 3mm; border-top: 0.75pt solid #94a3b8; font-size: 8pt; line-height: 1.5; color: #475569; }
 
@@ -1394,6 +1605,17 @@
     /* Kartlar ve SSS: gölgesiz ince çerçeve, bölünmeden */
     .info-card { box-shadow: none !important; border: 0.75pt solid #94a3b8 !important; border-radius: 3mm !important; break-inside: avoid; }
     .info-card-icon { display: none !important; }
+    .legal-doc::before { display: none; }
+    /* Bu sınıflar katmansız olduğu için print:hidden yardımcı sınıfını ezer; burada açıkça gizlenir */
+    .info-hero-icon, .info-hero-fact, .info-hero-grid, .faq-search, .faq-chips, .faq-group-icon, .delivery-highlights, .legal-pager { display: none !important; }
+    .legal-doc { border: 0 !important; border-radius: 0 !important; padding: 0 !important; box-shadow: none !important; }
+    .info-hero-pill { background: none !important; box-shadow: none !important; padding: 0 !important; color: #475569 !important; }
+    .info-hero-pill svg { display: none; }
+    .legal-h2-num { background: none !important; color: #0f172a !important; min-width: 0; padding: 0; height: auto; font-size: inherit; }
+    .legal-h2-num::after { content: "."; }
+    .prose-legal p > strong:first-child { color: #0f172a; }
+    .prose-help ol > li::before { background: none !important; color: #0f172a; box-shadow: 0 0 0 1pt #0f172a; }
+    .info-faq { border: 0 !important; border-bottom: 0.75pt solid #cbd5e1 !important; border-radius: 0 !important; box-shadow: none !important; }
     .info-faq { break-inside: avoid; page-break-inside: avoid; }
     .info-faq summary { padding: 3mm 0 1mm !important; font-size: 10.5pt; }
     .info-faq summary > span:last-child { display: none !important; }
