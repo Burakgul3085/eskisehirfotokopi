@@ -183,6 +183,21 @@ printer|Belge baskısı|Belgeni yükle, biz basalım', // simge|Başlık|Açıkl
         'delivery_card_pay' => 'Kapıda ödeme',
         'delivery_card_pay_text' => 'Ödemeyi teslimatta yaparsınız; internette kart bilgisi istenmez.',
         // Hakkımızda sayfası
+        'about_kicker' => 'Hakkımızda',
+        'about_scene' => '1',                // karşılamada 3D marka sahnesi (kapalıysa fotoğraf ya da düz marka işareti)
+        'about_hero_points' => "check|Eskişehir içi kapıya teslim\ncheck|Kapıda nakit veya kartla ödeme\ncheck|Belgeni yükle, biz basalım",
+        'about_quote' => 'Her siparişi, kendi siparişimizmiş gibi özenle hazırlıyoruz.',
+        'about_quote_author' => 'Ekibimiz',
+        'about_services_kicker' => 'Ne yapıyoruz',
+        'about_services_title' => 'Hizmetlerimiz',
+        'about_services' => "book|Kitap ve yayın|Sınav hazırlık, ders ve okuma kitapları; yayınevlerine göre düzenli katalog.|/urunler\nprinter|Fotokopi ve baskı|PDF ya da Word belgenizi yükleyin; kâğıt, renk ve cilt seçeneğiyle basalım.|/fotokopi\npackage|Kırtasiye|Okul ve ofis malzemeleri; dönem başı listeleri için toplu hazırlık.|/urunler\ntruck|Kapıya teslim|Eskişehir içinde kendi aracımızla, seçtiğiniz saat aralığında.|/sayfa/teslimat-ve-iade",
+        'about_steps_kicker' => 'Nasıl çalışıyoruz',
+        'about_steps_title' => 'Siparişten kapınıza dört adım',
+        'about_steps' => "search|Seçin|Kitabınızı bulun ya da belgenizi yükleyin.\ncart|Sipariş verin|Teslimat saatini seçin; kart bilgisi gerekmez.\nprinter|Hazırlayalım|Ürünleriniz paketlenir, belgeleriniz basılır.\ntruck|Kapınızda|Kendi aracımızla getirir, ödemeyi teslimatta alırız.",
+        'about_testimonials_kicker' => 'Müşterilerimiz',
+        'about_testimonials_title' => 'Bizim için ne dediler?',
+        'about_testimonials' => null,         // "Ad|Bilgi (ör. Veli)|Yorum" satırları; boşsa bölüm gösterilmez
+        'about_info_title' => 'Mağazamız',
         'about_title' => 'Eskişehir\'in kitap ve baskı adresi',
         'about_lead' => 'Kitap, soru bankası ve belge baskısında hızlı, güvenilir ve uygun fiyatlı hizmet. Siparişiniz kapınıza gelir, ödemenizi teslimatta yaparsınız.',
         'about_image_path' => null,

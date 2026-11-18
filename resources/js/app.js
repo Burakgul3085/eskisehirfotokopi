@@ -117,6 +117,7 @@ const sceneLoaders = {
     'publisher-carousel': () => import('./scenes/publisher-carousel.js'),
     'print-banner': () => import('./scenes/print-banner.js'),
     faq: () => import('./scenes/faq.js'),
+    about: () => import('./scenes/about.js'),
     contact: () => import('./scenes/contact.js'),
     auth: () => import('./scenes/auth.js'),
     'not-found': () => import('./scenes/not-found.js'),
@@ -200,6 +201,30 @@ if (toc && tocContent) {
         }
     }, { passive: true });
     update();
+}
+
+// Rakam sayaçları (Hakkımızda): ekrana gelince 0'dan hedef değere sayar; hareketi azalt tercihinde dokunulmaz
+const counters = document.querySelectorAll('[data-count-to]');
+if (counters.length && 'IntersectionObserver' in window && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    const fmt = new Intl.NumberFormat('tr-TR');
+    const countObserver = new IntersectionObserver((entries) => {
+        entries.forEach(({ isIntersecting, target }) => {
+            if (!isIntersecting) return;
+            countObserver.unobserve(target);
+            const to = Number(target.dataset.countTo) || 0;
+            const start = performance.now();
+            const tick = (now) => {
+                const p = Math.min(1, (now - start) / 1400);
+                target.textContent = fmt.format(Math.round(to * (1 - Math.pow(1 - p, 3))));
+                if (p < 1) requestAnimationFrame(tick);
+            };
+            target.textContent = '0';
+            requestAnimationFrame(tick);
+            // Arka planda çizim durursa bile son değer kesin yazılır
+            setTimeout(() => (target.textContent = fmt.format(to)), 1600);
+        });
+    }, { threshold: 0.4 });
+    counters.forEach((el) => countObserver.observe(el));
 }
 
 // Yazdırmada tüm açılır bölümler (SSS cevapları) açık çıkar; çıktıdan sonra eski hâline döner

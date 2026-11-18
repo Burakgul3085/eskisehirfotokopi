@@ -285,6 +285,11 @@ class SettingsController extends Controller
     {
         $text = fn (int $max) => ['nullable', 'string', 'max:'.$max];
         $data = $request->validate([
+            'about_kicker' => $text(40), 'about_scene' => ['nullable', 'in:0,1'], 'about_hero_points' => $text(600),
+            'about_quote' => $text(300), 'about_quote_author' => $text(80), 'about_info_title' => $text(60),
+            'about_services_kicker' => $text(40), 'about_services_title' => $text(80), 'about_services' => $text(2000),
+            'about_steps_kicker' => $text(40), 'about_steps_title' => $text(80), 'about_steps' => $text(1500),
+            'about_testimonials_kicker' => $text(40), 'about_testimonials_title' => $text(80), 'about_testimonials' => $text(3000),
             'about_title' => $text(120), 'about_lead' => $text(400), 'about_badge' => $text(60),
             'about_founded' => ['nullable', 'integer', 'min:1900', 'max:'.now()->year],
             'about_primary_button' => $text(40), 'about_secondary_button' => $text(40),

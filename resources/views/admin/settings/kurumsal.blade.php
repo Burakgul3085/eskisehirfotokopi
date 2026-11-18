@@ -6,8 +6,23 @@
 
         <fieldset class="space-y-4 rounded-xl border border-line p-4">
             <legend class="px-1 text-sm font-semibold">Hakkımızda › Üst bölüm</legend>
-            <x-field name="about_title" label="Başlık" :value="$s['about_title']" />
+            <div class="grid gap-4 sm:grid-cols-[1fr_2fr]">
+                <x-field name="about_kicker" label="Üst yazı" :value="$s['about_kicker']" />
+                <x-field name="about_title" label="Başlık" :value="$s['about_title']" />
+            </div>
             <x-field name="about_lead" type="textarea" rows="2" label="Kısa tanıtım" :value="$s['about_lead']" />
+            <x-field name="about_hero_points" type="textarea" rows="3" label="Başlık altındaki maddeler" :value="$s['about_hero_points']" help="Her satır: simge|Yazı (ör. check|Kapıda ödeme). Boşsa gösterilmez." />
+            <div>
+                <span class="field-label">Sağ taraf</span>
+                <div class="flex flex-wrap gap-3">
+                    @foreach (['1' => '3D marka sahnesi', '0' => 'Mağaza fotoğrafı (yoksa marka işareti)'] as $v => $l)
+                        <label class="flex items-center gap-2 rounded-xl border border-line px-4 py-2.5 text-sm has-checked:border-primary has-checked:bg-primary-soft">
+                            <input type="radio" name="about_scene" value="{{ $v }}" @checked(old('about_scene', $s['about_scene']) === (string) $v) class="accent-primary"> {{ $l }}
+                        </label>
+                    @endforeach
+                </div>
+                <p class="field-help">3D sahne seçiliyken fotoğraf “Hikâyemiz” bölümünde gösterilir. Hareketi azaltmayı seçen ya da 3D desteklemeyen cihazlarda düz marka işareti çıkar.</p>
+            </div>
             <div class="grid gap-4 sm:grid-cols-2">
                 <x-field name="about_primary_button" label="Birinci buton (ürünlere gider)" :value="$s['about_primary_button']" />
                 <x-field name="about_secondary_button" label="İkinci buton (iletişime gider)" :value="$s['about_secondary_button']" />
@@ -52,12 +67,32 @@
                 <x-field name="about_values_kicker" label="Değerler: üst yazı" :value="$s['about_values_kicker']" />
                 <x-field name="about_values_title" label="Değerler: başlık" :value="$s['about_values_title']" />
             </div>
+            <div class="grid gap-4 sm:grid-cols-[2fr_1fr]">
+                <x-field name="about_quote" label="Hikâye altındaki alıntı" :value="$s['about_quote']" />
+                <x-field name="about_quote_author" label="Alıntının sahibi" :value="$s['about_quote_author']" />
+            </div>
+            <x-field name="about_info_title" label="Mağaza kartı başlığı (çalışma saatleri kartı)" :value="$s['about_info_title']" />
             <x-field name="about_values" type="textarea" rows="3" label="Değer kartları" :value="$s['about_values']" help="Her satır: simge|Başlık|Açıklama. Simgeler: target, eye, heart, star, shield, book, truck, printer, cash, users, chat, home." />
             <div class="grid gap-4 sm:grid-cols-2">
                 <x-field name="about_features_kicker" label="Farkımız: üst yazı" :value="$s['about_features_kicker']" />
                 <x-field name="about_features_title" label="Farkımız: başlık" :value="$s['about_features_title']" />
             </div>
             <x-field name="about_features" type="textarea" rows="4" label="Farkımız kartları" :value="$s['about_features']" help="Her satır: simge|Başlık|Açıklama." />
+            <div class="grid gap-4 sm:grid-cols-2">
+                <x-field name="about_services_kicker" label="Hizmetler: üst yazı" :value="$s['about_services_kicker']" />
+                <x-field name="about_services_title" label="Hizmetler: başlık" :value="$s['about_services_title']" />
+            </div>
+            <x-field name="about_services" type="textarea" rows="4" label="Hizmet kartları" :value="$s['about_services']" help="Her satır: simge|Başlık|Açıklama|Bağlantı (ör. /fotokopi; bağlantı isteğe bağlı)." />
+            <div class="grid gap-4 sm:grid-cols-2">
+                <x-field name="about_steps_kicker" label="Adımlar: üst yazı" :value="$s['about_steps_kicker']" />
+                <x-field name="about_steps_title" label="Adımlar: başlık" :value="$s['about_steps_title']" />
+            </div>
+            <x-field name="about_steps" type="textarea" rows="4" label="Çalışma adımları" :value="$s['about_steps']" help="Her satır: simge|Başlık|Açıklama. Sırayla numaralanır." />
+            <div class="grid gap-4 sm:grid-cols-2">
+                <x-field name="about_testimonials_kicker" label="Yorumlar: üst yazı" :value="$s['about_testimonials_kicker']" />
+                <x-field name="about_testimonials_title" label="Yorumlar: başlık" :value="$s['about_testimonials_title']" />
+            </div>
+            <x-field name="about_testimonials" type="textarea" rows="4" label="Müşteri yorumları" :value="$s['about_testimonials']" placeholder="Ayşe K.|Veli|Kitaplar ertesi gün kapımızdaydı." help="Her satır: Ad|Bilgi|Yorum. Yalnız gerçek müşteri yorumlarını, izinleriyle ekleyin. Boşsa bölüm gösterilmez." />
             <div class="grid gap-4 sm:grid-cols-2">
                 <x-field name="about_milestones_kicker" label="Zaman çizelgesi: üst yazı" :value="$s['about_milestones_kicker']" />
                 <x-field name="about_milestones_title" label="Zaman çizelgesi: başlık" :value="$s['about_milestones_title']" />
