@@ -146,6 +146,13 @@ printer|Belge baskısı|Belgeni yükle, biz basalım', // simge|Başlık|Açıkl
         'done_help_title' => 'Sorunuz mu var?',
         'done_help_text' => 'WhatsApp üzerinden bize yazın.',
 
+        // Bulunamadı (404) sayfası; arama metninde :q aranan kelimeyle değişir
+        'notfound_kicker' => 'Hata 404',
+        'notfound_title' => 'Aradığınızı',
+        'notfound_accent' => 'bulamadık.',
+        'notfound_text' => 'Bu sayfa taşınmış ya da hiç var olmamış olabilir. Aşağıdan arayın ya da popüler bölümlere göz atın.',
+        'notfound_search_text' => ':q için ürün, kategori ya da sayfa bulamadık. Farklı bir kelime, yazar adı veya ISBN deneyin.',
+
         // Hesabım sayfaları (üst etiket ve sayfa açıklamaları)
         'account_kicker' => 'Hesabım',
         'account_overview_text' => 'Siparişlerinizi, adreslerinizi ve hesap bilgilerinizi buradan yönetin.',

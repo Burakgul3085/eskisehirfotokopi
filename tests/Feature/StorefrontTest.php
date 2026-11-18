@@ -146,7 +146,12 @@ class StorefrontTest extends TestCase
         $this->get('/ara?q=kpss+zzqx')->assertOk()->assertSee('KPSS Tarih Denemeleri')->assertSee('en az birini');
         // Site bölümleri ve SSS de aranır; ürün yoksa çok satanlar gösterilir
         $this->get('/ara?q=kargo')->assertOk()->assertSee('Sipariş takibi')->assertSee('En çok tercih edilenler')->assertSee('TYT Matematik Soru Bankası');
-        $this->get('/ara?q=asdfgh')->assertOk()->assertSee('En çok tercih edilenler');
+        // Hiçbir şey bulunamazsa 3D sahneli 404 sayfası (arama kutusu, hızlı erişim, çok satanlar)
+        Product::where('title', 'TYT Matematik Soru Bankası')->update(['image_key' => 'abc123']);
+        $this->get('/ara?q=asdfgh')->assertNotFound()->assertSee('data-scene="not-found"', false)->assertSee('“asdfgh”', false)
+            ->assertSee('Aradığınızı')->assertSee('En çok tercih edilenler')->assertSee('TYT Matematik Soru Bankası');
+        Settings::put(['notfound_title' => 'Burada bir şey yok']);
+        $this->get('/ara?q=asdfgh')->assertNotFound()->assertSee('Burada bir şey yok');
         // Boş kutu: hızlı erişim
         $this->getJson('/ara/oneri?q=')->assertOk()->assertJsonStructure(['quick' => ['sections', 'categories']]);
         $this->getJson('/ara/oneri?q=iletişim')->assertOk()->assertJsonPath('pages.0.url', route('contact'));
@@ -154,7 +159,9 @@ class StorefrontTest extends TestCase
         // Bulunamayan kayıt ve bilinmeyen adres hata yerine aramaya yönlenir
         $this->get('/urun/tyt-matematk')->assertRedirect(route('search', ['q' => 'tyt matematk']));
         $this->get('/kategori/yok-boyle')->assertRedirect(route('search', ['q' => 'yok boyle']));
-        $this->get('/boyle-bir-sayfa/kimya-kitabi')->assertRedirect(route('search', ['q' => 'kimya kitabi']));
+        $this->get('/boyle-bir-sayfa/kimya-kitabi')->assertNotFound()->assertSee('data-scene="not-found"', false);
+        $this->get('/urun/zzqxw-yyy')->assertRedirect(route('search', ['q' => 'zzqxw yyy']));
+        $this->get(route('search', ['q' => 'zzqxw yyy']))->assertNotFound();
         $this->get('/yonetim/olmayan')->assertNotFound();
         $this->get('/olmayan.pdf')->assertNotFound();
     }

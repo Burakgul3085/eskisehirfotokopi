@@ -30,7 +30,7 @@
     {{-- Arama sonuçları --}}
     <div x-show="hasQuery">
         <p x-show="isCorrected" x-text="correctionLabel" class="mx-3 mt-3 rounded-xl bg-accent-soft px-3 py-2 text-xs font-semibold text-accent-ink"></p>
-        <p x-show="isEmpty" class="px-4 py-8 text-center text-sm text-muted">Eşleşen sonuç bulunamadı. Enter'a basın; size en yakın sonuçları ve önerileri gösterelim.</p>
+        <p x-show="isEmpty" class="px-4 py-8 text-center text-sm text-muted">Eşleşen sonuç bulunamadı. Farklı bir kelime, yazar adı veya ISBN deneyin.</p>
 
         {{-- İki sütun yalnız hem ürün hem diğer sonuç varken: md:grid-cols-[1.35fr_1fr] --}}
         <div class="grid gap-x-2 p-2" x-bind:class="gridClass">

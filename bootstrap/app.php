@@ -39,13 +39,13 @@ return Application::configure(basePath: dirname(__DIR__))
             fn (Request $request) => $request->is('api/*') || $request->expectsJson(),
         );
 
-        // "Sayfa bulunamadı" yerine arama: bilinmeyen adres veya bulunamayan/gizli ürün, kategori, yayınevi, sayfa
-        // adresteki kelimelerle aranır (ör. /urun/tyt-matematk → /ara?q=tyt matematk). Yönetim, dosya ve JSON hariç.
+        // Bulunamayan/gizli ürün, kategori, yayınevi ve sayfa adresteki kelimelerle aranır (ör. /urun/tyt-matematk →
+        // /ara?q=tyt matematk); arama da bir şey bulamazsa 404 sayfası. Diğer bilinmeyen adresler doğrudan 404 sayfası.
         $exceptions->render(function (NotFoundHttpException $e, Request $request) {
             $route = $request->route()?->getName();
             if (! $request->isMethod('GET') || $request->expectsJson() || $request->is('yonetim', 'yonetim/*')
                 || str_contains(basename($request->path()), '.')
-                || ($route !== null && ! in_array($route, ['category.show', 'publisher.show', 'product.show', 'page.show'], true))) {
+                || ! in_array($route, ['category.show', 'publisher.show', 'product.show', 'page.show'], true)) {
                 return null;
             }
             $words = trim(preg_replace('/[^\pL\pN]+/u', ' ', urldecode((string) collect($request->segments())->last())));

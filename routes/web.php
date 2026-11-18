@@ -94,3 +94,6 @@ Route::middleware('store.open')->group(function () {
         Route::post('/favori/{product}', [FavoriteController::class, 'toggle'])->name('favorites.toggle');
     });
 });
+
+// Bilinmeyen adres: oturumlu web isteği olarak 3D'li 404 sayfası (resources/views/errors/404.blade.php)
+Route::fallback(fn () => abort(404));

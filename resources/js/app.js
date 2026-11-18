@@ -98,6 +98,7 @@ const sceneLoaders = {
     faq: () => import('./scenes/faq.js'),
     contact: () => import('./scenes/contact.js'),
     auth: () => import('./scenes/auth.js'),
+    'not-found': () => import('./scenes/not-found.js'),
     'footer-wave': () => import('./scenes/footer-wave.js'),
 };
 const sceneRoots = document.querySelectorAll('[data-scene]');

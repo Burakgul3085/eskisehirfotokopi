@@ -7,10 +7,13 @@ use App\Domain\Import\Ocr\OcrEngine;
 use App\Domain\Import\Ocr\TesseractEngine;
 use App\Domain\Print\PrintCart;
 use App\Domain\Print\PrintOwner;
+use App\Domain\Search\SiteSearch;
+use App\Models\Product;
 use App\Support\Settings;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\Paginator;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
@@ -74,7 +77,18 @@ class AppServiceProvider extends ServiceProvider
         RateLimiter::for('customer-register', fn (Request $r) => Limit::perHour(10)->by('ip:'.$r->ip()));
         RateLimiter::for('password-email', fn (Request $r) => [Limit::perMinute(3)->by('ip:'.$r->ip()), Limit::perHour(5)->by('email:'.mb_strtolower((string) $r->input('email')))]);
 
-        View::composer(['components.layouts.*', 'components.account-layout', 'store.*', 'admin.*', 'auth.*', 'account.*'], function ($view) {
+        View::composer(['errors.404', 'errors::404'], function ($view) {
+            $quick = rescue(fn () => app(SiteSearch::class)->quick(), ['sections' => [], 'categories' => []], false);
+            // Önbellekte yalnız kimlikler (model nesnesi önbelleğe yazılmaz)
+            $products = rescue(function () {
+                $ids = Cache::remember('notfound.products', 600, fn () => Product::visible()->whereNotNull('image_key')->orderByDesc('sales_count')->limit(12)->pluck('id')->all());
+
+                return Product::visible()->whereIn('id', $ids)->with('publisher:id,name,slug')->orderByDesc('sales_count')->get();
+            }, collect(), false);
+            $view->with('notFound', $quick + ['products' => $products]);
+        });
+
+        View::composer(['components.layouts.*', 'components.account-layout', 'errors.*', 'errors::*', 'store.*', 'admin.*', 'auth.*', 'account.*'], function ($view) {
             $view->with('settings', Settings::all());
         });
     }

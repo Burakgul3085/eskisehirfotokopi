@@ -125,6 +125,17 @@
                      help="Geniş ekranda panelin altında. Her satır: simge|Başlık|Açıklama (ör. truck|Kapınıza teslim|Eskişehir içi). Boşsa gizlenir." />
         </fieldset>
         <fieldset class="space-y-3 rounded-xl border border-line p-4">
+            <legend class="px-1 text-sm font-semibold">Bulunamadı (404) sayfası</legend>
+            <p class="field-help">Olmayan adreslerde ve hiçbir sonuç vermeyen aramalarda gösterilir (3D büyüteç sahneli).</p>
+            <div class="grid gap-5 sm:grid-cols-3">
+                <x-field name="notfound_kicker" label="Üst etiket" :value="$s['notfound_kicker']" />
+                <x-field name="notfound_title" label="Başlık" :value="$s['notfound_title']" />
+                <x-field name="notfound_accent" label="Başlığın renkli kısmı" :value="$s['notfound_accent']" />
+            </div>
+            <x-field name="notfound_text" label="Açıklama (olmayan adres)" :value="$s['notfound_text']" />
+            <x-field name="notfound_search_text" label="Açıklama (sonuçsuz arama)" :value="$s['notfound_search_text']" help=":q yerine aranan kelime yazılır." />
+        </fieldset>
+        <fieldset class="space-y-3 rounded-xl border border-line p-4">
             <legend class="px-1 text-sm font-semibold">Hesabım sayfaları</legend>
             <p class="field-help">Üye girişinden sonra görülen sayfaların üst etiketi ve başlık altı açıklamaları. Boş bırakılan açıklama gizlenir.</p>
             <div class="grid gap-5 sm:grid-cols-2">

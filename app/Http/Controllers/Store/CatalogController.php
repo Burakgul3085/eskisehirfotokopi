@@ -13,6 +13,7 @@ use App\Support\Money;
 use App\Support\Text;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\View\View;
 
@@ -106,12 +107,16 @@ class CatalogController extends Controller
     }
 
     /** Arama sonuçları; sorgu boşsa tüm ürünler (/urunler). */
-    public function search(Request $request): View
+    public function search(Request $request): View|Response
     {
         $q = trim(mb_substr((string) $request->query('q'), 0, 100));
         $isSearch = ProductListing::terms($q) !== [];
-        // Site geneli arama: tam eşleşme → yazım düzeltmesi → herhangi bir kelime → çok satanlar (asla boş sayfa yok)
+        // Site geneli arama: tam eşleşme → yazım düzeltmesi → herhangi bir kelime; hiçbir şey yoksa 404 sayfası
         $found = $this->site->products($q);
+        $others = $isSearch ? $this->site->others($q, 8) : null;
+        if ($isSearch && $found['mode'] === 'none' && collect($others)->flatten(1)->isEmpty()) {
+            return response()->view('errors.404', ['search' => $q], 404);
+        }
         $base = $found['query'];
         $sort = $found['mode'] === 'none' && ! $request->filled('sirala') ? 'cok-satan' : $request->query('sirala');
         $products = $this->listing->paginate($this->listing->sort($this->listing->filter(clone $base, $request), $sort, $found['used']));
@@ -129,7 +134,7 @@ class CatalogController extends Controller
             'noindex' => $isSearch,
             'searchMode' => $isSearch ? $found['mode'] : null,
             'searchUsed' => $found['used'],
-            'searchOthers' => $isSearch ? $this->site->others($q, 8) : null,
+            'searchOthers' => $others,
         ]);
     }
 
