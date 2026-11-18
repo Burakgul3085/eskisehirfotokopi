@@ -138,6 +138,13 @@ printer|Belge baskısı|Belgeni yükle, biz basalım', // simge|Başlık|Açıkl
         'cart_print_text' => 'PDF veya Word dosyanızı yükleyin, fiyatı görün, siparişinize ekleyelim.',
         'cart_payment_title' => 'Ödeme seçenekleri',
 
+        // Sipariş onayı sayfası
+        'done_title' => 'Siparişiniz alındı',
+        'done_text' => 'Teşekkür ederiz! Siparişinizi hazırlamaya başlıyoruz; teslimat zamanında kapınızdayız.',
+        'done_note' => 'Siparişinizin durumunu sipariş numaranız ve telefonunuzla dilediğiniz zaman takip edebilirsiniz.',
+        'done_help_title' => 'Sorunuz mu var?',
+        'done_help_text' => 'WhatsApp üzerinden bize yazın.',
+
         // Giriş / üye ol sayfalarının sol paneli (avantajlar: simge|Başlık|Açıklama, her satır bir madde)
         'auth_panel_kicker' => 'Hesabınız',
         'auth_panel_title' => 'Kitabınız bir tık',

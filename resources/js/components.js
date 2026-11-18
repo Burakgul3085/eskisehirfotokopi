@@ -737,3 +737,28 @@ export function mobileCategories() {
         },
     };
 }
+
+/** Metin kopyalama düğmesi: data-copy değerini panoya yazar, kısa süre data-done yazısını gösterir. */
+export function copyText() {
+    return {
+        copied: false,
+        idle: '',
+        doneText: '',
+        init() {
+            // Yazılar şablondan: düğmenin ilk metni ve data-done
+            const btn = this.$el.querySelector('[data-copy]');
+            this.idle = btn?.querySelector('[x-text]')?.textContent.trim() || '';
+            this.doneText = btn?.dataset.done || this.idle;
+        },
+        get label() {
+            return this.copied ? this.doneText : this.idle;
+        },
+        copy(event) {
+            const value = event.currentTarget.dataset.copy || '';
+            navigator.clipboard?.writeText(value).then(() => {
+                this.copied = true;
+                setTimeout(() => (this.copied = false), 1800);
+            }).catch(() => {});
+        },
+    };
+}

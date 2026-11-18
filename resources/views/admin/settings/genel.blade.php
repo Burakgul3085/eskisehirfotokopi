@@ -100,6 +100,18 @@
             </div>
         </fieldset>
         <fieldset class="space-y-3 rounded-xl border border-line p-4">
+            <legend class="px-1 text-sm font-semibold">Sipariş onayı sayfası</legend>
+            <div class="grid gap-5 sm:grid-cols-2">
+                <x-field name="done_title" label="Başlık" :value="$s['done_title']" />
+                <x-field name="done_text" label="Başlık altı yazı" :value="$s['done_text']" />
+            </div>
+            <x-field name="done_note" label="Takip notu" :value="$s['done_note']" help="E-posta bilgisinin yanında görünür." />
+            <div class="grid gap-5 sm:grid-cols-2">
+                <x-field name="done_help_title" label="WhatsApp kartı başlığı" :value="$s['done_help_title']" />
+                <x-field name="done_help_text" label="WhatsApp kartı yazısı" :value="$s['done_help_text']" help="WhatsApp numarası girilmişse görünür." />
+            </div>
+        </fieldset>
+        <fieldset class="space-y-3 rounded-xl border border-line p-4">
             <legend class="px-1 text-sm font-semibold">Giriş ve üyelik paneli</legend>
             <p class="field-help">Giriş yap, üye ol ve parola sayfalarındaki 3D kilitli koyu panel.</p>
             <div class="grid gap-5 sm:grid-cols-3">

@@ -92,7 +92,8 @@ class OrderTest extends TestCase
         $this->assertSame(1, $order->history()->count());
         Event::assertDispatched(OrderPlaced::class);
 
-        $this->get(route('checkout.done', $order))->assertOk()->assertSee($order->number);
+        $this->get(route('checkout.done', $order))->assertOk()->assertSee($order->number)
+            ->assertSee('done-check', false)->assertSee('x-data="copyText"', false)->assertSee('Alındı');
         $this->get(route('cart.index'))->assertSee('Sepetiniz şu an boş');
     }
 
