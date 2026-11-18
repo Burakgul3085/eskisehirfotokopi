@@ -57,35 +57,29 @@
                 @if ($logo)
                     <img src="{{ $logo }}" alt="{{ $settings['site_name'] }}" class="h-9 w-auto transition duration-500 group-hover/brand:scale-105 sm:h-12">
                 @else
-                    {{-- Kodla çizilmiş 3D logo: kalınlıklı kutu, yazıcı ve içinden çıkan sayfa, geçen ışık; üzerine gelince eğilir --}}
-                    <span class="brand-mark relative block size-11 shrink-0 sm:size-12" aria-hidden="true">
-                        <span class="brand-depth absolute inset-0 rounded-[0.95rem]"></span>
-                        <span class="brand-face absolute inset-0 overflow-hidden rounded-[0.95rem]">
-                            <svg viewBox="0 0 48 48" class="absolute inset-0 size-full">
-                                <g class="brand-sheet">
-                                    <rect x="16" y="8" width="16" height="18" rx="2" class="fill-white"/>
-                                    <rect x="18.8" y="11.5" width="7" height="2" rx="1" class="brand-accent"/>
-                                    <rect x="18.8" y="15.2" width="10.4" height="1.5" rx=".75" class="brand-line"/>
-                                    <rect x="18.8" y="18.4" width="8.4" height="1.5" rx=".75" class="brand-line"/>
-                                </g>
-                                <rect x="10" y="21" width="28" height="13" rx="4.5" class="brand-body"/>
-                                <rect x="10" y="21" width="28" height="3.6" rx="1.8" class="brand-body-top"/>
-                                <rect x="14" y="28.6" width="20" height="2.2" rx="1.1" class="brand-slot"/>
-                                <circle cx="33.6" cy="25.2" r="1.5" class="brand-led brand-accent"/>
-                                <path d="M16 31h16l-1.4 9.2a1.6 1.6 0 0 1-1.6 1.3H19a1.6 1.6 0 0 1-1.6-1.3Z" class="brand-out"/>
-                                <rect x="19.4" y="34.2" width="6.4" height="1.5" rx=".75" class="fill-white"/>
-                                <path d="M39.5 9.5l.9 2.1 2.1.9-2.1.9-.9 2.1-.9-2.1-2.1-.9 2.1-.9Z" class="brand-star"/>
-                            </svg>
-                            <span class="brand-shine absolute inset-0"></span>
-                        </span>
-                    </span>
+                    {{-- Logo: düz renkli iki sayfa (fotokopi = kopya) ve ön sayfadaki satırlardan oluşan "E" harfi.
+                         Gradyansız, kurumsal işaret; üzerine gelince sayfalar hafifçe ayrılır. --}}
+                    <svg viewBox="0 0 40 40" class="brand-mark size-10 shrink-0 sm:size-11" aria-hidden="true">
+                        <path class="brand-back" d="M14 3h15.5a4 4 0 0 1 4 4v22.5a4 4 0 0 1-4 4H14a4 4 0 0 1-4-4V7a4 4 0 0 1 4-4Z"/>
+                        <g class="brand-front">
+                            <path class="brand-sheet" d="M8.5 9h14.2L29 15.3V33a4 4 0 0 1-4 4H8.5a4 4 0 0 1-4-4V13a4 4 0 0 1 4-4Z"/>
+                            <path class="brand-fold" d="M22.7 9v4.3a2 2 0 0 0 2 2H29Z"/>
+                            <rect class="brand-ink" x="10" y="19" width="3" height="13" rx="1.5"/>
+                            <rect class="brand-ink" x="10" y="19" width="13" height="3" rx="1.5"/>
+                            <rect class="brand-ink" x="10" y="24" width="9.5" height="3" rx="1.5"/>
+                            <rect class="brand-ink" x="10" y="29" width="13" height="3" rx="1.5"/>
+                        </g>
+                    </svg>
                     @php($nameWords = preg_split('/\s+/u', trim($settings['site_name'])))
                     @php($nameLast = count($nameWords) > 1 ? array_pop($nameWords) : null)
-                    <span class="hidden leading-tight sm:block">
-                        <span class="block font-display text-xl font-extrabold tracking-tight text-ink">
-                            {{ implode(' ', $nameWords) }}@if ($nameLast) <span class="brand-word">{{ $nameLast }}</span>@endif
-                        </span>
-                        @if ($settings['site_tagline'])<span class="header-tagline hidden max-w-72 truncate text-[11px] font-bold tracking-wide text-primary xl:block">{{ $settings['site_tagline'] }}</span>@endif
+                    {{-- Yazı: üstte ad, altta son kelime aralıklı büyük harf (ör. ESKİŞEHİR / FOTOKOPİ) --}}
+                    <span class="brand-type hidden sm:block">
+                        <span class="block font-display text-[1.4rem] leading-none font-extrabold tracking-[-0.02em] text-ink">{{ implode(' ', $nameWords) }}</span>
+                        @if ($nameLast)
+                            <span class="mt-1 flex items-center gap-2 text-[0.68rem] leading-none font-bold tracking-[0.34em] text-primary uppercase">
+                                <span class="brand-rule h-[2px] w-4 rounded-full bg-accent"></span>{{ $nameLast }}
+                            </span>
+                        @endif
                     </span>
                 @endif
             </a>

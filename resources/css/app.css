@@ -372,63 +372,17 @@
     100% { transform: translateX(100%); }
 }
 
-/* 3D logo: kalınlıklı parlak kutu (alt katman derinlik), içinde yazıcı; sayfa periyodik olarak çıkar,
-   üzerinden ışık geçer, gösterge yanıp söner. Üzerine gelince kutu eğilir, sayfa tamamen çıkar. */
-.brand-mark {
-    transform-style: preserve-3d;
-    transition: transform 0.6s cubic-bezier(0.2, 0.8, 0.2, 1);
-    transform-origin: left center;
-}
-.brand-depth {
-    background: linear-gradient(160deg, var(--color-primary-dark), color-mix(in oklab, var(--color-primary) 45%, #04121a));
-    transform: translate3d(0, 4px, 0);
-    box-shadow: 0 12px 22px -10px color-mix(in oklab, var(--color-primary) 80%, #04121a);
-    transition: transform 0.6s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.6s ease;
-}
-.brand-face {
-    background:
-        radial-gradient(120% 80% at 20% 0%, color-mix(in oklab, var(--color-primary) 55%, white), transparent 60%),
-        linear-gradient(150deg, color-mix(in oklab, var(--color-primary) 85%, white), var(--color-primary) 50%, var(--color-primary-dark));
-    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.45), inset 0 -2px 3px rgb(0 0 0 / 0.2);
-    transition: transform 0.6s cubic-bezier(0.2, 0.8, 0.2, 1);
-}
-.brand-face svg { filter: drop-shadow(0 2px 2px rgb(0 0 0 / 0.18)); }
-.brand-body { fill: color-mix(in oklab, white 88%, var(--color-primary)); }
-.brand-body-top { fill: #ffffff; }
-.brand-slot { fill: color-mix(in oklab, var(--color-primary) 55%, #04121a); }
-.brand-out { fill: var(--color-accent); }
-.brand-star { fill: #fff7d6; animation: brand-star 3s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
-@keyframes brand-star { 0%, 100% { opacity: 0.35; transform: scale(0.7) rotate(0deg); } 50% { opacity: 1; transform: scale(1.15) rotate(45deg); } }
-.brand-accent { fill: var(--color-accent); }
-.brand-line { fill: #cbd5e1; }
-.brand-sheet { animation: brand-sheet 6s cubic-bezier(0.4, 0, 0.2, 1) infinite; }
-.brand-led { animation: brand-led 2.4s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
-.brand-shine {
-    background: linear-gradient(115deg, transparent 35%, rgb(255 255 255 / 0.55) 48%, transparent 60%);
-    transform: translate3d(-120%, 0, 0);
-    animation: brand-shine 6s ease-in-out infinite;
-    mix-blend-mode: soft-light;
-}
-.brand-word {
-    background: linear-gradient(100deg, var(--color-primary) 0%, color-mix(in oklab, var(--color-primary) 55%, var(--color-accent)) 55%, var(--color-accent) 100%);
-    background-size: 200% 100%;
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
-    animation: brand-word 8s ease-in-out infinite;
-}
-.header-brand:hover .brand-mark { transform: perspective(320px) rotateX(14deg) rotateY(-18deg); }
-.header-brand:hover .brand-face { transform: translate3d(0, -2px, 0); }
-.header-brand:hover .brand-depth { transform: translate3d(2px, 6px, 0); box-shadow: 0 18px 26px -10px color-mix(in oklab, var(--color-primary) 80%, #04121a); }
-.header-brand:hover .brand-sheet { animation-duration: 1.6s; }
-@keyframes brand-sheet {
-    0%, 12% { transform: translateY(12px); }
-    30%, 70% { transform: translateY(0); }
-    88%, 100% { transform: translateY(12px); }
-}
-@keyframes brand-led { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
-@keyframes brand-shine { 0%, 60% { transform: translate3d(-120%, 0, 0); } 85%, 100% { transform: translate3d(120%, 0, 0); } }
-@keyframes brand-word { 0%, 100% { background-position: 0 0; } 50% { background-position: 100% 0; } }
+/* Logo: düz kurumsal işaret. Arka sayfa vurgu rengi, ön sayfa ana renk, "E" beyaz.
+   Tek hareket: üzerine gelince sayfalar ters yönlere hafifçe kayar (kopya çıkıyormuş gibi). */
+.brand-back { fill: var(--color-accent); transition: transform 0.35s cubic-bezier(0.2, 0.8, 0.2, 1); }
+.brand-sheet { fill: var(--color-primary); }
+.brand-fold { fill: color-mix(in oklab, var(--color-primary) 55%, white); }
+.brand-ink { fill: #fff; }
+.brand-front { transition: transform 0.35s cubic-bezier(0.2, 0.8, 0.2, 1); }
+.header-brand:hover .brand-back { transform: translate(1.5px, -1.5px); }
+.header-brand:hover .brand-front { transform: translate(-1px, 1px); }
+.brand-rule { transition: width 0.35s cubic-bezier(0.2, 0.8, 0.2, 1); }
+.header-brand:hover .brand-rule { width: 1.5rem; }
 
 /* Arama: odakta parlayan çerçeve */
 .header-search form > input {
@@ -515,19 +469,14 @@
 
 @media (prefers-reduced-motion: reduce) {
     .header-announce::after, .cart-badge.cart-bump { animation: none; }
-    .brand-mark, .header-brand:hover .brand-mark, .mega-panel, .group:hover > .mega-panel { transform: none; transition: opacity 0.2s; }
-    .brand-sheet, .brand-led, .brand-shine, .brand-word, .brand-star { animation: none; }
+    .mega-panel, .group:hover > .mega-panel { transform: none; transition: opacity 0.2s; }
+    .brand-back, .brand-front, .brand-rule { transition: none; }
     .header-nav, .header-bar, .header-brand { transition: none; }
 }
 
 /* Kaydırınca logo hafifçe küçülür, slogan söner: yalnız transform/opacity (sayfa düzeni değişmez) */
 .header-brand { transform-origin: left center; transition: transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1); }
-.header-tagline { transition: opacity 0.3s ease; }
 .site-header[data-scrolled] .header-brand { transform: scale(0.94); }
-.site-header[data-scrolled] .header-tagline { opacity: 0; }
-@media (prefers-reduced-motion: reduce) {
-    .header-tagline { transition: none; }
-}
 
 /* ---- Ortak koyu zemin: karşılama, belge bandı ve alt bilgi aynı renk dilini kullanır ---- */
 .surface-deep {
