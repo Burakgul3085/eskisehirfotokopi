@@ -86,6 +86,17 @@
         <x-field name="checkout_consent" label="Sipariş onay kutusu metni" :value="$s['checkout_consent']" help="Altında Mesafeli Satış Sözleşmesi, KVKK ve Teslimat sayfalarının bağlantıları görünür." />
         <x-field name="register_consent" label="Üyelik onay kutusu metni" :value="$s['register_consent']" help="Altında Üyelik Koşulları ve KVKK sayfalarının bağlantıları görünür." />
         <fieldset class="space-y-3 rounded-xl border border-line p-4">
+            <legend class="px-1 text-sm font-semibold">Sepet sayfası</legend>
+            <div class="grid gap-5 sm:grid-cols-2">
+                <x-field name="cart_empty_title" label="Boş sepet başlığı" :value="$s['cart_empty_title']" />
+                <x-field name="cart_suggest_title" label="Öneri satırı başlığı" :value="$s['cart_suggest_title']" help="Sepetin altındaki ürün önerileri." />
+            </div>
+            <div class="grid gap-5 sm:grid-cols-2">
+                <x-field name="cart_steps" type="textarea" rows="3" label="Sipariş adımları" :value="$s['cart_steps']" help="Başlığın yanındaki adım göstergesi; her satır bir adım. Boşsa gizlenir." />
+                <x-field name="cart_trust" type="textarea" rows="3" label="Güven rozetleri" :value="$s['cart_trust']" help="Özetin altında. Her satır: simge|Başlık|Açıklama. Boşsa gizlenir." />
+            </div>
+        </fieldset>
+        <fieldset class="space-y-3 rounded-xl border border-line p-4">
             <legend class="px-1 text-sm font-semibold">Giriş ve üyelik paneli</legend>
             <p class="field-help">Giriş yap, üye ol ve parola sayfalarındaki 3D kilitli koyu panel.</p>
             <div class="grid gap-5 sm:grid-cols-3">

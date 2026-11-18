@@ -129,6 +129,12 @@ printer|Belge baskısı|Belgeni yükle, biz basalım', // simge|Başlık|Açıkl
         'checkout_consent' => 'Sipariş bilgilerimin teslimat için kullanılmasını ve satış koşullarını onaylıyorum.',
         'register_consent' => 'Üyelik koşullarını ve KVKK aydınlatma metnini okudum, kabul ediyorum.',
 
+        // Sepet sayfası (adımlar: her satır bir adım; güven rozetleri: simge|Başlık|Açıklama)
+        'cart_steps' => "Sepetim\nTeslimat ve ödeme\nSipariş onayı",
+        'cart_trust' => "shield|Güvenli alışveriş|Bilgileriniz korunur\ntruck|Kapıya teslim|Eskişehir içi hızlı teslimat\ncash|Kapıda ödeme|Nakit veya kartla ödeyin",
+        'cart_empty_title' => 'Sepetiniz şu an boş',
+        'cart_suggest_title' => 'Bunlar da ilginizi çekebilir',
+
         // Giriş / üye ol sayfalarının sol paneli (avantajlar: simge|Başlık|Açıklama, her satır bir madde)
         'auth_panel_kicker' => 'Hesabınız',
         'auth_panel_title' => 'Kitabınız bir tık',

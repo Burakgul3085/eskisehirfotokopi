@@ -52,14 +52,16 @@ class OrderTest extends TestCase
     public function test_cart_add_update_remove(): void
     {
         $this->post(route('cart.add'), ['product_id' => $this->book->id, 'print_type' => 'color', 'quantity' => 2])->assertSessionHas('status');
-        $this->get(route('cart.index'))->assertOk()->assertSee('TYT Matematik')->assertSee('520,00 ₺')->assertSee('Renkli');
+        $this->get(route('cart.index'))->assertOk()->assertSee('TYT Matematik')->assertSee('520,00 ₺')->assertSee('Renkli')
+            ->assertSee('aria-current="step"', false)->assertSee('Teslimat ve ödeme')
+            ->assertSee('name="quantity" value="3"', false)->assertSee('Güvenli alışveriş');
 
         $key = 'product:'.$this->book->id.':color';
         $this->patch(route('cart.update'), ['key' => $key, 'quantity' => 3]);
         $this->get(route('cart.index'))->assertSee('780,00 ₺');
 
         $this->delete(route('cart.remove'), ['key' => $key]);
-        $this->get(route('cart.index'))->assertSee('Sepetiniz boş');
+        $this->get(route('cart.index'))->assertSee('Sepetiniz şu an boş');
     }
 
     public function test_unpriced_or_hidden_product_cannot_be_added(): void
@@ -90,7 +92,7 @@ class OrderTest extends TestCase
         Event::assertDispatched(OrderPlaced::class);
 
         $this->get(route('checkout.done', $order))->assertOk()->assertSee($order->number);
-        $this->get(route('cart.index'))->assertSee('Sepetiniz boş');
+        $this->get(route('cart.index'))->assertSee('Sepetiniz şu an boş');
     }
 
     public function test_spiral_binding_adds_fixed_price_per_book(): void

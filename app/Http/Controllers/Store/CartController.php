@@ -22,9 +22,16 @@ class CartController extends Controller
     public function index(Cart $cart): View
     {
         $subtotal = $cart->subtotal();
+        $lines = $cart->lines();
+        // Öneri satırı: sepette olmayan, yayında ve görselli son ürünler
+        $inCart = collect($lines)->pluck('product.id')->filter()->all();
+        $suggestions = Product::query()->visible()->with('publisher:id,name,slug')
+            ->whereNotNull('image_key')->whereNotIn('id', $inCart)
+            ->latest('id')->limit(12)->get();
 
         return view('store.cart', [
-            'lines' => $cart->lines(),
+            'lines' => $lines,
+            'suggestions' => $suggestions,
             'subtotal' => $subtotal,
             'remaining' => $this->rules->remainingForFree($subtotal),
             'threshold' => $this->rules->freeThreshold(),
