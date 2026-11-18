@@ -181,8 +181,14 @@ class OrderTest extends TestCase
         $this->assertSame($user->id, $order->user_id);
         $this->assertSame($user->email, $order->email);
         $this->assertSame(1, $user->addresses()->count());
-        $this->get(route('account.orders'))->assertOk()->assertSee($order->number);
+        $this->get(route('account.orders'))->assertOk()->assertSee($order->number)->assertSee('account-steps', false)->assertSee('Takip et');
         $this->get(route('account.orders.show', $order))->assertOk();
+        // Genel bakış: özet, devam eden sipariş adımları; durum süzgeci; bilgiler sayfası
+        $this->get(route('account.index'))->assertOk()->assertSee('Devam eden siparişler')->assertSee($order->number)->assertSee('Merhaba,');
+        $this->get(route('account.orders', ['durum' => 'teslim']))->assertOk()->assertDontSee($order->number)->assertSee('Bu durumda siparişiniz yok.');
+        $order->update(['status' => 'delivered']);
+        $this->get(route('account.orders', ['durum' => 'teslim']))->assertOk()->assertSee($order->number)->assertSee('Tekrar al');
+        $this->get(route('account.settings'))->assertOk()->assertSee('Parola değiştir')->assertSee($user->email);
 
         $this->post(route('account.orders.reorder', $order))->assertRedirect(route('cart.index'));
         $this->get(route('cart.index'))->assertSee('TYT Matematik');

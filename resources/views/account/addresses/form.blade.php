@@ -1,10 +1,8 @@
-<x-layouts.store :title="$address->exists ? 'Adresi düzenle' : 'Yeni adres'" :noindex="true">
-    <div class="container-page max-w-2xl py-10">
-        <x-breadcrumb :items="[['Adreslerim', route('account.addresses.index')], [$address->exists ? 'Düzenle' : 'Yeni adres', null]]" />
-        <form method="post" action="{{ $address->exists ? route('account.addresses.update', $address) : route('account.addresses.store') }}" class="card mt-4 space-y-4 p-6 sm:p-8">
+<x-account-layout :title="$address->exists ? 'Adresi düzenle' : 'Yeni adres'" :text="$settings['account_addresses_text']">
+    <div class="max-w-2xl">
+        <form method="post" action="{{ $address->exists ? route('account.addresses.update', $address) : route('account.addresses.store') }}" class="card space-y-4 p-6 sm:p-8">
             @csrf
             @if ($address->exists) @method('put') @endif
-            <h1 class="text-2xl font-extrabold">{{ $address->exists ? 'Adresi düzenle' : 'Yeni adres' }}</h1>
             <x-field name="title" label="Adres başlığı" :value="$address->title" required placeholder="Ev, iş, yurt…" />
             <div class="grid gap-4 sm:grid-cols-2">
                 <x-field name="name" label="Teslim alacak kişi" :value="$address->name" required />
@@ -30,4 +28,4 @@
             </div>
         </form>
     </div>
-</x-layouts.store>
+</x-account-layout>

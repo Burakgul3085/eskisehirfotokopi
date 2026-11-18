@@ -82,6 +82,7 @@ Route::middleware('store.open')->group(function () {
     Route::middleware('auth:web')->group(function () {
         Route::post('/cikis', [CustomerAuthController::class, 'logout'])->name('logout');
         Route::get('/hesabim', [AccountController::class, 'index'])->name('account.index');
+        Route::get('/hesabim/bilgiler', [AccountController::class, 'settings'])->name('account.settings');
         Route::put('/hesabim/bilgiler', [AccountController::class, 'updateProfile'])->name('account.profile');
         Route::put('/hesabim/parola', [AccountController::class, 'updatePassword'])->name('account.password');
         Route::get('/hesabim/siparisler', [AccountOrderController::class, 'index'])->name('account.orders');

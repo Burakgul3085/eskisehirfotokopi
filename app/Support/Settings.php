@@ -146,6 +146,15 @@ printer|Belge baskısı|Belgeni yükle, biz basalım', // simge|Başlık|Açıkl
         'done_help_title' => 'Sorunuz mu var?',
         'done_help_text' => 'WhatsApp üzerinden bize yazın.',
 
+        // Hesabım sayfaları (üst etiket ve sayfa açıklamaları)
+        'account_kicker' => 'Hesabım',
+        'account_overview_text' => 'Siparişlerinizi, adreslerinizi ve hesap bilgilerinizi buradan yönetin.',
+        'account_orders_text' => 'Siparişlerinizin durumunu adım adım takip edin.',
+        'account_addresses_text' => 'Kayıtlı adresinizi siparişte tek tıkla seçin.',
+        'account_favorites_text' => 'Beğendiğiniz ürünler burada toplanır.',
+        'account_messages_text' => 'Bize yazdığınız mesajlar ve yanıtlarımız.',
+        'account_settings_text' => 'Ad, e-posta, telefon ve parolanızı güncelleyin.',
+
         // Giriş / üye ol sayfalarının sol paneli (avantajlar: simge|Başlık|Açıklama, her satır bir madde)
         'auth_panel_kicker' => 'Hesabınız',
         'auth_panel_title' => 'Kitabınız bir tık',

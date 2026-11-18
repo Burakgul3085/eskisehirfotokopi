@@ -124,6 +124,19 @@
             <x-field name="auth_panel_points" type="textarea" rows="3" label="Avantajlar" :value="$s['auth_panel_points']"
                      help="Geniş ekranda panelin altında. Her satır: simge|Başlık|Açıklama (ör. truck|Kapınıza teslim|Eskişehir içi). Boşsa gizlenir." />
         </fieldset>
+        <fieldset class="space-y-3 rounded-xl border border-line p-4">
+            <legend class="px-1 text-sm font-semibold">Hesabım sayfaları</legend>
+            <p class="field-help">Üye girişinden sonra görülen sayfaların üst etiketi ve başlık altı açıklamaları. Boş bırakılan açıklama gizlenir.</p>
+            <div class="grid gap-5 sm:grid-cols-2">
+                <x-field name="account_kicker" label="Üst etiket" :value="$s['account_kicker']" />
+                <x-field name="account_overview_text" label="Genel bakış" :value="$s['account_overview_text']" />
+                <x-field name="account_orders_text" label="Siparişlerim" :value="$s['account_orders_text']" />
+                <x-field name="account_addresses_text" label="Adreslerim" :value="$s['account_addresses_text']" />
+                <x-field name="account_favorites_text" label="Favorilerim" :value="$s['account_favorites_text']" />
+                <x-field name="account_messages_text" label="Mesajlarım" :value="$s['account_messages_text']" />
+                <x-field name="account_settings_text" label="Bilgilerim ve parola" :value="$s['account_settings_text']" />
+            </div>
+        </fieldset>
         <div class="flex justify-end"><button class="btn-primary">Kaydet</button></div>
     </form>
 </x-layouts.admin>

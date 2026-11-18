@@ -123,7 +123,7 @@
                                 {{ Settings::get('done_note', 'Siparişinizin durumunu sipariş numaranız ve telefonunuzla dilediğiniz zaman takip edebilirsiniz.') }}
                             </span>
                         </p>
-                        <a href="{{ $order->trackingUrl() }}" class="cart-checkout btn-primary w-full py-3"><x-icon name="truck" class="size-4" />Siparişi takip et</a>
+                        <a href="{{ $order->user_id && auth('web')->id() === $order->user_id ? route('account.orders.show', $order) : $order->trackingUrl() }}" class="cart-checkout btn-primary w-full py-3"><x-icon name="truck" class="size-4" />Siparişi takip et</a>
                         <a href="{{ route('home') }}" class="btn-ghost w-full py-3"><x-icon name="book" class="size-4" />Alışverişe devam et</a>
                     </div>
                     @if ($whatsapp)

@@ -15,9 +15,25 @@ class OrderController extends Controller
 {
     public function index(Request $request): View
     {
-        $orders = $request->user()->orders()->withCount('items')->latest()->paginate(15);
+        $filter = (string) $request->query('durum');
+        $base = fn () => $request->user()->orders();
+        $groups = [
+            'devam' => fn ($q) => $q->whereNotIn('status', ['delivered', 'cancelled']),
+            'teslim' => fn ($q) => $q->where('status', 'delivered'),
+            'iptal' => fn ($q) => $q->where('status', 'cancelled'),
+        ];
+        $query = $base()->with('items')->withCount('items');
+        if (isset($groups[$filter])) {
+            $groups[$filter]($query);
+        } else {
+            $filter = '';
+        }
 
-        return view('account.orders', ['orders' => $orders]);
+        return view('account.orders', [
+            'orders' => $query->paginate(10)->withQueryString(),
+            'filter' => $filter,
+            'counts' => ['' => $base()->count()] + array_map(fn ($g) => $g($base())->count(), $groups),
+        ]);
     }
 
     public function show(Request $request, Order $order): View

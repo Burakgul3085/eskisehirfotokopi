@@ -9,12 +9,32 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rules\Password as PasswordRule;
 use Illuminate\View\View;
 
-/** Hesabım: özet ve profil. Siparişler, adresler ve favoriler sonraki aşamalarda eklenir. */
+/** Hesabım: genel bakış paneli, bilgiler ve parola. */
 class AccountController extends Controller
 {
     public function index(Request $request): View
     {
-        return view('account.index', ['user' => $request->user()]);
+        $user = $request->user();
+        $open = fn () => $user->orders()->whereNotIn('status', ['delivered', 'cancelled']);
+
+        return view('account.index', [
+            'user' => $user,
+            'stats' => [
+                'orders' => $user->orders()->count(),
+                'open' => $open()->count(),
+                'favorites' => $user->favorites()->visible()->count(),
+                'addresses' => $user->addresses()->count(),
+            ],
+            // Devam eden siparişler adım çizelgesiyle en üstte; altında son siparişler
+            'active' => $open()->with('items')->limit(3)->get(),
+            'recent' => $user->orders()->withCount('items')->limit(5)->get(),
+            'favorites' => $user->favorites()->visible()->with('publisher:id,name,slug')->limit(5)->get(),
+        ]);
+    }
+
+    public function settings(Request $request): View
+    {
+        return view('account.settings', ['user' => $request->user()]);
     }
 
     public function updateProfile(Request $request): RedirectResponse
