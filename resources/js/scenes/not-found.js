@@ -143,4 +143,6 @@ export function mount(root) {
         waves.update(dt);
     });
     stage.start();
+    // Sahne hazır: yedek "404" yazısı söner, tuval görünür (app.css .hero-3d-ready)
+    (root.closest('section') || root).classList.add('hero-3d-ready');
 }

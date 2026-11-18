@@ -1074,8 +1074,6 @@
 /* ---- Bulunamadı (404) ---- */
 .nf-chip { display: inline-flex; align-items: center; gap: 0.5rem; border-radius: 9999px; padding: 0.55rem 1rem; font-size: 0.875rem; font-weight: 600; background: rgb(255 255 255 / 0.08); box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.16); backdrop-filter: blur(12px); transition: background-color 0.2s ease, transform 0.2s ease; }
 .nf-chip:hover, .nf-chip:focus-visible { background: rgb(255 255 255 / 0.18); transform: translateY(-2px); outline: none; }
-.nf-link { transition: background-color 0.18s ease; animation: account-rise 0.45s ease-out both; animation-delay: calc(var(--i, 0) * 50ms); }
-.nf-link:hover, .nf-link:focus-visible { background: var(--color-surface); outline: none; }
 .nf-fallback { animation: nf-bob 3.2s ease-in-out infinite; }
 @keyframes nf-bob { 50% { transform: translateY(-8px); } }
-@media (prefers-reduced-motion: reduce) { .nf-fallback, .nf-link { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .nf-fallback { animation: none; } }

@@ -56,6 +56,8 @@
             </div>
         @endif
 
+        {{-- Aramada eşleşen ürün yoksa ürün ızgarası (ve öneri) gösterilmez; yalnız eşleşen sayfa/kategori kartları --}}
+        @if (($searchMode ?? null) !== 'none')
         <div class="mt-6 grid gap-6 lg:grid-cols-[260px_1fr]">
             {{-- Filtreler: masaüstünde yan panel, mobilde açılır panel --}}
             @if ($facets)
@@ -176,5 +178,6 @@
                 @endif
             </div>
         </div>
+        @endif
     </div>
 </x-layouts.store>

@@ -13,22 +13,12 @@
     $hasOthers = collect($searchOthers)->flatten(1)->isNotEmpty();
 @endphp
 
-@if ($searchMode === 'corrected')
-    <p class="search-note mt-5 flex flex-wrap items-center gap-2 rounded-2xl bg-accent-soft px-4 py-3 text-sm text-accent-ink">
-        <x-icon name="alert" class="size-4 shrink-0" />
-        “{{ $search }}” için sonuç bulunamadı; <strong>“{{ $searchUsed }}”</strong> için sonuçlar gösteriliyor.
-    </p>
-@elseif ($searchMode === 'partial')
-    <p class="search-note mt-5 flex items-center gap-2 rounded-2xl bg-info-soft px-4 py-3 text-sm text-info">
-        <x-icon name="search" class="size-4 shrink-0" />
-        Tüm kelimeleri içeren ürün yok; kelimelerden en az birini içeren ürünler gösteriliyor.
-    </p>
-@elseif ($searchMode === 'none')
+@if ($searchMode === 'none')
     <div class="search-note mt-5 flex items-start gap-3 rounded-2xl border border-dashed border-line bg-white px-5 py-4 text-sm">
         <span class="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary-soft text-primary"><x-icon name="search" class="size-5" /></span>
         <span>
             <strong class="block text-ink">“{{ $search }}” ile eşleşen ürün yok.</strong>
-            <span class="text-muted">{{ $hasOthers ? 'Aşağıdaki sayfalara göz atın veya' : 'Farklı bir kelime, yazar adı ya da ISBN deneyin;' }} en çok tercih edilen ürünlerimizi inceleyin.</span>
+            <span class="text-muted">Aramanızla eşleşen sayfa ve bölümler aşağıda.</span>
         </span>
     </div>
 @endif
@@ -63,8 +53,4 @@
             </section>
         @endforeach
     </div>
-@endif
-
-@if ($searchMode === 'none')
-    <h2 class="mt-8 font-display text-xl font-extrabold">En çok tercih edilenler</h2>
 @endif

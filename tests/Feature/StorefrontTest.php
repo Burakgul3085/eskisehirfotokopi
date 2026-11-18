@@ -139,17 +139,17 @@ class StorefrontTest extends TestCase
 
     public function test_site_search_covers_everything_and_never_dead_ends(): void
     {
-        // Yazım hatası düzeltilir
-        $this->get('/ara?q=matemtik')->assertOk()->assertSee('TYT Matematik Soru Bankası')->assertSee('“matematik”', false);
-        $this->getJson('/ara/oneri?q=matemtik')->assertOk()->assertJsonPath('mode', 'corrected')->assertJsonPath('used', 'matematik');
-        // Kelimelerden biri tutarsa kısmi sonuç
-        $this->get('/ara?q=kpss+zzqx')->assertOk()->assertSee('KPSS Tarih Denemeleri')->assertSee('en az birini');
-        // Site bölümleri ve SSS de aranır; ürün yoksa çok satanlar gösterilir
-        $this->get('/ara?q=kargo')->assertOk()->assertSee('Sipariş takibi')->assertSee('En çok tercih edilenler')->assertSee('TYT Matematik Soru Bankası');
-        // Hiçbir şey bulunamazsa 3D sahneli 404 sayfası (arama kutusu, hızlı erişim, çok satanlar)
-        Product::where('title', 'TYT Matematik Soru Bankası')->update(['image_key' => 'abc123']);
+        // Yalnız gerçek eşleşme: yazım düzeltmesi ve "kelimelerden biri" eşleşmesi yok → 404 sayfası
+        $this->get('/ara?q=matematik')->assertOk()->assertSee('TYT Matematik Soru Bankası')->assertDontSee('KPSS Tarih Denemeleri');
+        $this->get('/ara?q=matemtik')->assertNotFound()->assertSee('data-scene="not-found"', false)->assertSee('“matemtik”', false);
+        $this->getJson('/ara/oneri?q=matemtik')->assertOk()->assertJsonPath('mode', 'none')->assertJsonCount(0, 'products');
+        $this->get('/ara?q=kpss+zzqx')->assertNotFound();
+        // Site bölümleri ve SSS de aranır; eşleşen ürün yoksa yalnız eşleşen bölümler (öneri ürün yok)
+        Product::where('title', 'TYT Matematik Soru Bankası')->update(['image_key' => 'abc123', 'sales_count' => 50]);
+        $this->get('/ara?q=kargo')->assertOk()->assertSee('Sipariş takibi')->assertDontSee('En çok tercih edilenler')->assertDontSee('TYT Matematik Soru Bankası');
+        // Hiçbir şey yoksa sade 404 sayfası: 3D sahne, başlık, arama kutusu, ana sayfa; öneri yok
         $this->get('/ara?q=asdfgh')->assertNotFound()->assertSee('data-scene="not-found"', false)->assertSee('“asdfgh”', false)
-            ->assertSee('Aradığınızı')->assertSee('En çok tercih edilenler')->assertSee('TYT Matematik Soru Bankası');
+            ->assertSee('Aradığınızı')->assertSee('Ana sayfaya dön')->assertDontSee('En çok tercih edilenler')->assertDontSee('TYT Matematik Soru Bankası');
         Settings::put(['notfound_title' => 'Burada bir şey yok']);
         $this->get('/ara?q=asdfgh')->assertNotFound()->assertSee('Burada bir şey yok');
         // Boş kutu: hızlı erişim

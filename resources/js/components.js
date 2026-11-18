@@ -323,12 +323,6 @@ export function liveSearch() {
         sideClass() {
             return this.hasProducts() ? 'md:border-l md:border-line md:pl-2' : '';
         },
-        isCorrected() {
-            return this.results.mode === 'corrected';
-        },
-        correctionLabel() {
-            return this.isCorrected() ? '“' + this.q.trim() + '” bulunamadı · “' + this.results.used + '” için sonuçlar' : '';
-        },
         isEmpty() {
             return !this.hasProducts() && !this.hasOthers();
         },

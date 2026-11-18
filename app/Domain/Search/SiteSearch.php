@@ -19,11 +19,8 @@ use Illuminate\Support\Str;
 
 /**
  * Site geneli arama: ürünler, kategoriler, yayınevleri, yazarlar, bilgi sayfaları, SSS ve site bölümleri
- * (sepet, fotokopi, sipariş takibi, iletişim…). Hiçbir arama boş dönmez:
- *   1) tüm kelimeler eşleşir → "exact"
- *   2) yazım hatası düzeltilir (sözlükteki en yakın kelime) → "corrected"
- *   3) kelimelerden herhangi biri eşleşir → "partial"
- *   4) hiçbiri yoksa çok satan ürünler önerilir → "none"
+ * (sepet, fotokopi, sipariş takibi, iletişim…). Yalnız gerçek eşleşme gösterilir: tüm kelimeleri içeren ürün varsa
+ * "exact", yoksa "none"; ürün dışı sonuç da yoksa arama 404 sayfasını gösterir (CatalogController@search).
  */
 class SiteSearch
 {
@@ -46,26 +43,7 @@ class SiteSearch
             return ['query' => $exact, 'mode' => 'exact', 'used' => $q];
         }
 
-        $fixed = $this->correct($q);
-        if ($fixed !== null) {
-            $corrected = $this->listing->base(null, null, $fixed);
-            if ((clone $corrected)->exists()) {
-                return ['query' => $corrected, 'mode' => 'corrected', 'used' => $fixed];
-            }
-        }
-
-        $useful = array_values(array_filter($terms, fn ($t) => mb_strlen($t) >= 3 || ctype_digit($t)));
-        if ($useful !== []) {
-            $any = Product::query()->visible()->where(function (Builder $w) use ($useful) {
-                foreach ($useful as $t) {
-                    $w->orWhere('search_text', 'like', '%'.$t.'%');
-                }
-            });
-            if ((clone $any)->exists()) {
-                return ['query' => $any, 'mode' => 'partial', 'used' => $q];
-            }
-        }
-
+        // Yalnız gerçek eşleşme: yazım düzeltmesi ve "kelimelerden biri" eşleşmesi yapılmaz
         return ['query' => Product::query()->visible(), 'mode' => 'none', 'used' => $q];
     }
 
@@ -80,13 +58,8 @@ class SiteSearch
         if ($terms === []) {
             return ['categories' => [], 'publishers' => [], 'authors' => [], 'pages' => [], 'faq' => []];
         }
-        $out = $this->collectOthers($terms, $limit);
-        // Hiçbir şey yoksa yazım düzeltmesiyle bir kez daha
-        if (array_sum(array_map('count', $out)) === 0 && ($fixed = $this->correct($q)) !== null) {
-            $out = $this->collectOthers(ProductListing::terms($fixed), $limit);
-        }
 
-        return $out;
+        return $this->collectOthers($terms, $limit);
     }
 
     /** Arama kutusu boşken gösterilen hızlı erişim: site bölümleri ve en dolu kategoriler. */
@@ -103,44 +76,6 @@ class SiteSearch
             return ['sections' => $sections, 'categories' => $categories];
         });
     }
-
-    /** Yazım düzeltmesi: eşleşmeyen her kelimeyi sitedeki en yakın kelimeyle değiştirir (değişiklik yoksa null). */
-    public function correct(string $q): ?string
-    {
-        $terms = ProductListing::terms($q);
-        if ($terms === []) {
-            return null;
-        }
-        $vocab = $this->vocabulary();
-        $changed = false;
-        foreach ($terms as $i => $term) {
-            if (ctype_digit($term) || mb_strlen($term) < 3 || $this->inVocabulary($term, $vocab)) {
-                continue;
-            }
-            $best = null;
-            $bestDistance = PHP_INT_MAX;
-            $max = strlen($term) <= 4 ? 1 : (strlen($term) <= 7 ? 2 : 3);
-            foreach ($vocab as $word) {
-                if (abs(strlen($word) - strlen($term)) > $max) {
-                    continue;
-                }
-                // Önek eşleşmesi (yarım yazılmış kelime) yazım hatasından önce gelir
-                $d = str_starts_with($word, $term) ? 0 : levenshtein($term, $word);
-                if ($d < $bestDistance || ($d === $bestDistance && strlen($word) < strlen((string) $best))) {
-                    $best = $word;
-                    $bestDistance = $d;
-                }
-            }
-            if ($best !== null && $bestDistance <= $max) {
-                $terms[$i] = $best;
-                $changed = true;
-            }
-        }
-
-        return $changed ? implode(' ', $terms) : null;
-    }
-
-    // ---------------------------------------------------------------------
 
     private function collectOthers(array $terms, int $limit): array
     {
@@ -201,38 +136,6 @@ class SiteSearch
         }
 
         return true;
-    }
-
-    private function inVocabulary(string $term, array $vocab): bool
-    {
-        foreach ($vocab as $word) {
-            if (str_contains($word, $term)) {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    /** Sitedeki kelimeler (ürün, kategori, yayınevi, yazar, sayfa, bölüm): yazım düzeltmesi için. */
-    private function vocabulary(): array
-    {
-        return Cache::remember('search.vocab', 600, function () {
-            $text = ' ';
-            Product::query()->visible()->select('id', 'search_text')->chunkById(500, function ($rows) use (&$text) {
-                foreach ($rows as $r) {
-                    $text .= $r->search_text.' ';
-                }
-            });
-            $text .= ' '.Category::active()->pluck('normalized_name')->implode(' ');
-            $text .= ' '.Publisher::active()->pluck('match_key')->implode(' ');
-            $text .= ' '.Author::query()->pluck('match_key')->implode(' ');
-            $text .= ' '.collect($this->sections())->pluck('key')->implode(' ');
-            $text .= ' '.collect($this->pageIndex())->pluck('key')->implode(' ');
-            $words = array_unique(array_filter(explode(' ', $text), fn ($w) => strlen($w) >= 3 && ! ctype_digit($w)));
-
-            return array_values(array_slice($words, 0, 30000));
-        });
     }
 
     /** Site bölümleri: anahtar kelimelerle (ör. "kargo" → Sipariş takibi, "yazdır" → Fotokopi). */
