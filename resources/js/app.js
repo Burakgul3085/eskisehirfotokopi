@@ -21,16 +21,43 @@ document.addEventListener('submit', (event) => {
 // Header: kaydırınca süzülen gölge, fareyi izleyen ışık, sepet sayısı değişince rozet zıplar
 const siteHeader = document.querySelector('[data-site-header]');
 if (siteHeader) {
-    // Eşikte titremesin diye iki ayrı sınır (header boyu değişince kaydırma konumu oynayabilir)
+    // Kaydırma: kare başına en çok bir güncelleme; öznitelik yalnız durum değişince yazılır.
+    // Header'ın boyu değişmez (üst bant header dışında doğal kayar), bu yüzden eşikte titreme olmaz.
+    const ticker = document.querySelector('.header-ticker');
+    const headerNav = siteHeader.querySelector('[data-header-nav]');
+    let tickerH = ticker ? ticker.offsetHeight : 0;
+    window.addEventListener('resize', () => (tickerH = ticker ? ticker.offsetHeight : 0), { passive: true });
+    let lastY = window.scrollY;
+    let scrolled = false;
+    let navHidden = false;
+    let scrollQueued = false;
+    const setState = (name, on) => siteHeader.toggleAttribute(name, on);
     const onScroll = () => {
-        const y = window.scrollY;
-        if (y > 40) {
-            siteHeader.toggleAttribute('data-scrolled', true);
-        } else if (y < 6) {
-            siteHeader.toggleAttribute('data-scrolled', false);
+        scrollQueued = false;
+        const y = Math.max(0, window.scrollY);
+        const wantScrolled = scrolled ? y > tickerH - 4 : y > tickerH + 12;
+        if (wantScrolled !== scrolled) {
+            scrolled = wantScrolled;
+            setState('data-scrolled', scrolled);
+        }
+        const dy = y - lastY;
+        if (Math.abs(dy) > 8 || y < tickerH + 200) {
+            // Aşağı inerken menüyü gizle (kategori paneli açıkken veya üstteyken gizleme), yukarı çıkınca göster
+            const busy = headerNav && headerNav.matches(':hover, :focus-within');
+            const wantHidden = dy > 0 && y > tickerH + 200 && !busy;
+            if (wantHidden !== navHidden) {
+                navHidden = wantHidden;
+                setState('data-nav-hidden', navHidden);
+            }
+            lastY = y;
         }
     };
-    window.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('scroll', () => {
+        if (!scrollQueued) {
+            scrollQueued = true;
+            requestAnimationFrame(onScroll);
+        }
+    }, { passive: true });
     onScroll();
     // Fare ışığı: kare başına en çok bir stil yazımı
     let headerX = 0;
