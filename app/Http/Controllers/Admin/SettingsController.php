@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Mail\SiteMail;
 use App\Models\Product;
 use App\Support\Activity;
+use App\Support\MapEmbed;
 use App\Support\Money;
 use App\Support\Settings;
 use Illuminate\Http\RedirectResponse;
@@ -82,21 +83,7 @@ class SettingsController extends Controller
                 'checkout_consent' => ['nullable', 'string', 'max:300'],
                 'register_consent' => ['nullable', 'string', 'max:300'],
             ]),
-            'iletisim' => $request->validate([
-                'phone' => ['nullable', 'string', 'max:30'],
-                'whatsapp' => ['nullable', 'regex:/^[0-9 +()-]{10,20}$/'],
-                'email' => ['nullable', 'email', 'max:190'],
-                'address' => ['nullable', 'string', 'max:300'],
-                'working_hours' => ['nullable', 'string', 'max:300'],
-                'maps_url' => ['nullable', 'url', 'max:500'],
-                'contact_intro' => ['nullable', 'string', 'max:500'],
-                'contact_consent' => ['nullable', 'string', 'max:300'],
-                'instagram' => ['nullable', 'url', 'max:255'],
-                'facebook' => ['nullable', 'url', 'max:255'],
-                'x' => ['nullable', 'url', 'max:255'],
-                'youtube' => ['nullable', 'url', 'max:255'],
-                'tiktok' => ['nullable', 'url', 'max:255'],
-            ]),
+            'iletisim' => $this->contact($request),
             'teslimat' => $this->delivery($request),
             'gorunum' => $this->appearance($request),
             'urun-bilgileri' => ['hidden_specs' => implode(',', array_values(array_intersect(
@@ -128,6 +115,39 @@ class SettingsController extends Controller
         Activity::log('settings.test_mail', null, ['to' => $data['to']]);
 
         return back()->with('status', 'Deneme e-postası '.$data['to'].' adresine gönderildi.');
+    }
+
+    /** İletişim ayarları: kısa harita bağlantısı kayıtta bir kez tam bağlantıya çözülür (gömülü harita için). */
+    private function contact(Request $request): array
+    {
+        $data = $request->validate([
+            'phone' => ['nullable', 'string', 'max:30'],
+            'whatsapp' => ['nullable', 'regex:/^[0-9 +()-]{10,20}$/'],
+            'email' => ['nullable', 'email', 'max:190'],
+            'address' => ['nullable', 'string', 'max:300'],
+            'working_hours' => ['nullable', 'string', 'max:300'],
+            'maps_url' => ['nullable', 'url', 'max:500'],
+            'maps_embed' => ['nullable', 'string', 'max:3000'],
+            'contact_intro' => ['nullable', 'string', 'max:500'],
+            'contact_consent' => ['nullable', 'string', 'max:300'],
+            'contact_kicker' => ['nullable', 'string', 'max:60'],
+            'contact_title' => ['nullable', 'string', 'max:80'],
+            'contact_title_accent' => ['nullable', 'string', 'max:80'],
+            'contact_form_title' => ['nullable', 'string', 'max:80'],
+            'contact_info_title' => ['nullable', 'string', 'max:80'],
+            'contact_map_title' => ['nullable', 'string', 'max:80'],
+            'instagram' => ['nullable', 'url', 'max:255'],
+            'facebook' => ['nullable', 'url', 'max:255'],
+            'x' => ['nullable', 'url', 'max:255'],
+            'youtube' => ['nullable', 'url', 'max:255'],
+            'tiktok' => ['nullable', 'url', 'max:255'],
+        ]);
+        if (filled($data['maps_embed'] ?? null) && ! MapEmbed::fromCode($data['maps_embed'])) {
+            throw ValidationException::withMessages(['maps_embed' => 'Google Haritalar › Paylaş › Haritayı yerleştir bölümündeki kodu (iframe) yapıştırın.']);
+        }
+        $data['maps_resolved'] = MapEmbed::resolve($data['maps_url'] ?? null);
+
+        return $data;
     }
 
     private function delivery(Request $request): array

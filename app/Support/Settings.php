@@ -33,6 +33,14 @@ class Settings
         'address' => null,
         'working_hours' => null,         // satır satır
         'maps_url' => null,
+        'maps_embed' => null,            // isteğe bağlı: Google Haritalar "Haritayı yerleştir" kodu
+        'maps_resolved' => null,         // kısa paylaş bağlantısının kayıtta çözülmüş hâli (MapEmbed::resolve)
+        'contact_kicker' => 'Bize ulaşın',
+        'contact_title' => 'Sorunuz mu var?',
+        'contact_title_accent' => 'Hemen yazın.',
+        'contact_form_title' => 'Mesaj gönderin',
+        'contact_info_title' => 'İletişim bilgileri',
+        'contact_map_title' => 'Bizi ziyaret edin',
         'contact_intro' => 'Sipariş, belge baskısı veya ürünlerle ilgili sorularınızı yazın; en kısa sürede e-postayla yanıt verelim.',
         'contact_consent' => 'Bilgilerimin mesajıma yanıt verilmesi amacıyla işlenmesini kabul ediyorum.',
 

@@ -794,3 +794,8 @@
 .nav-link-active { background: var(--color-primary-soft); color: var(--color-primary-dark); }
 .nav-link-active .nav-icon { color: var(--color-primary); }
 .nav-link-active::after { display: none; }
+
+/* İletişim: bilgi satırları üzerine gelince tonlanır; harita kenarında yumuşak iç gölge */
+.contact-row { transition: background-color 0.25s ease; }
+.contact-row:hover { background: color-mix(in oklab, var(--color-primary) 7%, white); }
+.contact-map::after { content: ''; position: absolute; inset: 0; pointer-events: none; border-radius: inherit; box-shadow: inset 0 0 0 1px rgb(15 23 42 / 0.06); }
