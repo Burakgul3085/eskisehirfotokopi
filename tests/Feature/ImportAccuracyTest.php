@@ -193,7 +193,7 @@ class ImportAccuracyTest extends TestCase
             ->assertRedirect();
         $this->assertSame(['isbn'], Settings::hiddenSpecs());
         $this->get($url)->assertOk()->assertDontSee('9786054238606')->assertDontSee('gtin13')->assertSee('AKT-583');
-        $this->get('/ara?q=9786054238606')->assertOk()->assertSee($p->title);
+        $this->get('/ara?q=9786054238606')->assertRedirect(route('product.show', $p)); // ISBN birebir: doğrudan ürün
 
         // Ürün kendi seçimi genel ayarın önüne geçer
         $this->put(route('admin.products.update', $p), [

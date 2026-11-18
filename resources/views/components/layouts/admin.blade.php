@@ -26,6 +26,7 @@
         'Vitrin' => [
             ['Ana sayfa', 'home', 'admin.home-blocks.index', 'admin.home-blocks.*'],
             ['Sayfalar', 'list', 'admin.pages.index', 'admin.pages.*'],
+            ['Site araması', 'search', 'admin.search.index', 'admin.search.*'],
         ],
     ];
     $unreadMessages = \App\Models\MessageThread::where('unread_admin', true)->count();

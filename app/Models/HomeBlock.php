@@ -43,8 +43,9 @@ class HomeBlock extends Model
 
     protected static function booted(): void
     {
-        static::saved(fn () => Cache::forget(self::CACHE_KEY));
-        static::deleted(fn () => Cache::forget(self::CACHE_KEY));
+        // Site araması SSS dizini de yenilenir (SiteSearch::faqIndex)
+        static::saved(fn () => Cache::deleteMultiple([self::CACHE_KEY, 'search.faq2']));
+        static::deleted(fn () => Cache::deleteMultiple([self::CACHE_KEY, 'search.faq2']));
     }
 
     public function setting(string $key, mixed $default = null): mixed

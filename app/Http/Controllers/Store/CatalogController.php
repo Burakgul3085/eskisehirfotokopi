@@ -9,9 +9,13 @@ use App\Http\Controllers\Controller;
 use App\Models\Category;
 use App\Models\Product;
 use App\Models\Publisher;
+use App\Models\SearchMiss;
+use App\Models\SearchRedirect;
+use App\Support\Highlight;
 use App\Support\Money;
 use App\Support\Text;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Cache;
@@ -107,19 +111,41 @@ class CatalogController extends Controller
     }
 
     /** Arama sonuçları; sorgu boşsa tüm ürünler (/urunler). */
-    public function search(Request $request): View|Response
+    public function search(Request $request): View|Response|RedirectResponse
     {
         $q = trim(mb_substr((string) $request->query('q'), 0, 100));
         $isSearch = ProductListing::terms($q) !== [];
-        // Site geneli arama: yalnız gerçek eşleşmeler; ürün de ürün dışı sonuç da yoksa 404 sayfası
+        // Filtre/sıralama/sayfa yoksa (yalnız q) doğrudan gitme kuralları uygulanır
+        $plain = $isSearch && array_keys($request->query()) === ['q'];
+
+        // 1) Adı birebir eşleşen sayfa, bölüm, SSS, kategori, yayınevi, ürün veya yönetimdeki yönlendirme
+        if ($plain && ($direct = $this->site->direct($q))) {
+            if (isset($direct['redirect'])) {
+                SearchRedirect::whereKey($direct['redirect'])->increment('hits');
+            }
+
+            return redirect()->to($direct['url']);
+        }
+
+        // 2) Yalnız gerçek eşleşmeler
         $found = $this->site->products($q);
         $others = $isSearch ? $this->site->others($q, 8) : null;
-        if ($isSearch && $found['mode'] === 'none' && collect($others)->flatten(1)->isEmpty()) {
+        $otherHits = collect($others)->flatten(1);
+
+        // 3) Hiçbir şey yok: 404 sayfası, aranan kelime rapora yazılır
+        if ($isSearch && $found['mode'] === 'none' && $otherHits->isEmpty()) {
+            SearchMiss::record($q);
+
             return response()->view('errors.404', ['search' => $q], 404);
         }
+
         $base = $found['query'];
-        $sort = $request->query('sirala');
-        $products = $this->listing->paginate($this->listing->sort($this->listing->filter(clone $base, $request), $sort, $found['used']));
+        $products = $this->listing->paginate($this->listing->sort($this->listing->filter(clone $base, $request), $request->query('sirala'), $found['used']));
+
+        // Tek bir sonuç kaldıysa doğrudan ona
+        if ($plain && $products->total() + $otherHits->count() === 1) {
+            return redirect()->to($products->total() === 1 ? route('product.show', $products->first()) : $otherHits->first()['url']);
+        }
 
         return view('store.catalog.listing', [
             'heading' => $isSearch ? '“'.$q.'” için sonuçlar' : 'Tüm ürünler',
@@ -138,32 +164,34 @@ class CatalogController extends Controller
         ]);
     }
 
+    /** Anlık arama (açılır panel): doğrudan hedef, eşleşen ürünler (vurgulu) ve ürün dışı sonuçlar. */
     public function suggest(Request $request): JsonResponse
     {
         $q = trim(mb_substr((string) $request->query('q'), 0, 100));
         $terms = ProductListing::terms($q);
-        $empty = ['products' => [], 'categories' => [], 'publishers' => [], 'authors' => [], 'pages' => [], 'faq' => [], 'total' => 0, 'mode' => 'none', 'used' => ''];
         if ($terms === []) {
-            // Kutu boşken: hızlı erişim (site bölümleri ve popüler kategoriler)
-            return response()->json($empty + ['quick' => $this->site->quick(), 'all_url' => route('search')]);
+            return response()->json(['direct' => null, 'products' => [], 'categories' => [], 'publishers' => [], 'authors' => [], 'pages' => [], 'faq' => [], 'total' => 0, 'all_url' => '']);
         }
 
-        $data = Cache::remember('search.suggest2.'.md5(implode(' ', $terms)), 300, function () use ($q) {
+        $data = Cache::remember('search.suggest3.'.md5(implode(' ', $terms).'|'.Text::key($q)), 300, function () use ($q, $terms) {
             $found = $this->site->products($q);
             $total = $found['mode'] === 'none' ? 0 : (clone $found['query'])->count();
             $products = $found['mode'] === 'none' ? [] : $this->listing->sort($found['query'], 'onerilen', $found['used'])
                 ->with('publisher:id,name')->limit(6)->get()->map(fn ($p) => [
                     'title' => $p->title,
+                    'hl' => Highlight::mark($p->title, $terms),
                     'url' => route('product.show', $p),
                     'image' => $p->imageUrl('sm'),
                     'meta' => $p->publisher?->name,
                     'price' => ($t = $p->defaultPrintType()) ? Money::format($p->price($t)) : null,
                 ])->all();
+            $direct = $this->site->direct($q);
+            unset($direct['redirect']);
 
-            return ['products' => $products, 'total' => $total, 'mode' => $found['mode'], 'used' => $found['used']] + $this->site->others($q, 4);
+            return ['direct' => $direct ? $direct + ['hl' => Highlight::mark($direct['title'], $terms)] : null, 'products' => $products, 'total' => $total] + $this->site->others($q, 4);
         });
 
-        return response()->json($data + ['quick' => null, 'all_url' => route('search', ['q' => $q])]);
+        return response()->json($data + ['all_url' => route('search', ['q' => $q])]);
     }
 
     private static function initial(string $name): string

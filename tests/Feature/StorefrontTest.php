@@ -7,8 +7,11 @@ use App\Domain\Storefront\HomePage;
 use App\Models\Admin;
 use App\Models\Category;
 use App\Models\HomeBlock;
+use App\Models\Page;
 use App\Models\Product;
 use App\Models\Publisher;
+use App\Models\SearchMiss;
+use App\Models\SearchRedirect;
 use App\Support\Settings;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
@@ -124,43 +127,86 @@ class StorefrontTest extends TestCase
     public function test_search_and_suggestions(): void
     {
         $this->get('/ara?q=tyt+mat')->assertOk()->assertSee('TYT Matematik Soru Bankası')->assertDontSee('KPSS Tarih Denemeleri')
-            ->assertSee('noindex', false);
-        $this->get('/ara?q=978-605-4238-60-6')->assertOk()->assertSee('TYT Matematik Soru Bankası');
-        $this->get('/ara?q=hız')->assertOk()->assertSee('KPSS Tarih Denemeleri')->assertDontSee('TYT Matematik Soru');
+            ->assertSee('noindex', false)->assertSee('2 ürün');
+        $this->get('/ara?q=tyt')->assertRedirect(route('category.show', Category::where('name', 'TYT')->first())); // kategori adı birebir
         $this->get('/urunler')->assertOk()->assertSee('Tüm ürünler')->assertSee('KPSS Tarih Denemeleri');
 
         $this->getJson('/ara/oneri?q=tyt')->assertOk()
             ->assertJsonPath('total', 2)
             ->assertJsonCount(2, 'products')
-            ->assertJsonPath('categories.0.title', 'YKS › TYT');
-        $this->getJson('/ara/oneri?q=palme')->assertOk()->assertJsonPath('publishers.0.title', 'Palme Yayınları');
-        $this->getJson('/ara/oneri?q=a')->assertOk()->assertJsonPath('total', 0);
+            ->assertJsonPath('categories.0.title', 'YKS › TYT')
+            ->assertJsonPath('products.0.hl', fn ($hl) => str_contains($hl, '<mark class="search-mark">TYT</mark>'));
+        $this->getJson('/ara/oneri?q=palme')->assertOk()->assertJsonPath('direct.url', route('publisher.show', $this->palme))
+            ->assertJsonPath('direct.type', 'Yayınevi');
+        // Kutu boşken öneri yok
+        $this->getJson('/ara/oneri?q=')->assertOk()->assertJsonPath('total', 0)->assertJsonPath('direct', null)->assertJsonMissingPath('quick');
     }
 
-    public function test_site_search_covers_everything_and_never_dead_ends(): void
+    public function test_search_goes_directly_to_exact_names(): void
     {
-        // Yalnız gerçek eşleşme: yazım düzeltmesi ve "kelimelerden biri" eşleşmesi yok → 404 sayfası
-        $this->get('/ara?q=matematik')->assertOk()->assertSee('TYT Matematik Soru Bankası')->assertDontSee('KPSS Tarih Denemeleri');
+        $tyt = Product::where('title', 'TYT Matematik Soru Bankası')->first();
+        Page::updateOrCreate(['slug' => 'hakkimizda'], ['title' => 'Hakkımızda', 'body' => 'Bize ulaşmak için iletişim sayfası.', 'is_active' => true]);
+        $faq = HomeBlock::where('type', 'faq')->first();
+        $firstQuestion = collect($faq->setting('items', []))->first(fn ($i) => ! empty($i['q']) && ! empty($i['a']))['q'];
+
+        // Sayfa ve bölüm adları (Türkçe karakter ve büyük/küçük harf farkı gözetilmez)
+        $this->get('/ara?q=hakkımızda')->assertRedirect(url('/sayfa/hakkimizda'));
+        $this->get('/ara?q=HAKKIMIZDA')->assertRedirect(url('/sayfa/hakkimizda'));
+        $this->get('/ara?q=iletisim')->assertRedirect(route('contact'));
+        $this->get('/ara?q=sepet')->assertRedirect(route('cart.index'));
+        $this->get('/ara?q=sıkça+sorulan+sorular')->assertRedirect(route('home').'#sss');
+        $this->get('/ara?q=sss')->assertRedirect(route('home').'#sss');
+        // SSS sorusu birebir: o soru açık gelir
+        $this->get('/ara?q='.urlencode($firstQuestion))->assertRedirect(route('home').'#sss-1');
+        // Kategori, yayınevi, ürün adı ve ISBN
+        $this->get('/ara?q=kpss')->assertRedirect(route('category.show', Category::where('slug', 'kpss')->first()));
+        $this->get('/ara?q=hız+yayınları')->assertRedirect(route('publisher.show', $this->hiz));
+        $this->get('/ara?q=hiz')->assertRedirect(route('publisher.show', $this->hiz));
+        $this->get('/ara?q=tyt+matematik+soru+bankasi')->assertRedirect(route('product.show', $tyt));
+        $this->get('/ara?q=978-605-4238-60-6')->assertRedirect(route('product.show', $tyt));
+        // Tek sonuç kalırsa doğrudan; filtre/sıralama varsa liste kalır
+        $geo = Product::where('title', 'TYT Geometri Konu Anlatımı')->first();
+        $this->get('/ara?q=geometri')->assertRedirect(route('product.show', $geo));
+        $this->get('/ara?q=geometri&sirala=fiyat-artan')->assertOk()->assertSee('TYT Geometri Konu Anlatımı');
+
+        // Bilgi sayfaları yalnız başlığından bulunur (içerikte "iletişim" geçmesi yetmez)
+        $this->getJson('/ara/oneri?q=ileti')->assertOk()->assertJsonCount(1, 'pages')->assertJsonPath('pages.0.url', route('contact'));
+        $this->getJson('/ara/oneri?q=hakkımızda')->assertOk()->assertJsonPath('direct.url', url('/sayfa/hakkimizda'))->assertJsonPath('direct.type', 'Sayfa');
+    }
+
+    public function test_site_search_shows_only_real_matches_and_404_otherwise(): void
+    {
+        // Yazım düzeltmesi ve "kelimelerden biri" eşleşmesi yok → 404 sayfası; aranan kelime rapora yazılır
         $this->get('/ara?q=matemtik')->assertNotFound()->assertSee('data-scene="not-found"', false)->assertSee('“matemtik”', false);
-        $this->getJson('/ara/oneri?q=matemtik')->assertOk()->assertJsonPath('mode', 'none')->assertJsonCount(0, 'products');
+        $this->get('/ara?q=matemtik')->assertNotFound();
+        $this->assertSame(2, SearchMiss::where('match_key', 'matemtik')->value('hits'));
+        $this->getJson('/ara/oneri?q=matemtik')->assertOk()->assertJsonCount(0, 'products')->assertJsonPath('direct', null);
         $this->get('/ara?q=kpss+zzqx')->assertNotFound();
-        // Site bölümleri ve SSS de aranır; eşleşen ürün yoksa yalnız eşleşen bölümler (öneri ürün yok)
-        Product::where('title', 'TYT Matematik Soru Bankası')->update(['image_key' => 'abc123', 'sales_count' => 50]);
-        $this->get('/ara?q=kargo')->assertOk()->assertSee('Sipariş takibi')->assertDontSee('En çok tercih edilenler')->assertDontSee('TYT Matematik Soru Bankası');
         // Hiçbir şey yoksa sade 404 sayfası: 3D sahne, başlık, arama kutusu, ana sayfa; öneri yok
-        $this->get('/ara?q=asdfgh')->assertNotFound()->assertSee('data-scene="not-found"', false)->assertSee('“asdfgh”', false)
-            ->assertSee('Aradığınızı')->assertSee('Ana sayfaya dön')->assertDontSee('En çok tercih edilenler')->assertDontSee('TYT Matematik Soru Bankası');
+        Product::where('title', 'TYT Matematik Soru Bankası')->update(['image_key' => 'abc123', 'sales_count' => 50]);
+        $this->get('/ara?q=asdfgh')->assertNotFound()->assertSee('Aradığınızı')->assertSee('Ana sayfaya dön')
+            ->assertDontSee('En çok tercih edilenler')->assertDontSee('TYT Matematik Soru Bankası');
         Settings::put(['notfound_title' => 'Burada bir şey yok']);
         $this->get('/ara?q=asdfgh')->assertNotFound()->assertSee('Burada bir şey yok');
-        // Boş kutu: hızlı erişim
-        $this->getJson('/ara/oneri?q=')->assertOk()->assertJsonStructure(['quick' => ['sections', 'categories']]);
-        $this->getJson('/ara/oneri?q=iletişim')->assertOk()->assertJsonPath('pages.0.url', route('contact'));
 
-        // Bulunamayan kayıt ve bilinmeyen adres hata yerine aramaya yönlenir
+        // Yönetimden yönlendirme: kelime → adres; eklenince "bulunamayan" kaydı silinir, kullanım sayılır
+        $this->actingAs(Admin::factory()->create(), 'admin');
+        $this->get(route('admin.search.index'))->assertOk()->assertSee('matemtik')->assertSee('kargo');
+        $this->post(route('admin.search.store'), ['term' => 'Matemtik', 'url' => '/urunler'])->assertRedirect(route('admin.search.index'));
+        $this->post(route('admin.search.store'), ['term' => 'matemtik', 'url' => '/x'])->assertSessionHasErrors('match_key');
+        $this->post(route('admin.search.store'), ['term' => 'kötü', 'url' => 'javascript:alert(1)'])->assertSessionHasErrors('url');
+        $this->assertNull(SearchMiss::where('match_key', 'matemtik')->first());
+        $this->get('/ara?q=matemtik')->assertRedirect('/urunler');
+        $this->assertSame(1, SearchRedirect::where('match_key', 'matemtik')->value('hits'));
+        $this->get('/ara?q=kargo')->assertRedirect('/siparis-takip');
+        $this->delete(route('admin.search.destroy', SearchRedirect::where('match_key', 'matemtik')->first()))->assertRedirect();
+        $this->get('/ara?q=matemtik')->assertNotFound();
+        $this->delete(route('admin.search.misses.clear'))->assertRedirect();
+        $this->assertSame(0, SearchMiss::count());
+
+        // Bulunamayan kayıt aramaya yönlenir; bilinmeyen adres doğrudan 404
         $this->get('/urun/tyt-matematk')->assertRedirect(route('search', ['q' => 'tyt matematk']));
-        $this->get('/kategori/yok-boyle')->assertRedirect(route('search', ['q' => 'yok boyle']));
         $this->get('/boyle-bir-sayfa/kimya-kitabi')->assertNotFound()->assertSee('data-scene="not-found"', false);
-        $this->get('/urun/zzqxw-yyy')->assertRedirect(route('search', ['q' => 'zzqxw yyy']));
         $this->get(route('search', ['q' => 'zzqxw yyy']))->assertNotFound();
         $this->get('/yonetim/olmayan')->assertNotFound();
         $this->get('/olmayan.pdf')->assertNotFound();

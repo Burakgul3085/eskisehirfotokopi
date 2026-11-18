@@ -15,7 +15,7 @@
         </div>
         <div class="faq-stack space-y-3">
             @foreach ($items as $i => $item)
-                <details class="faq-card group rounded-2xl border border-line/70 bg-white shadow-[0_1px_0_rgba(15,23,42,0.03)] open:border-primary/30 open:shadow-[0_24px_50px_-28px_color-mix(in_oklab,var(--color-primary)_55%,transparent)]">
+                <details id="sss-{{ $i + 1 }}" class="faq-card scroll-mt-40 group rounded-2xl border border-line/70 bg-white shadow-[0_1px_0_rgba(15,23,42,0.03)] open:border-primary/30 open:shadow-[0_24px_50px_-28px_color-mix(in_oklab,var(--color-primary)_55%,transparent)]">
                     <summary class="flex cursor-pointer list-none items-center gap-4 px-5 py-4 font-semibold [&::-webkit-details-marker]:hidden">
                         <span class="flex size-9 shrink-0 items-center justify-center rounded-xl bg-primary-soft font-display text-sm font-bold text-primary transition group-open:bg-primary group-open:text-white">{{ str_pad((string) ($i + 1), 2, '0', STR_PAD_LEFT) }}</span>
                         <span class="flex-1">{{ $item['q'] }}</span>

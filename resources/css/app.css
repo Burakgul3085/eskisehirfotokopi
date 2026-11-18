@@ -1077,3 +1077,8 @@
 .nf-fallback { animation: nf-bob 3.2s ease-in-out infinite; }
 @keyframes nf-bob { 50% { transform: translateY(-8px); } }
 @media (prefers-reduced-motion: reduce) { .nf-fallback { animation: none; } }
+
+/* Arama vurgusu ve "doğrudan git" satırı */
+.search-mark { background: color-mix(in oklab, var(--color-accent) 32%, transparent); color: inherit; border-radius: 0.25rem; padding: 0 0.08em; }
+.search-direct { background: var(--color-primary-soft); box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--color-primary) 22%, transparent); transition: background-color 0.18s ease, box-shadow 0.18s ease; }
+.search-direct:hover, .search-direct:focus { background: color-mix(in oklab, var(--color-primary) 16%, white); box-shadow: inset 0 0 0 2px var(--color-primary); outline: none; }

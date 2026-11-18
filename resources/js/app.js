@@ -5,6 +5,27 @@ import * as components from './components.js';
 // davranışlar components.js'te bileşen olarak tanımlanır; şablonda yalnızca basit özellik/metot adları kullanılır.
 window.Alpine = Alpine;
 Object.entries(components).forEach(([name, component]) => Alpine.data(name, component));
+
+// x-mark: sunucunun vurguladığı metni (<mark> içeren, kaçışlı HTML) güvenle yazar. CSP sürümünde x-html yasak;
+// burada yalnız düz metin ve <mark> düğümleri oluşturulur, başka hiçbir etiket/öznitelik sayfaya girmez.
+Alpine.directive('mark', (el, { expression }, { effect, evaluateLater }) => {
+    const read = evaluateLater(expression);
+    effect(() => read((html) => {
+        const doc = new DOMParser().parseFromString(`<body>${html ?? ''}</body>`, 'text/html');
+        const out = [];
+        doc.body.childNodes.forEach((node) => {
+            if (node.nodeName === 'MARK') {
+                const m = document.createElement('mark');
+                m.className = 'search-mark';
+                m.textContent = node.textContent;
+                out.push(m);
+            } else {
+                out.push(document.createTextNode(node.textContent));
+            }
+        });
+        el.replaceChildren(...out);
+    }));
+});
 Alpine.start();
 
 // İçerik güvenlik politikası satır içi olay işleyicilerini engeller; onay ve otomatik gönderim öznitelikle tanımlanır:
@@ -111,6 +132,17 @@ if (sceneRoots.length && 'IntersectionObserver' in window) {
     }, { rootMargin: '400px' });
     sceneRoots.forEach((el) => sceneObserver.observe(el));
 }
+
+// SSS sorusu bağlantısı (#sss-3, ör. aramadan): ilgili soru açılır ve ekrana kaydırılır
+const openFaqFromHash = () => {
+    const el = /^#sss-\d+$/.test(location.hash) ? document.querySelector(location.hash) : null;
+    if (el && el.tagName === 'DETAILS') {
+        el.open = true;
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+};
+openFaqFromHash();
+window.addEventListener('hashchange', openFaqFromHash);
 
 document.addEventListener('change', (event) => {
     if (event.target.matches('[data-autosubmit]') && event.target.form) {

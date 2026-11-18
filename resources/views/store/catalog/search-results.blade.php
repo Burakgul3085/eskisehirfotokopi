@@ -42,7 +42,7 @@
                                     @else<x-icon :name="$item['icon'] ?? $icon" class="size-4" />@endif
                                 </span>
                                 <span class="min-w-0 flex-1">
-                                    <span class="block truncate text-sm font-semibold text-ink group-hover:text-primary">{{ $item['title'] }}</span>
+                                    <span class="block truncate text-sm font-semibold text-ink group-hover:text-primary">{!! $item['hl'] ?? e($item['title']) !!}</span>
                                     @if (! empty($item['meta']))<span class="line-clamp-1 text-xs text-muted">{{ $item['meta'] }}</span>@endif
                                 </span>
                                 <x-icon name="chevron-right" class="size-4 shrink-0 text-slate-300 transition group-hover:translate-x-0.5 group-hover:text-primary" />

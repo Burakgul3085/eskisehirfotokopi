@@ -16,6 +16,7 @@ use App\Http\Controllers\Admin\PageController;
 use App\Http\Controllers\Admin\PrintController;
 use App\Http\Controllers\Admin\ProductController;
 use App\Http\Controllers\Admin\PublisherController;
+use App\Http\Controllers\Admin\SearchController;
 use App\Http\Controllers\Admin\SettingsController;
 use Illuminate\Support\Facades\Route;
 
@@ -95,6 +96,11 @@ Route::prefix('yonetim')->name('admin.')->group(function () {
         });
 
         // Vitrin
+        Route::get('/arama', [SearchController::class, 'index'])->name('search.index');
+        Route::post('/arama/yonlendirme', [SearchController::class, 'store'])->name('search.store');
+        Route::delete('/arama/yonlendirme/{redirect}', [SearchController::class, 'destroy'])->name('search.destroy');
+        Route::delete('/arama/bulunamayan', [SearchController::class, 'clearMisses'])->name('search.misses.clear');
+        Route::delete('/arama/bulunamayan/{miss}', [SearchController::class, 'destroyMiss'])->name('search.misses.destroy');
         Route::resource('sayfalar', PageController::class)->parameters(['sayfalar' => 'page'])->except('show')->names('pages');
         Route::post('/ana-sayfa/{homeBlock}/sira', [HomeBlockController::class, 'move'])->name('home-blocks.move');
         Route::post('/ana-sayfa/{homeBlock}/goster-gizle', [HomeBlockController::class, 'toggle'])->name('home-blocks.toggle');

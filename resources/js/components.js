@@ -194,15 +194,15 @@ export function slider() {
 }
 
 /**
- * Anlık arama (header). Yazdıkça 180 ms bekleyip /ara/oneri'den ürün, yayınevi ve kategori önerileri alır.
- * Klavye: ↑/↓ ile öneriler arasında gezinilir, Enter ile seçilene gidilir, Esc kapatır.
+ * Anlık arama (header, ana sayfa). Yazdıkça /ara/oneri'den yalnız eşleşen sonuçları alır; adı birebir eşleşen hedef
+ * en üstte "doğrudan git" satırıdır. Klavye: ↑/↓ ile sonuçlar arasında gezinilir, Enter gider, Esc kapatır.
  */
 export function liveSearch() {
     let timer = null;
     let controller = null;
     let root = null; // form öğesi ($el, ifadenin bağlı olduğu alt öğeyi gösterebilir)
     const cache = new Map();
-    const blank = { products: [], categories: [], publishers: [], authors: [], pages: [], faq: [], total: 0, mode: 'none', used: '', quick: null, all_url: '' };
+    const blank = { direct: null, products: [], categories: [], publishers: [], authors: [], pages: [], faq: [], total: 0, all_url: '' };
     // Ürün dışı gruplar (sağ sütun) ve başlıkları
     const groups = [['pages', 'Sayfalar ve bölümler'], ['categories', 'Kategoriler'], ['publishers', 'Yayınevleri'], ['authors', 'Yazarlar'], ['faq', 'Sıkça sorulan sorular']];
 
@@ -220,8 +220,10 @@ export function liveSearch() {
             clearTimeout(timer);
             const q = this.q.trim();
             if (q.length < 2) {
-                // Kutu boşaldı: hızlı erişime dön
-                timer = setTimeout(() => this.fetch(''), 80);
+                // Kutu boşken panel açılmaz (öneri gösterilmez)
+                controller?.abort();
+                this.open = false;
+                this.loading = false;
                 return;
             }
             timer = setTimeout(() => this.fetch(q), 160);
@@ -241,8 +243,7 @@ export function liveSearch() {
                 if (res.ok) {
                     const data = { ...blank, ...(await res.json()) };
                     cache.set(q, data);
-                    const now = this.q.trim();
-                    if ((now.length < 2 ? '' : now) === q) {
+                    if (this.q.trim() === q) {
                         this.show(data);
                     }
                 }
@@ -256,7 +257,9 @@ export function liveSearch() {
         },
         onFocus() {
             const q = this.q.trim();
-            this.fetch(q.length < 2 ? '' : q);
+            if (q.length >= 2) {
+                this.fetch(q);
+            }
         },
         close() {
             this.open = false;
@@ -293,26 +296,30 @@ export function liveSearch() {
             return this.loading;
         },
         hasQuery() {
-            return this.results.quick === null && this.results.all_url !== '';
+            return this.results.all_url !== '';
         },
-        hasQuick() {
-            return this.results.quick !== null && this.results.quick !== undefined;
+        // Adı birebir eşleşen hedef: en üstte "doğrudan git" satırı (Enter da oraya götürür)
+        hasDirect() {
+            return this.results.direct !== null;
         },
-        quickSections() {
-            return this.results.quick?.sections || [];
+        directType() {
+            return this.results.direct?.type || '';
         },
-        quickCategories() {
-            return this.results.quick?.categories || [];
+        directHl() {
+            return this.results.direct?.hl || '';
         },
-        hasQuickCategories() {
-            return this.quickCategories().length > 0;
+        directUrl() {
+            return this.results.direct?.url || '';
+        },
+        products() {
+            return this.results.products.filter((p) => p.url !== this.directUrl());
         },
         hasProducts() {
-            return this.results.products.length > 0;
+            return this.products().length > 0;
         },
         otherGroups() {
-            return groups.filter(([key]) => (this.results[key] || []).length > 0)
-                .map(([key, label]) => ({ key, label, items: this.results[key] }));
+            return groups.map(([key, label]) => ({ key, label, items: (this.results[key] || []).filter((i) => i.url !== this.directUrl()) }))
+                .filter((g) => g.items.length > 0);
         },
         hasOthers() {
             return this.otherGroups().length > 0;
@@ -324,10 +331,13 @@ export function liveSearch() {
             return this.hasProducts() ? 'md:border-l md:border-line md:pl-2' : '';
         },
         isEmpty() {
-            return !this.hasProducts() && !this.hasOthers();
+            return !this.hasDirect() && !this.hasProducts() && !this.hasOthers();
+        },
+        hasAll() {
+            return this.results.total > 6;
         },
         totalLabel() {
-            return this.results.total > 0 ? 'Tüm sonuçları gör (' + this.results.total.toLocaleString('tr-TR') + ')' : 'Tüm sonuçları ve önerileri gör';
+            return 'Tüm ürün sonuçlarını gör (' + this.results.total.toLocaleString('tr-TR') + ')';
         },
     };
 }

@@ -29,6 +29,8 @@ class Page extends Model
     protected static function booted(): void
     {
         static::saved(fn () => Cache::memo()->forget(self::CACHE_KEY));
+        static::saved(fn () => Cache::forget('search.pages2')); // site araması sayfa dizini
+        static::deleted(fn () => Cache::forget('search.pages2'));
         static::deleted(fn () => Cache::memo()->forget(self::CACHE_KEY));
     }
 
