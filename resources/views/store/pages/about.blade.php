@@ -18,6 +18,7 @@
     $milestones = Settings::iconLines('about_milestones'); // icon alanı = yıl
     $hours = Settings::workingHours();
     $story = trim((string) $page->body) !== '' ? $page->html() : null;
+    $showContact = Settings::flag('pages_show_contact');
 @endphp
 <x-layouts.store :title="$page->title" :description="$page->meta_description ?: \Illuminate\Support\Str::limit($settings['about_lead'] ?: strip_tags($page->html()), 160)">
     {{-- Karşılama --}}
@@ -98,11 +99,13 @@
                 </div>
                 <div class="surface-deep relative overflow-hidden rounded-[2rem] p-7 text-white sm:p-8">
                     <x-brand :name="$settings['site_name']" dark />
+                    @if ($showContact)
                     <ul class="mt-6 space-y-3.5 text-sm">
                         @if ($settings['address'])<li class="flex gap-3"><x-icon name="pin" class="size-4 shrink-0 translate-y-0.5 text-accent" /><span class="text-slate-300">{{ $settings['address'] }}</span></li>@endif
                         @if ($settings['phone'])<li class="flex gap-3"><x-icon name="phone" class="size-4 shrink-0 translate-y-0.5 text-accent" /><a href="tel:{{ preg_replace('/[^0-9+]/', '', $settings['phone']) }}" class="font-semibold hover:text-accent">{{ $settings['phone'] }}</a></li>@endif
                         @if ($settings['email'])<li class="flex gap-3"><x-icon name="mail" class="size-4 shrink-0 translate-y-0.5 text-accent" /><a href="mailto:{{ $settings['email'] }}" class="break-all hover:text-accent">{{ $settings['email'] }}</a></li>@endif
                     </ul>
+                    @endif
                     @if ($hours)
                         <dl class="mt-6 space-y-2 border-t border-white/10 pt-5 text-sm">
                             @foreach ($hours as $row)

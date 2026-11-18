@@ -8,13 +8,13 @@
     $n = 0;
 @endphp
 <x-layouts.store :title="$page->title" :description="$page->meta_description ?: \Illuminate\Support\Str::limit(collect($groups)->flatMap(fn ($g) => $g['items'])->pluck('q')->implode(' · '), 160)">
-    <x-info.hero :page="$page" :date="false" />
+    <x-info.hero :page="$page" />
 
-    <div class="container-page grid gap-8 py-10 lg:grid-cols-[17rem_minmax(0,1fr)]">
+    <div class="container-page grid gap-8 py-10 lg:grid-cols-[17rem_minmax(0,1fr)] print:block print:py-4">
         @include('store.pages._help-aside')
 
         <div x-data="filterList" class="min-w-0">
-            <div class="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center">
+            <div class="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center print:hidden">
                 <label class="relative min-w-0 flex-1">
                     <span class="sr-only">{{ $settings['faq_search_placeholder'] }}</span>
                     <x-icon name="search" class="pointer-events-none absolute top-1/2 left-4 size-4 -translate-y-1/2 text-muted" />
@@ -47,9 +47,11 @@
                 @endforeach
                 <p x-show="noMatch" x-cloak class="rounded-3xl border border-dashed border-line px-6 py-10 text-center text-muted">{{ $settings['faq_empty'] }}</p>
             </div>
+            <x-info.print-note />
+            <x-info.actions class="mt-8" />
 
             @if ($settings['faq_more_title'])
-                <div class="surface-deep mt-10 flex flex-col items-start gap-4 rounded-3xl p-6 text-white sm:flex-row sm:items-center sm:p-8">
+                <div class="surface-deep mt-10 flex print:hidden flex-col items-start gap-4 rounded-3xl p-6 text-white sm:flex-row sm:items-center sm:p-8">
                     <span class="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-accent text-ink"><x-icon name="chat" class="size-6" /></span>
                     <div class="min-w-0 flex-1">
                         <p class="font-display text-lg font-extrabold">{{ $settings['faq_more_title'] }}</p>

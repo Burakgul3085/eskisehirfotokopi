@@ -171,6 +171,17 @@ const openFaqFromHash = () => {
 openFaqFromHash();
 window.addEventListener('hashchange', openFaqFromHash);
 
+// Yazdırmada tüm açılır bölümler (SSS cevapları) açık çıkar; çıktıdan sonra eski hâline döner
+let printOpened = [];
+window.addEventListener('beforeprint', () => {
+    printOpened = [...document.querySelectorAll('details.info-faq:not([open])')];
+    printOpened.forEach((el) => (el.open = true));
+});
+window.addEventListener('afterprint', () => {
+    printOpened.forEach((el) => (el.open = false));
+    printOpened = [];
+});
+
 document.addEventListener('change', (event) => {
     if (event.target.matches('[data-autosubmit]') && event.target.form) {
         event.target.form.requestSubmit();

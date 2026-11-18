@@ -35,11 +35,8 @@
                 </details>
             @endif
             <div class="prose-page prose-legal">{{ $doc['html'] }}</div>
-            @if ($settings['pages_print'])
-                <div class="mt-10 flex flex-wrap items-center gap-3 border-t border-line pt-6 print:hidden">
-                    <button type="button" x-data="printPage" x-on:click="print" class="btn-ghost"><x-icon name="printer" class="size-4" />{{ $settings['pages_print'] }}</button>
-                </div>
-            @endif
+            <x-info.print-note />
+            <x-info.actions class="mt-10 border-t border-line pt-6" />
         </article>
     </div>
 </x-layouts.store>

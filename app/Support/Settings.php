@@ -147,7 +147,13 @@ printer|Belge baskısı|Belgeni yükle, biz basalım', // simge|Başlık|Açıkl
         'newsletter_unsub_button' => 'Aboneliğimi sonlandır',
         'newsletter_unsub_done' => 'Aboneliğiniz sonlandırıldı. Artık kampanya e-postası almayacaksınız.',
         // Bilgi sayfaları (yasal metinler, yardım, SSS) ortak metinleri — Ayarlar › Kurumsal sayfalar
+        'pages_show_contact' => '0',          // bilgi sayfalarında telefon/e-posta/adres (kapalıyken yalnız İletişim bağlantısı)
         'pages_updated' => 'Son güncelleme',
+        'pages_effective' => 'Yürürlük tarihi',
+        'pages_copy_link' => 'Bağlantıyı kopyala',
+        'pages_copied' => 'Bağlantı kopyalandı',
+        'pages_print_note' => 'Bu belge, :site internet sitesinde yayımlanan güncel metnin çıktısıdır. Çıktı tarihi: :date. Güncel metin için: :url',
+        'pages_contact_placeholder' => 'İletişim sayfamızda yer alan kanallar',
         'pages_toc_title' => 'İçindekiler',
         'pages_legal_title' => 'Yasal metinler',
         'pages_help_nav_title' => 'Yardım',

@@ -16,13 +16,39 @@ class PagesAndSeoTest extends TestCase
 
     public function test_system_pages_render_with_placeholders_and_safe_markdown(): void
     {
-        Settings::put(['site_name' => 'Örnek Kırtasiye', 'phone' => '0222 111 22 33']);
+        Settings::put(['site_name' => 'Örnek Kırtasiye', 'phone' => '0222 111 22 33', 'pages_show_contact' => '1']);
         $page = Page::where('key', 'sales')->firstOrFail();
         $page->update(['body' => "## Taraflar\n\nSatıcı: {site_adi} — {telefon}\n\n<script>alert(1)</script>\n\n[kötü](javascript:alert(1))"]);
 
         $response = $this->get($page->url())->assertOk();
         $response->assertSee('<h2 id="bolum-1">Taraflar</h2>', false)->assertSee('Satıcı: Örnek Kırtasiye — 0222 111 22 33');
         $response->assertDontSee('<script>alert(1)</script>', false)->assertDontSee('javascript:alert', false);
+    }
+
+    public function test_contact_details_are_hidden_on_info_pages_by_default(): void
+    {
+        Settings::put(['phone' => '0222 111 22 33', 'email' => 'bilgi@example.com', 'address' => 'Örnek Mah. 1']);
+        $sales = Page::where('key', 'sales')->firstOrFail();
+
+        // Yeni metinler iletişim bilgisi içermez; İletişim sayfasına yönlendirir.
+        foreach (Page::whereIn('key', ['about', 'sales', 'kvkk', 'membership', 'cookies', 'delivery', 'faq'])->get() as $page) {
+            $this->assertStringNotContainsString('{telefon}', $page->body);
+            $this->assertStringNotContainsString('{eposta}', $page->body);
+            $this->assertStringNotContainsString('{adres}', $page->body);
+            $html = (string) $page->html();
+            $this->assertStringNotContainsString('0222 111 22 33', $html);
+            $this->assertStringNotContainsString('bilgi@example.com', $html);
+            // Yardım kartında (alt bilgi değil) telefon/e-posta satırı yok
+            $this->get($page->url())->assertOk()->assertDontSee('info-help-icon', false);
+        }
+        $this->get($sales->url())->assertSee('href="/iletisim"', false)->assertSee('Bağlantıyı kopyala')->assertSee('size: A4 portrait');
+
+        // Metindeki yer tutucu gizliyken yönlendirme yazısına döner; açılınca bilgi görünür.
+        $sales->update(['body' => 'Telefon: {telefon}']);
+        $this->get($sales->url())->assertSee('Telefon: İletişim sayfamızda yer alan kanallar');
+        Settings::put(['pages_show_contact' => '1']);
+        $this->get($sales->url())->assertSee('Telefon: 0222 111 22 33');
+        $this->get(Page::where('key', 'faq')->first()->url())->assertSee('info-help-icon', false);
     }
 
     public function test_footer_columns_consent_links_and_cookie_notice(): void

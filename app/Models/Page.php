@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Domain\Print\PrintSettings;
 use App\Support\Settings;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
@@ -157,8 +158,15 @@ class Page extends Model
     public static function placeholders(): array
     {
         $s = Settings::all();
+        $print = app(PrintSettings::class);
+        $contact = Settings::flag('pages_show_contact')
+            ? ['{telefon}' => $s['phone'] ?: null, '{eposta}' => $s['email'] ?: null, '{adres}' => $s['address'] ?: null]
+            : array_fill_keys(['{telefon}', '{eposta}', '{adres}'], $s['pages_contact_placeholder'] ?: 'İletişim sayfamız');
 
-        return ['{site_adi}' => Settings::siteName(), '{telefon}' => $s['phone'] ?: null, '{eposta}' => $s['email'] ?: null, '{adres}' => $s['address'] ?: null];
+        return ['{site_adi}' => Settings::siteName(), '{iletisim}' => route('contact', absolute: false)] + $contact + [
+            '{belge_gun}' => (string) $print->get('unordered_days'),
+            '{siparis_belge_gun}' => (string) $print->get('ordered_days'),
+        ];
     }
 
     /** İçerikte kullanılan ama ayarlarda boş olan yer tutucular (yönetimde uyarı için). @return list<string> */

@@ -71,6 +71,24 @@
 
         <fieldset class="space-y-4 rounded-xl border border-line p-4">
             <legend class="px-1 text-sm font-semibold">Yasal metinler, yardım ve SSS sayfaları</legend>
+            <div>
+                <span class="field-label">İletişim bilgileri</span>
+                <div class="flex flex-wrap gap-3">
+                    @foreach (['0' => 'Gizle (yalnız İletişim sayfası bağlantısı)', '1' => 'Telefon, e-posta ve adresi göster'] as $v => $l)
+                        <label class="flex items-center gap-2 rounded-xl border border-line px-4 py-2.5 text-sm has-checked:border-primary has-checked:bg-primary-soft">
+                            <input type="radio" name="pages_show_contact" value="{{ $v }}" @checked(old('pages_show_contact', $s['pages_show_contact']) === (string) $v) class="accent-primary"> {{ $l }}
+                        </label>
+                    @endforeach
+                </div>
+                <p class="field-help">Hakkımızda, yasal metinler, Teslimat ve İade ve SSS sayfalarındaki yardım kartı ile metin içindeki {telefon}, {eposta}, {adres} alanları. Gizliyken bu alanların yerine aşağıdaki yazı çıkar; yazdırılan çıktıda da görünmez.</p>
+            </div>
+            <x-field name="pages_contact_placeholder" label="Gizliyken {telefon}/{eposta}/{adres} yerine yazılan" :value="$s['pages_contact_placeholder']" />
+            <div class="grid gap-4 sm:grid-cols-3">
+                <x-field name="pages_effective" label="Çıktıda “Yürürlük tarihi”" :value="$s['pages_effective']" />
+                <x-field name="pages_copy_link" label="Bağlantı kopyalama butonu" :value="$s['pages_copy_link']" />
+                <x-field name="pages_copied" label="Kopyalandı yazısı" :value="$s['pages_copied']" />
+            </div>
+            <x-field name="pages_print_note" type="textarea" rows="2" label="Çıktının altındaki not" :value="$s['pages_print_note']" help=":site, :date ve :url yerine site adı, çıktı tarihi ve sayfa adresi yazılır." />
             <div class="grid gap-4 sm:grid-cols-3">
                 <x-field name="pages_updated" label="“Son güncelleme” yazısı" :value="$s['pages_updated']" />
                 <x-field name="pages_toc_title" label="İçindekiler başlığı" :value="$s['pages_toc_title']" />

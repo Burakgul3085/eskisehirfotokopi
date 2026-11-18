@@ -294,6 +294,8 @@ class SettingsController extends Controller
             'about_features_kicker' => $text(40), 'about_features_title' => $text(80), 'about_features' => $text(1500),
             'about_milestones_kicker' => $text(40), 'about_milestones_title' => $text(80), 'about_milestones' => $text(2000),
             'about_cta_title' => $text(120), 'about_cta_text' => $text(300),
+            'pages_show_contact' => ['nullable', 'in:0,1'], 'pages_effective' => $text(40), 'pages_copy_link' => $text(40), 'pages_copied' => $text(40),
+            'pages_print_note' => $text(300), 'pages_contact_placeholder' => $text(80),
             'pages_updated' => $text(40), 'pages_toc_title' => $text(40), 'pages_legal_title' => $text(40), 'pages_help_nav_title' => $text(40),
             'pages_help_title' => $text(80), 'pages_help_text' => $text(200), 'pages_contact_link' => $text(40), 'pages_print' => $text(60),
             'faq_search_placeholder' => $text(60), 'faq_empty' => $text(120), 'faq_more_title' => $text(80), 'faq_more_text' => $text(200),

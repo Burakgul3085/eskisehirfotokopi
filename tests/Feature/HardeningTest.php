@@ -49,7 +49,7 @@ class HardeningTest extends TestCase
 
     public function test_empty_placeholders_render_dash_and_admin_is_warned(): void
     {
-        Settings::put(['phone' => null, 'email' => 'info@example.com', 'address' => null]);
+        Settings::put(['phone' => null, 'email' => 'info@example.com', 'address' => null, 'pages_show_contact' => '1']);
         $page = Page::where('key', 'sales')->firstOrFail();
         $page->update(['body' => 'Telefon: {telefon} / E-posta: {eposta}']);
 

@@ -1363,8 +1363,42 @@
 }
 
 /* Yazdırma: yalnız sayfa içeriği */
+.info-letterhead { align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 9mm; padding-bottom: 4mm; border-bottom: 1.5pt solid #0f172a; font-size: 8.5pt; line-height: 1.45; color: #475569; }
+.info-print-note { margin-top: 10mm; padding-top: 3mm; border-top: 0.75pt solid #94a3b8; font-size: 8pt; line-height: 1.5; color: #475569; }
+
 @media print {
-    .header-ticker, .site-header, header, footer, .back-to-top, [aria-label="WhatsApp ile yazın"] { display: none !important; }
-    body { background: #fff !important; }
-    .info-hero { background: none !important; color: var(--color-ink) !important; }
+    .header-ticker, .site-header, header, footer, .back-to-top, [aria-label="WhatsApp ile yazın"], [x-cloak] { display: none !important; }
+    html, body { background: #fff !important; }
+    body { color: #0f172a; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    main { padding: 0 !important; }
+    .container-page { max-width: none !important; padding-inline: 0 !important; }
+    .info-hero { background: none !important; color: #0f172a !important; }
+    .info-hero h1 { margin-top: 2mm; color: #0f172a; }
+    .info-letterhead .brand-type span { color: #0f172a !important; }
+    .info-letterhead .brand-mark { width: 9mm; height: 9mm; }
+    .info-letterhead img { height: 11mm; width: auto; }
+
+    /* Metin: yazı tipi boyu, siyah-beyaz başlık ve tablolar; başlık, satır, tablo satırı bölünmez */
+    .prose-legal { font-size: 10.5pt; line-height: 1.6; color: #0f172a; text-align: justify; hyphens: auto; }
+    .prose-legal h2 { margin-top: 7mm; padding-bottom: 1.5mm; border-bottom: 0.75pt solid #94a3b8; font-size: 12.5pt; color: #0f172a; break-after: avoid; page-break-after: avoid; }
+    .prose-legal h3 { font-size: 11pt; break-after: avoid; page-break-after: avoid; }
+    .prose-legal p, .prose-legal li { orphans: 3; widows: 3; }
+    .prose-legal li, .prose-legal tr, .prose-legal blockquote { break-inside: avoid; page-break-inside: avoid; }
+    .prose-legal li::marker { color: #0f172a; }
+    .prose-legal a { color: inherit; text-decoration: underline; }
+    .prose-legal table { border-radius: 0; box-shadow: none; border-collapse: collapse; font-size: 9.5pt; }
+    .prose-legal thead { background: #f1f5f9 !important; display: table-header-group; }
+    .prose-legal th, .prose-legal td { border: 0.75pt solid #94a3b8; }
+    .prose-legal blockquote { border-radius: 0; background: none !important; border-left: 2pt solid #0f172a; }
+
+    /* Kartlar ve SSS: gölgesiz ince çerçeve, bölünmeden */
+    .info-card { box-shadow: none !important; border: 0.75pt solid #94a3b8 !important; border-radius: 3mm !important; break-inside: avoid; }
+    .info-card-icon { display: none !important; }
+    .info-faq { break-inside: avoid; page-break-inside: avoid; }
+    .info-faq summary { padding: 3mm 0 1mm !important; font-size: 10.5pt; }
+    .info-faq summary > span:last-child { display: none !important; }
+    .info-faq > div { padding: 0 0 3mm 9mm !important; font-size: 10pt; }
+    .info-faq-num { background: none !important; color: #0f172a !important; border: 0.75pt solid #0f172a; }
+    section[id] > h2 { font-size: 13pt; break-after: avoid; page-break-after: avoid; }
+    .divide-y > :not(:last-child) { border-color: #cbd5e1 !important; }
 }

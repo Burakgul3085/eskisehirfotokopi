@@ -12,7 +12,7 @@
 
         <div class="min-w-0 space-y-6">
             @isset($delivery)
-                <div class="grid gap-4 sm:grid-cols-2">
+                <div class="grid gap-4 sm:grid-cols-2 print:grid-cols-2 print:gap-3">
                     @if ($delivery['districts'])
                         <div class="info-card">
                             <span class="info-card-icon"><x-icon name="truck" class="size-6" /></span>
@@ -49,6 +49,8 @@
 
             <article class="rounded-3xl border border-line bg-white p-6 sm:p-10 print:border-0 print:p-0">
                 <div class="prose-page prose-legal">{{ $doc['html'] }}</div>
+                <x-info.print-note />
+                <x-info.actions class="mt-10 border-t border-line pt-6" />
             </article>
         </div>
     </div>
