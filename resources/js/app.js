@@ -70,6 +70,7 @@ const sceneLoaders = {
     'print-banner': () => import('./scenes/print-banner.js'),
     faq: () => import('./scenes/faq.js'),
     contact: () => import('./scenes/contact.js'),
+    auth: () => import('./scenes/auth.js'),
     'footer-wave': () => import('./scenes/footer-wave.js'),
 };
 const sceneRoots = document.querySelectorAll('[data-scene]');

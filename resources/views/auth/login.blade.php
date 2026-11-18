@@ -1,4 +1,4 @@
-<x-auth-card title="Giriş yap" subtitle="Siparişlerinizi takip edin, adreslerinizi kaydedin.">
+<x-auth-card tabs title="Giriş yap" subtitle="Siparişlerinizi takip edin, adreslerinizi kaydedin.">
     <form method="post" action="{{ route('login') }}" class="space-y-4">
         @csrf
         <x-field name="email" type="email" label="E-posta" autocomplete="email" required autofocus />

@@ -1,4 +1,4 @@
-<x-auth-card title="Üye ol" subtitle="Bir dakikada hesabınızı oluşturun.">
+<x-auth-card tabs title="Üye ol" subtitle="Bir dakikada hesabınızı oluşturun.">
     <form method="post" action="{{ route('register') }}" class="space-y-4">
         @csrf
         <x-field name="name" label="Ad soyad" autocomplete="name" required autofocus />

@@ -129,6 +129,13 @@ printer|Belge baskısı|Belgeni yükle, biz basalım', // simge|Başlık|Açıkl
         'checkout_consent' => 'Sipariş bilgilerimin teslimat için kullanılmasını ve satış koşullarını onaylıyorum.',
         'register_consent' => 'Üyelik koşullarını ve KVKK aydınlatma metnini okudum, kabul ediyorum.',
 
+        // Giriş / üye ol sayfalarının sol paneli (avantajlar: simge|Başlık|Açıklama, her satır bir madde)
+        'auth_panel_kicker' => 'Hesabınız',
+        'auth_panel_title' => 'Kitabınız bir tık',
+        'auth_panel_accent' => 'uzağınızda.',
+        'auth_panel_text' => 'Siparişlerinizi takip edin, adreslerinizi kaydedin, belgelerinizi tek yerden yönetin.',
+        'auth_panel_points' => "truck|Kapınıza teslim|Eskişehir içi hızlı gönderim\nshield|Güvenli hesap|Bilgileriniz korunur\npackage|Sipariş takibi|Her adımı anlık görün",
+
         // SEO
         'meta_title' => null,
         'meta_description' => null,

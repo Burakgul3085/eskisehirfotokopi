@@ -85,6 +85,18 @@
         <x-field name="cookie_notice" label="Çerez bildirimi" :value="$s['cookie_notice']" help="İlk ziyarette altta gösterilir; Çerez Politikası sayfasına bağlanır. Boşsa gösterilmez." />
         <x-field name="checkout_consent" label="Sipariş onay kutusu metni" :value="$s['checkout_consent']" help="Altında Mesafeli Satış Sözleşmesi, KVKK ve Teslimat sayfalarının bağlantıları görünür." />
         <x-field name="register_consent" label="Üyelik onay kutusu metni" :value="$s['register_consent']" help="Altında Üyelik Koşulları ve KVKK sayfalarının bağlantıları görünür." />
+        <fieldset class="space-y-3 rounded-xl border border-line p-4">
+            <legend class="px-1 text-sm font-semibold">Giriş ve üyelik paneli</legend>
+            <p class="field-help">Giriş yap, üye ol ve parola sayfalarındaki 3D kilitli koyu panel.</p>
+            <div class="grid gap-5 sm:grid-cols-3">
+                <x-field name="auth_panel_kicker" label="Üst etiket" :value="$s['auth_panel_kicker']" />
+                <x-field name="auth_panel_title" label="Başlık" :value="$s['auth_panel_title']" />
+                <x-field name="auth_panel_accent" label="Başlığın renkli kısmı" :value="$s['auth_panel_accent']" />
+            </div>
+            <x-field name="auth_panel_text" label="Açıklama" :value="$s['auth_panel_text']" />
+            <x-field name="auth_panel_points" type="textarea" rows="3" label="Avantajlar" :value="$s['auth_panel_points']"
+                     help="Geniş ekranda panelin altında. Her satır: simge|Başlık|Açıklama (ör. truck|Kapınıza teslim|Eskişehir içi). Boşsa gizlenir." />
+        </fieldset>
         <div class="flex justify-end"><button class="btn-primary">Kaydet</button></div>
     </form>
 </x-layouts.admin>
